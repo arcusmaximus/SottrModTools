@@ -64,7 +64,7 @@ When modding SOTTR, you'll encounter the following file types:
 
   Catch-all resource type used for (almost) everything not listed above.
 
-here are a few other extensions such as .tr11anim and .tr11script, which are however unexplored and not moddable.
+There are a few other extensions such as .tr11anim and .tr11script, which are however unexplored and not moddable.
 
 ## Installation
 
