@@ -1,0 +1,11 @@
+{
+    "typeCheckingMode": "strict",
+    "reportDeprecated": "none",
+    "reportCallInDefaultInitializer": "error",
+    "reportImplicitStringConcatenation": "error",
+    "reportImportCycles": "error",
+    "reportPropertyTypeMismatch": "error",
+    "reportShadowedImports": "error",
+    "reportUninitializedInstanceVariable": "error",
+    "reportUnnecessaryTypeIgnoreComment": "error"
+}

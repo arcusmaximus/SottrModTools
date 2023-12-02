@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>SottrExtractor</RootNamespace>
+    <AssemblyName>SottrExtractor</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\dummykey.snk</AssemblyOriginatorKeyFile>
+    <Nullable>disable</Nullable>
+    <BaseOutputPath>..\Build\</BaseOutputPath>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="SOTR_PC_Release.list" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Controls\FileTreeView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\FileTreeViewBase.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\ArchiveFileTreeView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Content Include="icon.ico" />
+    <Content Include="SOTR_PC_Release.list">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+</Project>
