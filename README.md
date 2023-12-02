@@ -2,9 +2,7 @@
 
 This repository contains modding tools for Shadow of the Tomb Raider.
 
-[Download](https://github.com/arcusmaximus/SottrModTools/releases)
-
-[Documentation for modders](Documentation.md)
+[Download from NexusMods](https://www.nexusmods.com/shadowofthetombraider/mods/185?tab=files)
 
 ## Mod Manager
 
@@ -34,4 +32,4 @@ Can be used to tweak shader parameters in materials or bone positions in skeleto
 # Credits
 alphaZomega for their [file format descriptions](https://www.nexusmods.com/riseofthetombraider/mods/20) and Ekey for their open source [CDCE TIGER Tool](https://github.com/Ekey/CDCE.TIGER.Tool). A large part of the knowledge used to create these tools comes from there.
 
-JOSTARMOD1 for the mod manager icon.
+JOSTAR for the mod manager icon.
