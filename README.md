@@ -32,6 +32,6 @@ Can be used to tweak shader parameters in materials or bone positions in skeleto
 ![Screenshot of a binary template](Screenshots/Template.png)
 
 # Credits
-Ekey for their open source [CDCE TIGER Tool](https://github.com/Ekey/CDCE.TIGER.Tool). The majority of the knowledge used to create the manager and extractor comes from there.
+alphaZomega for their [file format descriptions](https://www.nexusmods.com/riseofthetombraider/mods/20) and Ekey for their open source [CDCE TIGER Tool](https://github.com/Ekey/CDCE.TIGER.Tool). A large part of the knowledge used to create these tools comes from there.
 
-Jostar for the mod manager icon.
+JOSTARMOD1 for the mod manager icon.
