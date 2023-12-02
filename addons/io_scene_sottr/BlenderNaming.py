@@ -20,6 +20,7 @@ class BlenderLocalBoneIdSet(NamedTuple):
 
 class BlenderNaming:
     local_collection_name: ClassVar[str] = "Split meshes for export"
+    hidden_bone_collection_name: ClassVar[str] = "Non-deforming bones"
 
     @staticmethod
     def make_mesh_name(collection_name: str, model_id: int, model_data_id: int, mesh_idx: int) -> str:

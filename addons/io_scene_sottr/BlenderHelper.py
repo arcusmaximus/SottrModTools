@@ -1,6 +1,7 @@
 from types import TracebackType
 from typing import Iterable, cast
 import bpy
+from io_scene_sottr.BlenderNaming import BlenderNaming
 from io_scene_sottr.util.Enumerable import Enumerable
 from io_scene_sottr.util.SlotsBase import SlotsBase
 
@@ -57,6 +58,36 @@ class BlenderHelper:
             bl_existing_collection.objects.unlink(bl_obj)
         
         bl_collection.objects.link(bl_obj)
+    
+    @staticmethod
+    def is_bone_visible(bl_armature: bpy.types.Armature, bl_bone: bpy.types.Bone) -> bool:
+        if cast(tuple[int, ...], bpy.app.version) >= (4, 0, 0):
+            bl_hidden_bone_collection = cast(bpy.types.BoneCollection | None, bl_armature.collections.get(BlenderNaming.hidden_bone_collection_name))
+            return bl_hidden_bone_collection is None or bl_hidden_bone_collection.bones.get(bl_bone.name) is None
+        else:
+            return getattr(bl_bone, "layers")[0]
+    
+    @staticmethod
+    def set_bone_visible(bl_armature: bpy.types.Armature, bl_bone: bpy.types.Bone, visible: bool) -> None:
+        if cast(tuple[int, ...], bpy.app.version) >= (4, 0, 0):
+            bl_hidden_bone_collection = cast(bpy.types.BoneCollection | None, bl_armature.collections.get(BlenderNaming.hidden_bone_collection_name))
+
+            if visible:
+                if bl_hidden_bone_collection:
+                    bl_hidden_bone_collection.unassign(bl_bone)
+            else:
+                if bl_hidden_bone_collection is None:
+                    bl_hidden_bone_collection = bl_armature.collections.new(BlenderNaming.hidden_bone_collection_name)
+                    bl_hidden_bone_collection.is_visible = False
+
+                bl_hidden_bone_collection.assign(bl_bone)
+        else:
+            if visible:
+                getattr(bl_bone, "layers")[0] = True
+                getattr(bl_bone, "layers")[1] = False
+            else:
+                getattr(bl_bone, "layers")[1] = True
+                getattr(bl_bone, "layers")[0] = False
 
 class BlenderEditContext(SlotsBase):
     def __init__(self) -> None:

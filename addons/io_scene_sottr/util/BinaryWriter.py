@@ -90,7 +90,7 @@ class BinaryWriter(SlotsBase):
     def write_mat4x4(self, value: Matrix) -> None:
         for col in range(4):
             for row in range(4):
-                self.write_float(value[row][col])       # type: ignore
+                self.write_float(value[row][col])
 
     def write_struct(self, value: CStruct) -> None:
         value.map_fields_to_c(self)

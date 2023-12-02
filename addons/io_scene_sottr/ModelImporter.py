@@ -359,16 +359,17 @@ class ModelImporter(SlotsBase):
     
     def parent_objects_to_armature(self, bl_objs: Iterable[bpy.types.Object], bl_armature_obj: bpy.types.Object) -> None:
         used_bone_names: set[str] = set()
+
         for bl_obj in bl_objs:
             bl_obj.parent = bl_armature_obj
             bl_armature_modifier = cast(bpy.types.ArmatureModifier, bl_obj.modifiers.new("Armature", "ARMATURE"))
             bl_armature_modifier.object = bl_armature_obj
             used_bone_names.update(Enumerable(bl_obj.vertex_groups).select(lambda g: g.name))
         
-        for bl_bone in cast(bpy.types.Armature, bl_armature_obj.data).bones:
-            if not bl_bone.name in used_bone_names:
-                bl_bone.layers[1] = True
-                bl_bone.layers[0] = False
+        bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
+        for bl_bone in bl_armature.bones:
+            if bl_bone.name not in used_bone_names:
+                BlenderHelper.set_bone_visible(bl_armature, bl_bone, False)
     
     def separate_lods(self, tr_model_data: ModelData) -> None:
         new_tr_meshes: list[Mesh] = []

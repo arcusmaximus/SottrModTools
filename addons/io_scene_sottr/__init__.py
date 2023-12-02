@@ -2,7 +2,7 @@ bl_info = {
     "name": "SOTTR mesh support",
     "description": "Import/export files in the Shadow of the Tomb Raider format",
     "author": "arc_",
-    "blender": (2, 80, 0),
+    "blender": (3, 6, 5),
     "version": (0, 1, 5),
     "location": "File > Import-Export",
     "support": "COMMUNITY",

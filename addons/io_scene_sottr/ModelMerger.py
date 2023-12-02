@@ -91,7 +91,7 @@ class ModelMerger(SlotsBase):
         visible_bone_ids: list[int] = []
         bl_local_armature = cast(bpy.types.Armature, bl_local_armature_obj.data)
         for bl_bone in bl_local_armature.bones:
-            if not bl_bone.layers[0]:
+            if not BlenderHelper.is_bone_visible(bl_local_armature, bl_bone):
                 continue
 
             bone_ids = BlenderNaming.parse_local_bone_name(bl_bone.name)
@@ -105,7 +105,7 @@ class ModelMerger(SlotsBase):
     def apply_visible_global_bones_to_global_armature(self, bl_global_armature_obj: bpy.types.Object, visible_bone_ids: list[int]) -> None:
         bl_global_armature = cast(bpy.types.Armature, bl_global_armature_obj.data)
         for bone_id in visible_bone_ids:
-            bl_global_armature.bones[BlenderNaming.make_global_bone_name(bone_id)].layers[0] = True
+            BlenderHelper.set_bone_visible(bl_global_armature, bl_global_armature.bones[BlenderNaming.make_global_bone_name(bone_id)], True)
     
     def convert_local_armature_to_global(self, bl_local_armature_obj: bpy.types.Object, bl_existing_global_armature_obj: bpy.types.Object | None) -> None:
         bl_existing_global_armature = bl_existing_global_armature_obj is not None and cast(bpy.types.Armature, bl_existing_global_armature_obj.data) or None
