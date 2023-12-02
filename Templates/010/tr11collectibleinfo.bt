@@ -1,0 +1,238 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11collectibleinfo.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse the .tr11dtp file in globalcollectibleinfo.drm
+//  Category: SOTTR
+//------------------------------------------------
+
+#include "tr11common.bt"
+
+typedef struct
+{
+    uint hash <format=hex>;
+    FSkip(4);
+    
+    InternalRef nameRef;
+    if (IsValidRef(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x1F0 - 0x10);
+} CollectibleItem1 <read=name, optimize=false>;
+
+typedef struct
+{
+    int type;
+    FSkip(0x10 - 4);
+    
+    InternalRef nameRef;
+    if (IsValidRef(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x38 - 0x18);
+    InternalRef filePath1Ref;
+    if (IsValidRef(filePath1Ref))
+    {
+        SeekToRef(filePath1Ref);
+        string filePath1;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x60 - 0x40);
+    InternalRef filePath2Ref;
+    if (IsValidRef(filePath2Ref))
+    {
+        SeekToRef(filePath2Ref);
+        string filePath2;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x98 - 0x68);
+    InternalRef itemsRef;
+    int numItems;
+    FSkip(4);
+    if (IsValidRef(itemsRef))
+    {
+        SeekToRef(itemsRef);
+        CollectibleItem1 items[numItems];
+        ReturnFromRef();
+    }
+} CollectibleSet1 <read=name, optimize=false>;
+
+typedef struct
+{
+    uint hash <format=hex>;
+    FSkip(4);
+    
+    InternalRef nameRef;
+    if (IsValidRef(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0xF0-0x10);
+} CollectibleItem2 <read=name, optimize=false>;
+
+typedef struct
+{
+    int type;
+    FSkip(0x10 - 4);
+    
+    InternalRef itemsRef;
+    int numItems;
+    FSkip(4);
+    if (IsValidRef(itemsRef))
+    {
+        SeekToRef(itemsRef);
+        CollectibleItem2 items[numItems];
+        ReturnFromRef();
+    }
+} CollectibleSet2 <optimize=false>;
+
+enum OutfitPieceSlot
+{
+    HEAD,
+    HAIR,
+    TORSO,
+    LEGS
+};
+
+typedef struct
+{
+    InternalRef childHashesRef;
+    int numChildHashes;
+    if (IsValidRef(childHashesRef) && numChildHashes > 0)
+    {
+        SeekToRef(childHashesRef);
+        uint childHashes[numChildHashes] <format=hex>;
+        ReturnFromRef();
+    }
+    
+    OutfitPieceSlot slot;
+    ushort zoneId;
+    FSkip(2);
+} OutfitInfo <optimize=false>;
+
+typedef struct
+{
+    uint hash <format=hex>;
+    FSkip(4);
+    
+    InternalRef nameRef;
+    if (IsValidRef(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0xF0 - 0x10);
+    int isPiece;
+    FSkip(0x108-0xF4);
+    
+    InternalRef modifiersRef;
+    int numModifiers;
+    FSkip(4);
+    if (IsValidRef(modifiersRef) && numModifiers > 0)
+    {
+        SeekToRef(modifiersRef);
+        ushort modifiers[numModifiers];
+        ReturnFromRef();
+    }
+    
+    uquad nameLocaleHash <format=hex>;
+    uquad descriptionLocaleHash <format=hex>;
+    FSkip(8);
+    
+    InternalRef infoRef;
+    if (IsValidRef(infoRef))
+    {
+        SeekToRef(infoRef);
+        OutfitInfo info;
+        ReturnFromRef();
+    }
+    
+    int imageDtpId;
+    FSkip(4);
+    InternalRef imageFileNameRef;
+    if (IsValidRef(imageFileNameRef))
+    {
+        SeekToRef(imageFileNameRef);
+        string imageFileName;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x1E0 - 0x148);
+} Outfit <read=name, optimize=false>;
+
+typedef struct
+{
+    int type;
+    int field_4;
+    int field_8 <format=hex>;
+    int field_C;
+    InternalRef outfitsRef;
+    int numOutfits;
+    FSkip(4);
+    
+    if (IsValidRef(outfitsRef))
+    {
+        SeekToRef(outfitsRef);
+        Outfit outfits[numOutfits];
+        ReturnFromRef();
+    }
+} OutfitSet <optimize=false>;
+
+typedef struct
+{
+    InternalRef set1sRef;
+    int numSet1s;
+    if (IsValidRef(set1sRef))
+    {
+        SeekToRef(set1sRef);
+        CollectibleSet1 set1s[numSet1s];
+        ReturnFromRef();
+    }
+    
+    FSkip(0x20 - 0xC);
+    InternalRef set2sRef;
+    int numSet2s;
+    if (IsValidRef(set2sRef))
+    {
+        SeekToRef(set2sRef);
+        CollectibleSet2 set2s[numSet2s];
+        ReturnFromRef();
+    }
+    
+    FSkip(0x58 - 0x2C);
+    InternalRef outfitSetsRef;
+    int numOutfitSets;
+    
+    if (IsValidRef(outfitSetsRef))
+    {
+        SeekToRef(outfitSetsRef);
+        OutfitSet outfitSets[numOutfitSets];
+        ReturnFromRef();
+    }
+} Root;
+
+RefDefinitions refDefinitions;
+InternalRef rootRef;
+if (IsValidRef(rootRef))
+{
+    SeekToRef(rootRef);
+    Root root;
+    ReturnFromRef();
+}

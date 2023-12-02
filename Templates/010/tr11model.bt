@@ -1,0 +1,34 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11model.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse SOTTR model files
+//  Category: SOTTR
+// File Mask: *.tr11model
+//------------------------------------------------
+
+#include "tr11common.bt"
+
+typedef struct
+{
+    ExternalRef modelDataRef;
+    InternalRef textureRefsRef;
+    InternalRef materialRefsRef;
+    
+    FSeek(startof(textureRefsRef.target) + 8);
+    while (FTell() < startof(materialRefsRef))
+    {
+        ExternalRef textureRefs;
+    }
+    
+    FSeek(startof(materialRefsRef.target) + 8);
+    while (FTell() < FileSize())
+    {
+        ExternalRef materialRefs;
+    }
+} Model;
+
+RefDefinitions refDefinitions;
+Model model;

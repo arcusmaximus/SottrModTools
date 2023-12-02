@@ -1,0 +1,133 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11skeleton.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse SOTTR skeletons
+//  Category: SOTTR
+//------------------------------------------------
+
+#include "tr11common.bt"
+
+typedef struct
+{
+    Vector position;
+    Quaternion orientation;
+    float distanceFromParent;
+    int flags <format=hex>;
+    int parentBoneId;
+    int field_2C;
+    int field_30;
+    int field_34;
+    int field_38;
+    int field_3C;
+} Bone;
+
+typedef struct
+{
+    quad numBones;
+    InternalRef bonesRef;
+    if (exists(bonesRef.target))
+    {
+        local int prevPos = FTell();
+        FSeek(startof(bonesRef.target));
+        Bone bones[numBones] <style=sData>;
+        FSeek(prevPos);
+    }
+} BoneArray;
+
+typedef struct
+{
+    ushort animBoneId;
+    ushort skeletonBoneId;
+} BoneIdMapping;
+
+typedef struct
+{
+    InternalRef boneArrayRef;
+    if (IsValidRef(boneArrayRef))
+    {
+        SeekToRef(boneArrayRef);
+        BoneArray boneArray <style=sHeading2>;
+        ReturnFromRef();
+    }
+    
+    short numWords3;
+    short padding1;
+    int padding2;
+    InternalRef ref1;
+    
+    quad numWords1;
+    InternalRef words1Ref;
+    if (IsValidRef(words1Ref))
+    {
+        SeekToRef(words1Ref);
+        ushort words1[numWords1] <style=sSection1>;
+        ReturnFromRef();
+    }
+    
+    short numMappings1;
+    FSkip(6);
+    InternalRef mappings1Ref;
+    if (IsValidRef(mappings1Ref))
+    {
+        SeekToRef(mappings1Ref);
+        BoneIdMapping mappings1[numMappings1] <style=sSection2>;
+        ReturnFromRef();
+    }
+    
+    ubyte numMappings2;
+    FSkip(7);
+    InternalRef mappings2Ref;
+    if (IsValidRef(mappings2Ref))
+    {
+        SeekToRef(mappings2Ref);
+        BoneIdMapping mappings2[numMappings2] <style=sSection2Accent>;
+        ReturnFromRef();
+    }
+    
+    quad padding3;
+    InternalRef ref2;
+    
+    ubyte numWords2;
+    FSkip(7);
+    InternalRef words2Ref;
+    if (IsValidRef(words2Ref))
+    {
+        SeekToRef(words2Ref);
+        ushort words2[numWords2] <style=sSection3>;
+        ReturnFromRef();
+    }
+    
+    InternalRef boneBytesRef;
+    if (IsValidRef(boneBytesRef))
+    {
+        SeekToRef(boneBytesRef);
+        byte boneBytes[boneArray.numBones] <style=sDataAccent>;
+        ReturnFromRef();
+    }
+    
+    InternalRef words3ARef;
+    if (IsValidRef(words3ARef))
+    {
+        SeekToRef(words3ARef);
+        ushort words3A[numWords3] <style=sSection4>;
+        ReturnFromRef();
+    }
+    
+    InternalRef words3BRef;
+    if (IsValidRef(words3BRef))
+    {
+        SeekToRef(words3BRef);
+        ushort words3B[numWords3] <style=sSection4Accent>;
+        ReturnFromRef();
+    }
+    
+    short padding4;
+    short padding5;
+    int padding6;
+} Skeleton;
+
+RefDefinitions refDefinitions;
+Skeleton skeleton;

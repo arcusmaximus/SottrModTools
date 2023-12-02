@@ -1,0 +1,197 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct
+{
+    float x, y, z, w;
+} Vector <read=Str("(%f, %f, %f, %f)", x, y, z, w)>;
+
+typedef struct
+{
+    float x, y, z, w;
+} Quaternion <read=Str("(%f, %f, %f, %f)", w, x, y, z)>;
+
+typedef struct
+{
+    Vector a, b, c, d;
+} Matrix;
+
+enum ResourceType
+{
+    RESOURCETYPE_NONE             = 0,
+    RESOURCETYPE_ANIMATION        = 2,
+    RESOURCETYPE_PSDRES           = 4,
+    RESOURCETYPE_TEXTURE          = 5,
+    RESOURCETYPE_SOUND            = 6,
+    RESOURCETYPE_DTP              = 7,
+    RESOURCETYPE_SCRIPT           = 8,
+    RESOURCETYPE_SHADERLIB        = 9,
+    RESOURCETYPE_MATERIAL         = 10,
+    RESOURCETYPE_GLOBALCONTENTREF = 11,
+    RESOURCETYPE_MODEL            = 12,
+    RESOURCETYPE_COLLISIONMESH    = 13,
+    RESOURCETYPE_OBJECTREF        = 14,
+    RESOURCETYPE_TRIGGER          = 15
+};
+
+typedef struct
+{
+    string value;
+} String <optimize=false>;
+
+local String gResourceTypeExtensions[16];
+gResourceTypeExtensions[RESOURCETYPE_ANIMATION].value         = ".tr11anim";
+gResourceTypeExtensions[RESOURCETYPE_PSDRES].value            = ".tr11psdres";
+gResourceTypeExtensions[RESOURCETYPE_TEXTURE].value           = ".dds";
+gResourceTypeExtensions[RESOURCETYPE_SOUND].value             = ".tr11sound";
+gResourceTypeExtensions[RESOURCETYPE_DTP].value               = ".tr11dtp";
+gResourceTypeExtensions[RESOURCETYPE_SCRIPT].value            = ".tr11script";
+gResourceTypeExtensions[RESOURCETYPE_SHADERLIB].value         = ".tr11shaderlib";
+gResourceTypeExtensions[RESOURCETYPE_MATERIAL].value          = ".tr11material";
+gResourceTypeExtensions[RESOURCETYPE_GLOBALCONTENTREF].value  = ".tr11contentref";
+gResourceTypeExtensions[RESOURCETYPE_MODEL].value             = ".tr11model(data)";
+gResourceTypeExtensions[RESOURCETYPE_COLLISIONMESH].value     = ".tr11cmesh";
+gResourceTypeExtensions[RESOURCETYPE_OBJECTREF].value         = ".tr11objectref";
+gResourceTypeExtensions[RESOURCETYPE_TRIGGER].value           = ".tr11trigger";
+
+local short gRefIndexByFilePos[FileSize() / 4];
+local int gResourceBodyPos;
+
+typedef struct
+{
+    int refOffset <format=hex>;
+    int targetOffset <format=hex>;
+} InternalRefDefinition;
+
+typedef struct
+{
+    int refOffset <format=hex>;
+    ResourceType resourceType;
+    int resourceId;
+    int resourceOffset <format=hex>;
+} WideExternalRefDefinition;
+
+BitfieldDisablePadding();
+
+typedef struct
+{
+    int refOffset : 25 <format=hex>;
+    ResourceType resourceType : 7;
+} PackedExternalRefDefinition;
+
+BitfieldEnablePadding();
+
+typedef struct
+{
+    local short index = gRefIndexByFilePos[FTell() / 4];
+    quad pointer <read="">;
+    if (index >= 0)
+    {
+        local int prevPos = FTell();
+        FSeek(gResourceBodyPos + refDefinitions.internalRefs[index].targetOffset);
+        byte target <read="">;
+        FSeek(prevPos);
+    }
+} InternalRef <optimize=false, style=sMarker>;
+
+typedef struct
+{
+    local short index = gRefIndexByFilePos[FTell() / 4];
+    quad pointer <read="">;
+} ExternalRef <read=ReadExternalRef, write=WriteExternalRef, style=sMarkerAccent>;
+
+string ReadExternalRef(ExternalRef& ref)
+{
+    if (ref.index < 0)
+        return "null";
+    
+    ResourceType resourceType = refDefinitions.packedExternalRefs[ref.index].resourceType;
+    int resourceId = ref.pointer & 0x7FFFFFFF;
+    return Str("%d%s", resourceId, gResourceTypeExtensions[resourceType].value);
+}
+
+void WriteExternalRef(ExternalRef& ref, string value)
+{
+    local int resourceId;
+    if (SScanf(value, "%d", resourceId) == 1)
+        ref.pointer = resourceId;
+}
+
+typedef struct
+{
+    int numInternalRefs;
+    int numWideExternalRefs;
+    int numIntPatches;
+    int numShortPatches;
+    int numPackedExternalRefs;
+    
+    InternalRefDefinition internalRefs[numInternalRefs];
+    WideExternalRefDefinition wideExternalRefs[numWideExternalRefs];
+    int intPatches[numIntPatches];
+    quad shortPatches[numShortPatches];
+    PackedExternalRefDefinition packedExternalRefs[numPackedExternalRefs];
+    
+    gResourceBodyPos = FTell();
+    
+    local int i, refPos;
+    for (i = 0; i < FileSize() / 4; i++)
+    {
+        gRefIndexByFilePos[i] = 0xFFFF;
+    }
+    
+    for (i = 0; i < refDefinitions.numInternalRefs; i++)
+    {
+        refPos = gResourceBodyPos + internalRefs[i].refOffset;
+        gRefIndexByFilePos[refPos / 4] = i;
+        #ifdef REVEAL_REFS
+            FSeek(refPos);
+            InternalRef internalRef;
+        #endif
+    }
+    
+    for (i = 0; i < refDefinitions.numPackedExternalRefs; i++)
+    {
+        refPos = gResourceBodyPos + packedExternalRefs[i].refOffset * 4;
+        gRefIndexByFilePos[refPos / 4] = i;
+        #ifdef REVEAL_REFS
+            FSeek(refPos);
+            ExternalRef externalRef;
+        #endif
+    }
+    
+    FSeek(gResourceBodyPos);
+} RefDefinitions <style=sHeading1>;
+
+local int gFilePosStack[10];
+local int gFilePosStackIdx = 0;
+
+void FAlign(int alignment)
+{
+    FSeek((FTell() + alignment - 1) & ~(alignment - 1));
+}
+
+byte IsValidRef(InternalRef& ref)
+{
+    return exists(ref.target);
+}
+
+void SeekToRef(InternalRef& ref)
+{
+    gFilePosStack[gFilePosStackIdx++] = FTell();
+    FSeek(startof(ref.target));
+}
+
+void ReturnFromRef()
+{
+    FSeek(gFilePosStack[--gFilePosStackIdx]);
+}

@@ -1,0 +1,15 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11objectrefcomponent.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse .tr11dtp files pointed to by an OBJECTREF component in an object dtp
+//  Category: SOTTR
+//------------------------------------------------
+
+#include "tr11common.bt"
+
+RefDefinitions refDefinitions;
+FSkip(0x20);
+int zoneId;
