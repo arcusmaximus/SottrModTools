@@ -3,7 +3,7 @@ bl_info = {
     "description": "Import/export files in the Shadow of the Tomb Raider format",
     "author": "arc_",
     "blender": (3, 6, 5),
-    "version": (0, 1, 5),
+    "version": (1, 0, 0),
     "location": "File > Import-Export",
     "support": "COMMUNITY",
     "category": "Import-Export"
