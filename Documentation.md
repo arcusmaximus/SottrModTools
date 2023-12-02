@@ -23,7 +23,7 @@ When modding SOTTR, you'll encounter the following file types:
   resources can be found.
 
   It's good to know that .drm files only refer to resources; they don't contain them. Quite often, the same resource
-  is referenced by multiple .drm files, which means that modding one texture may affect multiple outfits.
+  is referenced by multiple .drm files, which means that modding one texture may affect multiple outfits, for example.
     
 - **.tr11objectref**
 
