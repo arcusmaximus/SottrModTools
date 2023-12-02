@@ -18,9 +18,9 @@ A standalone tool for extracting resources from the game.
 
 ![Screenshot of the extractor](Screenshots/Extractor.png)
 
-## io_scene_sottr
+## Blender addon
 
-A Blender addon for importing meshes/skeletons/materials and exporting meshes.
+Can import meshes/skeletons/materials and export meshes.
 
 ![Screenshot of the Blender addon](Screenshots/Blender.png)
 
