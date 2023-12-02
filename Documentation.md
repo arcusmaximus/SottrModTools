@@ -71,7 +71,7 @@ here are a few other extensions such as .tr11anim and .tr11script, which are how
 The extractor and manager need no installation and can be run from anywhere. They'll try to autodetect where
 SOTTR is installed and ask you to provide the location if they can't find it.
 
-The Blender addon can be installed as follows. Note that it requires Blender **3.6.5**.
+The Blender addon can be installed as follows. Note that it requires Blender **3.6.5** or above (including 4.0).
 
 - Click Edit → Preferences</span> in the menu.
 - Select the "Add-ons" tab.
@@ -156,8 +156,8 @@ and clicking "Clear Custom Split Normals Data."
 
 ### Skeletons
 
-SOTTR skeletons contain quite a few bones that aren't used for deforming the model. The Blender addon moves these bones
-to the second layer in the armature to reduce clutter.
+SOTTR skeletons contain quite a few bones that aren't used for deforming the model. To reduce clutter, the addon hides
+these bones by either moving them to the second bone layer (Blender 3.6) or into a hidden bone collection (Blender 4.0).
 
 When working on outfits, you'll notice something else, too: each outfit is split into multiple pieces — head, hair, torso,
 and legs — where each piece has its own .drm file, its own model, and its own skeleton. But the same spine bone
