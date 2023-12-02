@@ -26,7 +26,8 @@ Can import meshes/skeletons/materials and export meshes.
 
 ## Binary templates
 
-Pattern/template files for inspecting and modifying some file types (such as materials) with [ImHex](https://imhex.werwolv.net/) or [010 Editor](https://www.sweetscape.com/).
+Template files for inspecting and modifying some file types with [ImHex](https://imhex.werwolv.net/) or [010 Editor](https://www.sweetscape.com/).
+Can be used to tweak shader parameters in materials or bone positions in skeletons, for example.
 
 ![Screenshot of a binary template](Screenshots/Template.png)
 
