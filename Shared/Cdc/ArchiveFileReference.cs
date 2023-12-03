@@ -19,9 +19,9 @@
             get;
         }
 
-        public static implicit operator ArchiveFileIdentifier(ArchiveFileReference file)
+        public static implicit operator ArchiveFileKey(ArchiveFileReference file)
         {
-            return new ArchiveFileIdentifier(file.NameHash, file.Locale);
+            return new ArchiveFileKey(file.NameHash, file.Locale);
         }
     }
 }

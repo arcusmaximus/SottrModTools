@@ -29,9 +29,7 @@
     <Compile Update="Controls\FileTreeViewBase.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Controls\ArchiveFileTreeView.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Update="Controls\ArchiveFileTreeView.cs" />
     <Content Include="icon.ico" />
     <Content Include="SOTR_PC_Release.list">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

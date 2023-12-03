@@ -68,29 +68,12 @@ namespace SottrModManager.Shared.Cdc
                     Id = id
                 };
             writer.WriteStruct(ref header);
-            /*
-            writer.Write(0x53464154);   // Magic
-            writer.Write(5);            // Version
-            writer.Write(1);            // Number of parts
-            writer.Write(0);            // Number of files
-            writer.Write(id);           // ID
-            writer.Write(0);            // Sub ID (for locale-specific archives)
-            */
-            writer.Write(Platform);     // Platform
+            writer.Write(Platform);
 
             ArchiveFileEntry fileEntry = new ArchiveFileEntry();
             for (int i = 0; i < maxFiles; i++)
             {
                 writer.WriteStruct(ref fileEntry);
-                /*
-                writer.Write(0L);           // Hash
-                writer.Write(0L);           // Locale
-                writer.Write(0);            // Uncompressed size
-                writer.Write(0);            // Compressed size
-                writer.Write((short)0);     // Archive part
-                writer.Write((short)0);     // Archive ID
-                writer.Write(0);            // Offset
-                */
             }
 
             return archive;
@@ -245,7 +228,7 @@ namespace SottrModManager.Shared.Cdc
             return new ResourceReadStream(stream, resourceRef, true);
         }
 
-        public ArchiveFileReference AddFile(ArchiveFileIdentifier identifier, ReadOnlySpan<byte> data)
+        public ArchiveFileReference AddFile(ArchiveFileKey identifier, ReadOnlySpan<byte> data)
         {
             return AddFile(identifier.NameHash, identifier.Locale, data);
         }

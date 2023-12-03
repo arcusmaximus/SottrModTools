@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.Xml;
 using System.Text.RegularExpressions;
 using System.Threading;
 using SottrModManager.Shared.Util;
@@ -14,9 +13,10 @@ namespace SottrModManager.Shared.Cdc
     {
         public const string ModArchivePrefix = "bigfile._mod.";
 
+        private readonly object _lock = new();
         private readonly Dictionary<(int, int), Archive> _archives = new();
         private readonly List<Archive> _duplicateArchives = new List<Archive>();
-        private readonly Dictionary<ArchiveFileIdentifier, ArchiveFileReference> _files = new Dictionary<ArchiveFileIdentifier, ArchiveFileReference>();
+        private readonly Dictionary<ArchiveFileKey, ArchiveFileReference> _files = new Dictionary<ArchiveFileKey, ArchiveFileReference>();
 
         public ArchiveSet(string folderPath, bool includeGame, bool includeMods)
         {
@@ -79,56 +79,68 @@ namespace SottrModManager.Shared.Cdc
 
         public Archive CreateModArchive(string modName, int maxResourceCollections)
         {
-            string simplifiedName = Regex.Replace(modName, @"[^-.\w]", "_").ToLower();
-            simplifiedName = Regex.Replace(simplifiedName, @"__+", "_").Trim('_');
+            lock (_lock)
+            {
+                string simplifiedName = Regex.Replace(modName, @"[^-.\w]", "_").ToLower();
+                simplifiedName = Regex.Replace(simplifiedName, @"__+", "_").Trim('_');
 
-            int gameId = _archives.Values.First().MetaData.GameId;
-            int version = _archives.Values.Max(a => a.MetaData.Version) + 1;
-            int id = _archives.Values.Max(a => a.Id) + 1;
+                int gameId = _archives.Values.First().MetaData.GameId;
+                int version = _archives.Values.Max(a => a.MetaData.Version) + 1;
+                int id = _archives.Values.Max(a => a.Id) + 1;
 
-            string filePath = Path.Combine(FolderPath, $"{ModArchivePrefix}{simplifiedName}.000.000.tiger");
-            Archive archive = Archive.Create(filePath, gameId, version, id, maxResourceCollections);
+                string filePath = Path.Combine(FolderPath, $"{ModArchivePrefix}{simplifiedName}.000.000.tiger");
+                Archive archive = Archive.Create(filePath, gameId, version, id, maxResourceCollections);
 
-            string steamId = _archives.Values.First().MetaData.CustomEntries.FirstOrDefault(c => c.StartsWith("steamID:"));
-            if (steamId != null)
-                archive.MetaData.CustomEntries.Add(steamId);
+                string steamId = _archives.Values.First().MetaData.CustomEntries.FirstOrDefault(c => c.StartsWith("steamID:"));
+                if (steamId != null)
+                    archive.MetaData.CustomEntries.Add(steamId);
 
-            archive.MetaData.CustomEntries.Add("mod:" + modName);
-            archive.MetaData.Save();
-            return archive;
+                archive.MetaData.CustomEntries.Add("mod:" + modName);
+                archive.MetaData.Save();
+                return archive;
+            }
         }
 
         public void Add(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
-            _archives.Add((archive.Id, archive.SubId), archive);
-            List<Archive> sortedArchives = GetSortedArchives();
-            int index = sortedArchives.IndexOf(archive);
-            if (index >= 0)
-                UpdateResourceReferences(sortedArchives, index + 1, gameResourceUsageCache, progress, cancellationToken);
+            lock (_lock)
+            {
+                _archives.Add((archive.Id, archive.SubId), archive);
+                List<Archive> sortedArchives = GetSortedArchives();
+                int index = sortedArchives.IndexOf(archive);
+                if (index >= 0)
+                    UpdateResourceReferences(sortedArchives, index + 1, gameResourceUsageCache, progress, cancellationToken);
+            }
         }
 
         public void Enable(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
-            try
+            lock (_lock)
             {
-                progress.Begin($"Enabling mod {archive.ModName}...");
+                try
+                {
+                    progress.Begin($"Enabling mod {archive.ModName}...");
 
-                archive.Enabled = true;
+                    archive.Enabled = true;
 
-                List<Archive> sortedArchives = GetSortedArchives();
-                int index = sortedArchives.IndexOf(archive);
-                if (index >= 0)
-                    UpdateResourceReferences(sortedArchives, index, gameResourceUsageCache, progress, cancellationToken);
-            }
-            finally
-            {
-                progress.End();
+                    List<Archive> sortedArchives = GetSortedArchives();
+                    int index = sortedArchives.IndexOf(archive);
+                    if (index >= 0)
+                        UpdateResourceReferences(sortedArchives, index, gameResourceUsageCache, progress, cancellationToken);
+                }
+                finally
+                {
+                    progress.End();
+                }
             }
         }
 
         public void Disable(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
-            Disable(archive, gameResourceUsageCache, progress, $"Disabling mod {archive.ModName}...", cancellationToken);
+            lock (_lock)
+            {
+                Disable(archive, gameResourceUsageCache, progress, $"Disabling mod {archive.ModName}...", cancellationToken);
+            }
         }
 
         private void Disable(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, string statusText, CancellationToken cancellationToken)
@@ -158,11 +170,14 @@ namespace SottrModManager.Shared.Cdc
 
         public void Delete(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
-            Disable(archive, gameResourceUsageCache, progress, $"Removing mod {archive.ModName}...", cancellationToken);
-            archive.Delete();
-            archive.Dispose();
-            if (!_duplicateArchives.Remove(archive))
-                _archives.Remove((archive.Id, archive.SubId));
+            lock (_lock)
+            {
+                Disable(archive, gameResourceUsageCache, progress, $"Removing mod {archive.ModName}...", cancellationToken);
+                archive.Delete();
+                archive.Dispose();
+                if (!_duplicateArchives.Remove(archive))
+                    _archives.Remove((archive.Id, archive.SubId));
+            }
         }
 
         private void UpdateResourceReferences(List<Archive> sortedArchives, int startIndex, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
@@ -236,14 +251,14 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public ArchiveFileReference GetFileReference(ArchiveFileIdentifier fileId)
+        public ArchiveFileReference GetFileReference(ArchiveFileKey fileId)
         {
             return GetFileReference(fileId.NameHash, fileId.Locale);
         }
 
         public ArchiveFileReference GetFileReference(ulong nameHash, ulong locale = 0xFFFFFFFFFFFFFFFF)
         {
-            return _files.GetOrDefault(new ArchiveFileIdentifier(nameHash, locale));
+            return _files.GetOrDefault(new ArchiveFileKey(nameHash, locale));
         }
 
         public ArchiveFileReference GetFileReference(string name, ulong locale = 0xFFFFFFFFFFFFFFFF)

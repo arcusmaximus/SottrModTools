@@ -9,13 +9,11 @@ namespace SottrModManager.Shared.Cdc
 {
     public class ResourceUsageCache
     {
-        private record struct ResourceUsage(ulong CollectionNameHash, ulong CollectionLocale, int ResourceIndex);
-
         private const string FileName = "resourceusage.bin";
         private const int Version = 3;
 
         private readonly ResourceUsageCache _baseCache;
-        private readonly Dictionary<ResourceKey, List<ResourceUsage>> _usages = new();
+        private readonly Dictionary<ResourceKey, Dictionary<ArchiveFileKey, int>> _usages = new();
 
         public ResourceUsageCache()
         {
@@ -72,30 +70,49 @@ namespace SottrModManager.Shared.Cdc
         public void AddResourceReference(ResourceCollection collection, int resourceIdx)
         {
             ResourceReference resourceRef = collection.ResourceReferences[resourceIdx];
-            List<ResourceUsage> usages = _usages.GetOrAdd(resourceRef, () => new());
+            Dictionary<ArchiveFileKey, int> usages = _usages.GetOrAdd(resourceRef, () => new());
 
-            if (collection.Locale == 0xFFFFFFFFFFFFFFFF)
-                usages.RemoveAll(u => u.CollectionNameHash == collection.NameHash);
-            else
-                usages.RemoveAll(u => u.CollectionNameHash == collection.NameHash && u.CollectionLocale == collection.Locale);
+            ArchiveFileKey collectionKey = new ArchiveFileKey(collection.NameHash, collection.Locale);
+            if (collection.Locale == 0xFFFFFFFFFFFFFFFF && !usages.ContainsKey(collectionKey))
+            {
+                foreach (ArchiveFileKey localeSpecificCollectionKey in usages.Keys.Where(c => c.NameHash == collection.NameHash).ToList())
+                {
+                    usages.Remove(localeSpecificCollectionKey);
+                }
+            }
 
-            usages.Add(new ResourceUsage(collection.NameHash, collection.Locale, resourceIdx));
+            usages[collectionKey] = resourceIdx;
         }
 
         public IEnumerable<ResourceCollectionItemReference> GetUsages(ArchiveSet archiveSet, ResourceKey resourceKey)
         {
-            IEnumerable<ResourceCollectionItemReference> baseUsages = _baseCache?.GetUsages(archiveSet, resourceKey) ?? Array.Empty<ResourceCollectionItemReference>();
-            IList<ResourceUsage> usages = (IList<ResourceUsage>)_usages.GetOrDefault(resourceKey) ?? Array.Empty<ResourceUsage>();
+            IEnumerable<ResourceCollectionItemReference> baseUsages = _baseCache?.GetUsages(archiveSet, resourceKey);
+            Dictionary<ArchiveFileKey, int> usages = _usages.GetOrDefault(resourceKey);
 
-            foreach (ResourceCollectionItemReference baseUsage in baseUsages)
+            if (baseUsages != null)
             {
-                if (!usages.Any(u => u.CollectionNameHash == baseUsage.CollectionReference.NameHash && (u.CollectionLocale == baseUsage.CollectionReference.Locale || u.CollectionLocale == 0xFFFFFFFFFFFFFFFF)))
+                foreach (ResourceCollectionItemReference baseUsage in baseUsages)
+                {
+                    if (usages != null)
+                    {
+                        if (usages.ContainsKey(new ArchiveFileKey(baseUsage.CollectionReference.NameHash, baseUsage.CollectionReference.Locale)))
+                            continue;
+
+                        if (baseUsage.CollectionReference.Locale != 0xFFFFFFFFFFFFFFFF &&
+                            usages.ContainsKey(new ArchiveFileKey(baseUsage.CollectionReference.NameHash, 0xFFFFFFFFFFFFFFFF)))
+                            continue;
+                    }
+
                     yield return baseUsage;
+                }
             }
-            
-            foreach (ResourceUsage usage in usages)
+
+            if (usages != null)
             {
-                yield return new ResourceCollectionItemReference(archiveSet.GetFileReference(usage.CollectionNameHash, usage.CollectionLocale), usage.ResourceIndex);
+                foreach ((ArchiveFileKey collectionKey, int resourceIdx) in usages)
+                {
+                    yield return new ResourceCollectionItemReference(archiveSet.GetFileReference(collectionKey.NameHash, collectionKey.Locale), resourceIdx);
+                }
             }
         }
 
@@ -131,13 +148,13 @@ namespace SottrModManager.Shared.Cdc
                 ResourceType type = (ResourceType)reader.ReadByte();
                 int id = reader.ReadInt32();
                 int numUsages = reader.ReadInt32();
-                List<ResourceUsage> usages = new List<ResourceUsage>(numUsages);
+                Dictionary<ArchiveFileKey, int> usages = new(numUsages);
                 for (int j = 0; j < numUsages; j++)
                 {
                     ulong collectionNameHash = reader.ReadUInt64();
                     ulong collectionLocale = reader.ReadByte() == 0 ? 0xFFFFFFFFFFFFFFFF : reader.ReadUInt64();
                     int resourceIdx = reader.ReadInt32();
-                    usages.Add(new ResourceUsage(collectionNameHash, collectionLocale, resourceIdx));
+                    usages.Add(new ArchiveFileKey(collectionNameHash, collectionLocale), resourceIdx);
                 }
                 _usages.Add(new ResourceKey(type, id), usages);
             }
@@ -153,24 +170,24 @@ namespace SottrModManager.Shared.Cdc
             writer.Write(GetArchiveDateHash(archiveFolderPath));
 
             writer.Write(_usages.Count);
-            foreach ((ResourceKey resource, List<ResourceUsage> usages) in _usages)
+            foreach ((ResourceKey resource, Dictionary<ArchiveFileKey, int> usages) in _usages)
             {
                 writer.Write((byte)resource.Type);
                 writer.Write(resource.Id);
                 writer.Write(usages.Count);
-                foreach (ResourceUsage usage in usages)
+                foreach ((ArchiveFileKey collectionKey, int resourceIdx) in usages)
                 {
-                    writer.Write(usage.CollectionNameHash);
-                    if (usage.CollectionLocale == 0xFFFFFFFFFFFFFFFF)
+                    writer.Write(collectionKey.NameHash);
+                    if (collectionKey.Locale == 0xFFFFFFFFFFFFFFFF)
                     {
                         writer.Write((byte)0);
                     }
                     else
                     {
                         writer.Write((byte)1);
-                        writer.Write(usage.CollectionLocale);
+                        writer.Write(collectionKey.Locale);
                     }
-                    writer.Write(usage.ResourceIndex);
+                    writer.Write(resourceIdx);
                 }
             }
         }

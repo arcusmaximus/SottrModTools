@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
@@ -56,7 +55,7 @@ namespace SottrModManager.Mod
                                                    .Where(a => a.ModName != null)
                                                    .OrderByDescending(a => a.MetaData.Version))
             {
-                archive.CloseStreams();
+                _archiveSet.CloseStreams();
                 ArchiveInfo archiveInfo = new ArchiveInfo
                 {
                     NfoFilePath = Path.Combine(_archiveSet.FolderPath, "_orig_" + Path.GetFileName(archive.NfoFilePath)),
@@ -129,16 +128,17 @@ namespace SottrModManager.Mod
 
         private InstalledMod Install(ModPackage modPackage, ModVariation modVariation, ITaskProgress progress, CancellationToken cancellationToken)
         {
-            ResourceUsageCache fullResourceUsageCache = new ResourceUsageCache(_gameResourceUsageCache);
-            using (ArchiveSet modArchiveSet = new ArchiveSet(_archiveSet.FolderPath, false, true))
-            {
-                fullResourceUsageCache.AddArchiveSet(modArchiveSet, null, CancellationToken.None);
-            }
-
             Archive archive = null;
             try
             {
                 progress.Begin($"Installing mod {modPackage.Name}...");
+
+                _archiveSet.CloseStreams();
+                ResourceUsageCache fullResourceUsageCache = new ResourceUsageCache(_gameResourceUsageCache);
+                using (ArchiveSet modArchiveSet = new ArchiveSet(_archiveSet.FolderPath, false, true))
+                {
+                    fullResourceUsageCache.AddArchiveSet(modArchiveSet, null, CancellationToken.None);
+                }
 
                 IEnumerable<ResourceKey> modResources = modPackage.Resources;
                 if (modVariation != null)

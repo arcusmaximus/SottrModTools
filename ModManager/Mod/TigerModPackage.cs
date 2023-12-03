@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using SottrModManager.Shared.Cdc;
+using SottrModManager.Shared.Util;
 
 namespace SottrModManager.Mod
 {
@@ -37,7 +38,8 @@ namespace SottrModManager.Mod
 
         public override Stream OpenResource(ResourceKey resourceKey)
         {
-            return _archive.OpenResource(_resources[resourceKey]);
+            ResourceReference resourceRef = _resources.GetOrDefault(resourceKey);
+            return resourceRef != null ? _archive.OpenResource(_resources[resourceKey]) : null;
         }
 
         public override string ToString()
