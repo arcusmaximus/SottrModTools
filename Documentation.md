@@ -321,7 +321,7 @@ can choose the one they like.
 | Commando | Lara_Loyalty_TR10_Commando | paperdoll_piece_tr11_lara_tr10_commando |
 | Condor Cowl Of Urqu | Stealth_02_Torso | paperdoll_piece_tr11_lara_stealth_02_torso |
 | Crimson Huntress | Lara_CrimsonHuntress | paperdoll_piece_tr11_lara_priest |
-| Croft Fitness | DLC_Outfit_08 | paperdoll_piece_tr11_lara_abby |
+| Croft Fitness | DLC_Outfit_13 | paperdoll_piece_tr11_lara_workout_nostraps |
 | Desert Tank | Lara_Loyalty_TR10_DesertTank | paperdoll_piece_tr11_lara_tr10_desert_tanktop |
 | Dragon Scales | Kukulkan_01 | paperdoll_piece_tr11_lara_dlc_kukulkan_alt |
 | Dragon Scales - Legend | DLC_Outfit_05 | paperdoll_piece_tr11_lara_dlc_kukulkan |
