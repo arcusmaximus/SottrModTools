@@ -357,8 +357,8 @@ can choose the one they like.
 | Serpent Guard | Lara_WarriorPriest | paperdoll_piece_tr11_lara_highpriest |
 | Shadow Runner | Lara_Loyalty_TR10_ShadowRunner | paperdoll_piece_tr11_lara_tr10_shadowrunner_torso |
 | Siberian Ranger | Lara_Loyalty_TR10_SiberianRanger | paperdoll_piece_tr11_lara_tr10_siberian_ranger |
-| Sinchi Chiqa Battle Dress - Honor Guard | DLC_Outfit_02 | paperdoll_piece_tr11_lara_dlc_rebelwarrior_alt |
 | Sinchi Chiqa Battle Dress | Rebel_01 | paperdoll_piece_tr11_lara_dlc_rebelwarrior |
+| Sinchi Chiqa Battle Dress - Honor Guard | DLC_Outfit_02 | paperdoll_piece_tr11_lara_dlc_rebelwarrior_alt |
 | Survivor | Lara_Loyalty_TR9_ShipwreckedSurvivor | paperdoll_piece_tr11_lara_tr9_yamatai |
 | Tactical Adventurer | Lara_BlueTank | paperdoll_piece_tr11_lara_tactical |
 | Tactical Adventurer (Black) | Lara_Classic | paperdoll_piece_tr11_lara_classic |
