@@ -132,14 +132,16 @@ etc. follow similar conventions. These names should be left unchanged as they're
 ### Fixing materials
 
 The addon creates a Blender material for every SOTTR material in the "Material" folder (even ones not referenced by the model).
-Each Blender material's shader tree contains all the textures used by the SOTTR material, which makes it easier to find which textures
-you need to change.
+Each Blender material's shader tree contains all the textures used by the SOTTR material, which makes it easier to find
+textures to change.
 
 The addon also assigns these materials to the mesh parts, so that you can see a textured preview of the model right after importing.
 You'll likely notice, however, that some textures are off. This is because the addon doesn't know which of each material's
 textures is the diffuse one — it takes a guess, but it can be wrong. You can fix this by going to Blender's Shading tab and
 linking the correct texture yourself.
 
+Note that the Blender shader tree only affects how the material looks in Blender. If you want to change how it looks ingame,
+you need to use the binary template instead (or use a different material).
 
 ### Normals
 
