@@ -276,8 +276,8 @@ folder or compressed archive (.zip/.7z/.rar) and you're done. There's no need to
 > saving you some time when iterating.
 
 For textures, simply use DDS files; the manager will automatically convert them back to the game-specific texture
-format during installation (again without loss of quality). However, you should make sure to use the same compression
-as the original textures, and to generate mipmaps.
+format during installation (again without loss of quality). However, you should make sure to generate mipmaps,
+and ideally use the same compression as the original textures.
 
 You can organize your files in subfolders in any way you like: by file type, by model they belong to, or not at all.
 
