@@ -273,7 +273,7 @@ folder or compressed archive (.zip/.7z/.rar) and you're done. There's no need to
 > 
 > What's more: if you install from a folder, the manager will first automatically uninstall
 > the existing mod with the same name (if present) so that you don't have to do this manually,
-> saving you some time when interating.
+> saving you some time when iterating.
 
 For textures, simply use DDS files; the manager will automatically convert them back to the game-specific texture
 format during installation (again without loss of quality). However, you should make sure to use the same compression
