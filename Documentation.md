@@ -279,7 +279,7 @@ For textures, simply use DDS files; the manager will automatically convert them 
 format during installation (again without loss of quality). However, you should make sure to generate mipmaps,
 and ideally use the same compression as the original textures.
 
-You can organize your files in subfolders in any way you like: by file type, by model they belong to, or not at all.
+You can organize your files in subfolders in any way you like: by file type, by model they belong to... or not at all.
 
 Note that a resource may be referenced by multiple .drm resource collections. Modding a texture that you extracted
 for just one outfit may well end up affecting other outfits too.
