@@ -41,7 +41,7 @@ When modding SOTTR, you'll encounter the following file types:
 - **.tr11material**
 
   References texture and shader resources, and providers parameters for the latter. Can technically be edited using the binary
-  templates, but usually it's easier/safer to simply find an existing material that suits your needs.
+  templates, but usually it's easier to simply find an existing material that suits your needs.
 
 - **.dds**
 
