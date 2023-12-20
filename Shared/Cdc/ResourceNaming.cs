@@ -7,7 +7,9 @@ namespace SottrModManager.Shared.Cdc
         private static class Extensions
         {
             public const string Animation = ".tr11anim";
+            public const string AnimationLib = ".tr11animlib";
             public const string CollisionMesh = ".tr11cmesh";
+            public const string CubeLut = ".tr11cubelut";
             public const string Dtp = ".tr11dtp";
             public const string GlobalContentReference = ".tr11contentref";
             public const string Material = ".tr11material";
@@ -17,9 +19,9 @@ namespace SottrModManager.Shared.Cdc
             public const string PsdRes = ".tr11psdres";
             public const string Script = ".tr11script";
             public const string ShaderLib = ".tr11shaderlib";
+            public const string ShResource = ".tr11shresource";
             public const string Sound = ".tr11sound";
             public const string Texture = ".dds";
-            public const string Trigger = ".tr11trigger";
         }
 
         public static (ResourceType, ResourceSubType) GetType(string filePath)
@@ -27,7 +29,9 @@ namespace SottrModManager.Shared.Cdc
             return Path.GetExtension(filePath) switch
             {
                 Extensions.Animation =>                 (ResourceType.Animation, 0),
+                Extensions.AnimationLib =>              (ResourceType.AnimationLib, 0),
                 Extensions.CollisionMesh =>             (ResourceType.CollisionMesh, 0),
+                Extensions.CubeLut =>                   (ResourceType.Model, ResourceSubType.CubeLut),
                 Extensions.Dtp =>                       (ResourceType.Dtp, 0),
                 Extensions.GlobalContentReference =>    (ResourceType.GlobalContentReference, 0),
                 Extensions.Material =>                  (ResourceType.Material, 0),
@@ -37,9 +41,9 @@ namespace SottrModManager.Shared.Cdc
                 Extensions.PsdRes =>                    (ResourceType.PsdRes, 0),
                 Extensions.Script =>                    (ResourceType.Script, 0),
                 Extensions.ShaderLib =>                 (ResourceType.ShaderLib, 0),
+                Extensions.ShResource =>                (ResourceType.Model, ResourceSubType.ShResource),
                 Extensions.Sound =>                     (ResourceType.Sound, 0),
                 Extensions.Texture =>                   (ResourceType.Texture, ResourceSubType.Texture),
-                Extensions.Trigger =>                   (ResourceType.Trigger, 0),
                 _ => (ResourceType.Unknown, 0)
             };
         }
@@ -49,14 +53,18 @@ namespace SottrModManager.Shared.Cdc
             return type switch
             {
                 ResourceType.Animation =>               Extensions.Animation,
+                ResourceType.AnimationLib =>            Extensions.AnimationLib,
                 ResourceType.CollisionMesh =>           Extensions.CollisionMesh,
                 ResourceType.Dtp =>                     Extensions.Dtp,
                 ResourceType.GlobalContentReference =>  Extensions.GlobalContentReference,
                 ResourceType.Material =>                Extensions.Material,
                 ResourceType.Model => subType switch
                 {
+                    ResourceSubType.CubeLut =>          Extensions.CubeLut,
                     ResourceSubType.Model =>            Extensions.Model,
                     ResourceSubType.ModelData =>        Extensions.ModelData,
+                    ResourceSubType.ShResource =>       Extensions.ShResource,
+                    ResourceSubType.Texture =>          Extensions.Texture,
                     _ =>                                Extensions.Model + (int)subType
                 },
                 
@@ -66,7 +74,6 @@ namespace SottrModManager.Shared.Cdc
                 ResourceType.ShaderLib =>               Extensions.ShaderLib,
                 ResourceType.Sound =>                   Extensions.Sound,
                 ResourceType.Texture =>                 Extensions.Texture,
-                ResourceType.Trigger =>                 Extensions.Trigger,
                 _ => ".type" + (int)type
             };
         }

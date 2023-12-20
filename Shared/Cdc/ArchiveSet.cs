@@ -190,7 +190,7 @@ namespace SottrModManager.Shared.Cdc
                 {
                     _files[file] = file;
                 }
-                if (archive.ModName != null)
+                if (archive.ModName != null && startIndex < sortedArchives.Count)
                     resourceUsageCache.AddArchive(archive);
             }
 
@@ -293,7 +293,7 @@ namespace SottrModManager.Shared.Cdc
             return _archives[(resourceRef.ArchiveId, resourceRef.ArchiveSubId)].OpenResource(resourceRef);
         }
 
-        private List<Archive> GetSortedArchives()
+        public List<Archive> GetSortedArchives()
         {
             List<Archive> sortedArchives = _archives.Values.Where(a => a.Enabled).ToList();
             sortedArchives.Sort(CompareArchivePriority);

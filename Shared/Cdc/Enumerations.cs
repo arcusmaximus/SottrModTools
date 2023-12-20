@@ -15,14 +15,16 @@
         Model = 12,
         CollisionMesh = 13,
         ObjectReference = 14,
-        Trigger = 15
+        AnimationLib = 15
     }
 
     public enum ResourceSubType
     {
         Texture = 5,
         Model = 26,
-        ModelData = 27
+        ModelData = 27,
+        ShResource = 116,
+        CubeLut = 117
     }
 
     public enum Locale

@@ -140,12 +140,12 @@ namespace SottrModManager.Mod
                     fullResourceUsageCache.AddArchiveSet(modArchiveSet, null, CancellationToken.None);
                 }
 
-                IEnumerable<ResourceKey> modResources = modPackage.Resources;
+                List<ResourceKey> modResourceKeys = modPackage.Resources.ToList();
                 if (modVariation != null)
-                    modResources = modResources.Concat(modVariation.Resources);
+                    modResourceKeys.AddRange(modVariation.Resources);
 
                 Dictionary<ResourceKey, List<ResourceCollectionItemReference>> modResourceUsages =
-                    modResources.ToDictionary(r => r, r => fullResourceUsageCache.GetUsages(_archiveSet, r).ToList());
+                    modResourceKeys.ToDictionary(r => r, r => fullResourceUsageCache.GetUsages(_archiveSet, r).ToList());
 
                 Dictionary<ulong, ResourceCollection> modResourceCollections = modResourceUsages.Values
                                                                                                 .SelectMany(c => c)
@@ -161,9 +161,9 @@ namespace SottrModManager.Mod
                               .ToList()
                 );
 
-                Dictionary<ulong, HashSet<ResourceKey>> resourceRefsToAdd = GetResourceRefsToAdd(modPackage, modVariation, modResourceCollections, modResources);
+                Dictionary<ulong, HashSet<ResourceKey>> resourceRefsToAdd = GetResourceRefsToAdd(modPackage, modVariation, modResourceKeys, fullResourceUsageCache);
                 AddResourceReferencesToCollections(modResourceCollections, modResourceCollectionItems, resourceRefsToAdd);
-                
+
                 archive = _archiveSet.CreateModArchive(modPackage.Name, 1 + modResourceCollections.Count);
                 AddResourcesToArchive(archive, modPackage, modVariation, modResourceCollectionItems, progress, cancellationToken);
                 AddResourceCollectionsToArchive(archive, modResourceCollections.Values);
@@ -191,59 +191,72 @@ namespace SottrModManager.Mod
         private Dictionary<ulong, HashSet<ResourceKey>> GetResourceRefsToAdd(
             ModPackage modPackage,
             ModVariation modVariation,
-            Dictionary<ulong, ResourceCollection> modResourceCollections,
-            IEnumerable<ResourceKey> modResources)
+            List<ResourceKey> modResourceKeys,
+            ResourceUsageCache fullResourceUsageCache)
         {
-            Dictionary<ulong, HashSet<ResourceKey>> resourcesToAdd = new();
-
-            foreach (ResourceKey modelResource in modResources.Where(r => r.Type == ResourceType.Model && r.SubType == ResourceSubType.Model))
+            Dictionary<ulong, HashSet<ResourceKey>> resourceRefsToAdd = new();
+            foreach (ResourceKey modResourceKey in modResourceKeys)
             {
-                List<ResourceKey> materialResources;
-                using (Stream modResourceStream = modVariation?.OpenResource(modelResource) ?? modPackage.OpenResource(modelResource))
-                {
-                    materialResources = new ResourceRefDefinitions(modResourceStream).ExternalRefs
-                                                                                     .Select(r => r.ResourceKey)
-                                                                                     .Where(r => r.Type == ResourceType.Material)
-                                                                                     .ToList();
-                }
-
-                foreach (ResourceCollectionItemReference modelUsage in _gameResourceUsageCache.GetUsages(_archiveSet, modelResource))
-                {
-                    ResourceCollection collection = modResourceCollections[modelUsage.CollectionReference.NameHash];
-                    foreach (ResourceKey materialResource in materialResources)
-                    {
-                        if (collection.ResourceReferences.Any(r => ((ResourceKey)r).Equals(materialResource)))
-                            continue;
-
-                        resourcesToAdd.GetOrAdd(collection.NameHash, () => new HashSet<ResourceKey>())
-                                      .UnionWith(GetResourceKeysRecursive(materialResource));
-                    }
-                }
-            }
-
-            return resourcesToAdd;
-        }
-
-        private IEnumerable<ResourceKey> GetResourceKeysRecursive(ResourceKey rootResourceKey)
-        {
-            Queue<ResourceKey> resourceKeyQueue = new();
-            resourceKeyQueue.Enqueue(rootResourceKey);
-
-            while (resourceKeyQueue.Count > 0)
-            {
-                ResourceKey resourceKey = resourceKeyQueue.Dequeue();
-                yield return resourceKey;
-
-                ResourceReference resourceRef = _gameResourceUsageCache.GetResourceReference(_archiveSet, resourceKey);
-                if (resourceRef == null || resourceRef.RefDefinitionsSize == 0)
+                HashSet<ResourceKey> externalResourceKeys = new();
+                CollectExternalResourceKeys(modPackage, modVariation, modResourceKeys, modResourceKey, externalResourceKeys, fullResourceUsageCache);
+                if (externalResourceKeys.Count == 0)
                     continue;
 
-                using Stream resourceStream = _archiveSet.OpenResource(resourceRef);
-                ResourceRefDefinitions refDefinitions = new ResourceRefDefinitions(resourceStream);
-                foreach (ResourceRefDefinitions.ExternalRef externalRef in refDefinitions.ExternalRefs)
+                foreach (ResourceCollectionItemReference modResourceUsage in fullResourceUsageCache.GetUsages(_archiveSet, modResourceKey))
                 {
-                    resourceKeyQueue.Enqueue(externalRef.ResourceKey);
+                    resourceRefsToAdd.GetOrAdd(modResourceUsage.CollectionReference.NameHash, () => new()).UnionWith(externalResourceKeys);
                 }
+            }
+            return resourceRefsToAdd;
+        }
+
+        private void CollectExternalResourceKeys(
+            ModPackage modPackage,
+            ModVariation modVariation,
+            List<ResourceKey> modResourceKeys,
+            ResourceKey resourceKey,
+            HashSet<ResourceKey> allExternalResourceKeys,
+            ResourceUsageCache fullResourceUsageCache)
+        {
+            if (!MightHaveRefDefinitions(resourceKey))
+                return;
+
+            ResourceReference resourceRef = fullResourceUsageCache.GetResourceReference(_archiveSet, resourceKey);
+            if (resourceRef == null || resourceRef.RefDefinitionsSize == 0)
+                return;
+
+            List<ResourceKey> externalResourceKeys;
+            Stream resourceStream = null;
+            try
+            {
+                if (modResourceKeys.Contains(resourceKey))
+                    resourceStream = modVariation?.OpenResource(resourceKey) ?? modPackage.OpenResource(resourceKey);
+                else
+                    resourceStream = _archiveSet.OpenResource(resourceRef);
+
+                if (!resourceStream.CanSeek)
+                {
+                    MemoryStream memResourceStream = new MemoryStream();
+                    resourceStream.CopyTo(memResourceStream);
+                    memResourceStream.Position = 0;
+                    resourceStream.Close();
+                    resourceStream = memResourceStream;
+                }
+
+                externalResourceKeys = new ResourceRefDefinitions(resourceStream).ExternalRefs.Select(r => r.ResourceKey).ToList();
+            }
+            finally
+            {
+                resourceStream.Close();
+            }
+
+            foreach (ResourceKey externalResourceKey in externalResourceKeys)
+            {
+                if (resourceKey.SubType == ResourceSubType.Model && externalResourceKey.Type == ResourceType.Model)
+                    continue;
+
+                if (allExternalResourceKeys.Add(externalResourceKey))
+                    CollectExternalResourceKeys(modPackage, modVariation, modResourceKeys, externalResourceKey, allExternalResourceKeys, fullResourceUsageCache);
             }
         }
 
@@ -299,9 +312,15 @@ namespace SottrModManager.Mod
                         int? refDefinitionsSize = null;
 
                         if (modResourceKey.Type == ResourceType.Texture && !(modPackage is TigerModPackage))
+                        {
                             ConvertTexture(ref modResourceStream, collectionItems);
-                        else if (modResourceKey.Type == ResourceType.Model && modResourceKey.SubType == ResourceSubType.Model)
-                            refDefinitionsSize = GetResourceRefDefinitionsSize(modPackage, modResourceKey);
+                        }
+                        else if (MightHaveRefDefinitions(modResourceKey))
+                        {
+                            ResourceReference existingResourceRef = _gameResourceUsageCache.GetResourceReference(_archiveSet, modResourceKey);
+                            if (existingResourceRef.RefDefinitionsSize > 0)
+                                refDefinitionsSize = GetResourceRefDefinitionsSize(modPackage, modResourceKey);
+                        }
 
                         ArchiveBlobReference newResource = archive.AddResource(modResourceStream);
                         foreach (ResourceCollectionItem collectionItem in collectionItems)
@@ -380,6 +399,14 @@ namespace SottrModManager.Mod
                 collectionStream.TryGetBuffer(out ArraySegment<byte> collectionData);
                 archive.AddFile(resourceCollection.NameHash, 0xFFFFFFFFFFFFFFFF, collectionData);
             }
+        }
+
+        private static bool MightHaveRefDefinitions(ResourceKey resourceKey)
+        {
+            if (resourceKey.Type == ResourceType.Texture || resourceKey.Type == ResourceType.ShaderLib || resourceKey.SubType == ResourceSubType.ModelData)
+                return false;
+
+            return true;
         }
     }
 }

@@ -37,6 +37,14 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
+        public void AddArchives(IEnumerable<Archive> archives)
+        {
+            foreach (Archive archive in archives)
+            {
+                AddArchive(archive);
+            }
+        }
+
         public void AddArchive(Archive archive)
         {
             AddFiles(archive.Files, archive.GetResourceCollection, null, CancellationToken.None);
