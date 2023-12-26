@@ -73,7 +73,7 @@ SOTTR is installed and ask you to provide the location if they can't find it.
 
 The Blender addon can be installed as follows. Note that it requires Blender **3.6.5** or above (including 4.0).
 
-- Click Edit → Preferences</span> in the menu.
+- Click Edit → Preferences in the menu.
 - Select the "Add-ons" tab.
 - Click "Install..."
 - Select io_scene_sottr.zip.
@@ -113,7 +113,7 @@ The import filechooser has the following options on the right hand side:
   you may want to see them: if an original outfit doesn't have a full-detail mesh for one of its parts, or if you're looking
   to replace Lara's head (explained further below).
         
-  Note, however, that the addon doesn't support <em>exporting</em> LODs. All meshes will be exported as full-detail
+  Note, however, that the addon doesn't support *exporting* LODs. All meshes will be exported as full-detail
   meshes, regardless of whether they were LOD meshes when you imported them. This means you should delete any LOD meshes
   before exporting.
 
@@ -180,8 +180,8 @@ The way it works is as follows:
 
 - When you import a second model with the "Merge with existing armature(s)" option enabled,
   the addon will create a new armature containing the bones of both the first and second skeleton
-  (duplicates removed), and all the bones renamed to use <em>just</em> the global ID. It also parents the
-  meshes of both the first and second model to this new armature and renames their vertex groups to match.</p>
+  (duplicates removed), and all the bones renamed to use *just* the global ID. It also parents the
+  meshes of both the first and second model to this new armature and renames their vertex groups to match.
 
   The original armatures are moved to a hidden collection named "Split meshes for export" and should
   not be deleted.
