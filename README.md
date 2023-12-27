@@ -18,7 +18,7 @@ A standalone tool for extracting resources from the game.
 
 ## Blender addon
 
-Can import meshes/skeletons/materials and export meshes.
+Can import meshes/materials/skeletons/animations and export meshes/animations.
 
 ![Screenshot of the Blender addon](Screenshots/Blender.png)
 
@@ -32,4 +32,6 @@ Can be used to tweak shader parameters in materials or bone positions in skeleto
 # Credits
 alphaZomega for their [file format descriptions](https://www.nexusmods.com/riseofthetombraider/mods/20) and Ekey for their open source [CDCE TIGER Tool](https://github.com/Ekey/CDCE.TIGER.Tool). A large part of the knowledge used to create these tools comes from there.
 
-JOSTAR for the mod manager icon.
+Jostar, Raq, and swiz19 for beta testing.
+
+Jostar for the mod manager icon.
