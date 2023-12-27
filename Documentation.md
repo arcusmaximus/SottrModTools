@@ -244,7 +244,7 @@ mesh editing — instead, you need to use the binary templates. This is done as 
   - 010 Editor: Templates → Open Template... followed by Templates → Run Template
 - Find the `objectRef` entry and note its number.
 - Open the .tr11dtp file corresponding to this number and apply the "tr11object" template.
-- Find the `externalComponentsByType` entry, and within it, the `DYNAMICHAIR` entry.
+- Find the `simpleComponents` entry, and within it, the `DYNAMICHAIR` entry.
 - Change the `type` field of the hair entry to `_NONE`.
 - Save the file and include it in your mod.
 
