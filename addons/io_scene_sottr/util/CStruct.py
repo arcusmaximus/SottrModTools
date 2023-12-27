@@ -139,6 +139,7 @@ class CArrayTypeMapping(typing.Generic[TMappedItemType, TCItemType, TArrayLength
 
 class CStructField(typing.NamedTuple):
     offset: int
+    type: type
     type_mapping: ICStructTypeMapping | None
 
 class CStructMeta(type(ctypes.Structure)):
@@ -157,11 +158,13 @@ class CStructMeta(type(ctypes.Structure)):
                     continue
 
                 field_type_mapping = _type_mappings.get(field_type)
-                field_infos[field_name] = CStructField(field_offset, field_type_mapping)
+                field_infos[field_name] = CStructField(field_offset, field_type, field_type_mapping)
 
                 if field_type_mapping is not None:
                     field_name = CStructMeta.get_c_field_name(field_name)
                     field_type = field_type_mapping.c_type
+                elif issubclass(field_type, CStructBase):
+                    field_name = CStructMeta.get_c_field_name(field_name)
                 
                 field_types.append((field_name, field_type))
                 field_offset += ctypes.sizeof(field_type)
@@ -207,19 +210,27 @@ class CStructBase(ctypes.Structure, metaclass=CStructMeta):
         for mapping in mappings:
             _type_mappings[mapping.mapped_type] = mapping
     
-    def map_fields_from_c(self, context: object = None) -> None:
+    def map_fields_from_c(self, context: object = None, offset_in_parent: int = 0) -> None:
         for field_name, field_info in self._field_infos_.items():
             if field_info.type_mapping is not None:
                 c_value = getattr(self, CStructMeta.get_c_field_name(field_name))
-                mapped_value = field_info.type_mapping.map_from_c(c_value, field_info.offset, context)
+                mapped_value = field_info.type_mapping.map_from_c(c_value, offset_in_parent + field_info.offset, context)
                 setattr(self, field_name, mapped_value)
+            elif issubclass(field_info.type, CStructBase):
+                struct_value = typing.cast(CStructBase, getattr(self, CStructMeta.get_c_field_name(field_name)))
+                struct_value.map_fields_from_c(context, offset_in_parent + field_info.offset)
+                setattr(self, field_name, struct_value)
     
-    def map_fields_to_c(self, context: object = None) -> None:
+    def map_fields_to_c(self, context: object = None, offset_in_parent: int = 0) -> None:
         for field_name, field_info in self._field_infos_.items():
             if field_info.type_mapping is not None:
                 mapped_value = getattr(self, field_name)
-                c_value = field_info.type_mapping.map_to_c(mapped_value, field_info.offset, context)
+                c_value = field_info.type_mapping.map_to_c(mapped_value, offset_in_parent + field_info.offset, context)
                 setattr(self, CStructMeta.get_c_field_name(field_name), c_value)
+            elif issubclass(field_info.type, CStructBase):
+                struct_value = typing.cast(CStructBase, getattr(self, field_name))
+                struct_value.map_fields_to_c(context, offset_in_parent + field_info.offset)
+                setattr(self, CStructMeta.get_c_field_name(field_name), struct_value)
 
 if typing.TYPE_CHECKING:
     class CStruct(CStructBase, typing.Protocol):        # type: ignore

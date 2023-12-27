@@ -2,7 +2,6 @@ from io_scene_sottr.tr.Enumerations import ResourceType
 from io_scene_sottr.tr.ResourceKey import ResourceKey
 from io_scene_sottr.tr.ResourceReference import ResourceReference
 from io_scene_sottr.util.BinaryReader import BinaryReader
-from io_scene_sottr.util.CStruct import CFloat, CStruct
 
 class ResourceReader(BinaryReader):
     resource: ResourceKey
@@ -72,9 +71,3 @@ class ResourceReader(BinaryReader):
             raise Exception("Attempt to seek to an external resource")
 
         self.position = self.resource_body_pos + ref.offset
-
-class CVec4(CStruct):
-    x: CFloat
-    y: CFloat
-    z: CFloat
-    w: CFloat

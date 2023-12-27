@@ -16,8 +16,14 @@ class ResourceBuilder(BinaryWriter):
     def add_ref(self, offset: int, ref: ResourceReference) -> None:
         self.references[offset] = ref
 
-    def write_local_ref(self, offset: int = -1) -> ResourceReference:
-        ref = ResourceReference(self.resource.type, self.resource.id, offset)
+    def make_internal_ref(self, offset: int = -1) -> ResourceReference:
+        if offset < 0:
+            offset = self.position
+        
+        return ResourceReference(self.resource.type, self.resource.id, offset)
+    
+    def write_internal_ref(self, offset: int = -1) -> ResourceReference:
+        ref = self.make_internal_ref(offset)
         self.write_ref(ref)
         return ref
     

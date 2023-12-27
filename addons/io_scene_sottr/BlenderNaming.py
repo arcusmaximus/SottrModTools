@@ -14,7 +14,12 @@ class BlenderMeshIdSet(NamedTuple):
     model_data_id: int
     mesh_idx: int
 
-class BlenderLocalBoneIdSet(NamedTuple):
+class BlenderBoneIdSet(NamedTuple):
+    skeleton_id: int | None
+    global_id: int | None
+    local_id: int | None
+
+class BlenderBlendShapeIdSet(NamedTuple):
     global_id: int | None
     local_id: int
 
@@ -137,43 +142,70 @@ class BlenderNaming:
         return local_skeleton_id
     
     @staticmethod
-    def make_global_bone_name(global_id: int) -> str:
-        return f"bone_{global_id}"
-
-    @staticmethod
-    def parse_global_bone_name(name: str) -> int:
-        match = re.fullmatch(r"bone_(\d+)", name)
-        if match is None:
-            raise Exception(f"{name} is not a valid global bone name.")
-
-        return int(match.group(1))
+    def make_bone_name(skeleton_id: int | None, global_id: int | None, local_id: int | None) -> str:
+        if skeleton_id is not None:
+            if local_id is None:
+                raise Exception("Must provide local bone ID when providing skeleton ID")
+            
+            return f"bone_{skeleton_id}_{coalesce(global_id, 'x')}_{local_id}"
+        elif local_id is not None:
+            return f"bone_{coalesce(global_id, 'x')}_{local_id}"
+        elif global_id is not None:
+            return f"bone_{global_id}"
+        else:
+            raise Exception("Must provide at least one ID for bone name")
     
     @staticmethod
-    def make_local_bone_name(global_id: int | None, local_id: int) -> str:
-        return f"bone_{coalesce(global_id, 'x')}_{local_id}"
-    
-    @staticmethod
-    def parse_local_bone_name(name: str) -> BlenderLocalBoneIdSet:
-        match = re.fullmatch(r"bone_(x|\d+)_(\d+)", name)
+    def parse_bone_name(name: str) -> BlenderBoneIdSet:
+        match = re.fullmatch(r"bone_(x|\d+)(?:_(x|\d+))?(?:_(\d+))?", name)
         if match is None:
-            raise Exception(f"{name} is not a valid local bone name.")
+            raise Exception(f"{name} is not a valid bone name.")
         
-        return BlenderLocalBoneIdSet(
-            int(match.group(1)) if match.group(1) != "x" else None,
-            int(match.group(2))
-        )
+        if match.group(3) is not None:
+            return BlenderBoneIdSet(
+                int(match.group(1)),
+                int(match.group(2)) if match.group(2) != "x" else None,
+                int(match.group(3))
+            )
+        elif match.group(2) is not None:
+            return BlenderBoneIdSet(
+                None,
+                int(match.group(1)) if match.group(1) != "x" else None,
+                int(match.group(2))
+            )
+        else:
+            return BlenderBoneIdSet(
+                None,
+                int(match.group(1)),
+                None
+            )
     
     @staticmethod
-    def make_shape_key_name(idx: int) -> str:
-        return f"shapekey_{idx}"
+    def get_bone_local_id(name: str) -> int:
+        bone_id_set = BlenderNaming.parse_bone_name(name)
+        if bone_id_set.local_id is None:
+            raise Exception(f"{name} is not a local bone.")
+        
+        return bone_id_set.local_id
     
     @staticmethod
-    def parse_shape_key_name(name: str) -> int:
+    def make_shape_key_name(global_id: int | None, local_id: int) -> str:
+        return f"shapekey_{coalesce(global_id, 'x')}_{local_id}"
+    
+    @staticmethod
+    def parse_shape_key_name(name: str) -> BlenderBlendShapeIdSet:
+        match = re.fullmatch(r"shapekey_(x|\d+)_(\d+)", name)
+        if match is not None:
+            return BlenderBlendShapeIdSet(
+                int(match.group(1)) if match.group(1) != "x" else None,
+                int(match.group(2))
+            )
+        
         match = re.fullmatch(r"shapekey_(\d+)", name)
-        if match is None:
-            raise Exception(f"{name} is not a valid shape key name.")
-        
-        return int(match.group(1))
+        if match is not None:
+            return BlenderBlendShapeIdSet(None, int(match.group(1)))
+
+        raise Exception(f"{name} is not a valid shape key name.")
 
     @staticmethod
     def make_material_name(id: int) -> str:
@@ -188,9 +220,25 @@ class BlenderNaming:
         return int(match.group(1))
 
     @staticmethod
+    def make_action_name(id: int, model_data_id: int | None, mesh_idx: int | None) -> str:
+        name = f"animation_{id}"
+        if model_data_id is not None and mesh_idx is not None:
+            name += f"_{model_data_id}_{mesh_idx}"
+        
+        return name
+    
+    @staticmethod
+    def try_parse_action_name(name: str) -> int | None:
+        match = re.fullmatch(r"animation_(\d+)(?:_\d+)?(?:\.\d+)?", name)
+        if match is None:
+            return None
+        
+        return int(match.group(1))
+
+    @staticmethod
     def make_collection_item_name(collection_name: str, suffix: str) -> str:
         result = f"{collection_name}_{suffix}"
-        if len(result) > 63:
-            result = result[-63:]
+        if len(result) > 59:
+            result = result[-59:]
         
         return result

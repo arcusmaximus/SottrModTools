@@ -1,8 +1,19 @@
 from mathutils import Quaternion, Vector
 from io_scene_sottr.tr.ResourceBuilder import ResourceBuilder
-from io_scene_sottr.tr.ResourceReader import CVec4, ResourceReader
+from io_scene_sottr.tr.ResourceReader import ResourceReader
 from io_scene_sottr.tr.ResourceReference import ResourceReference
-from io_scene_sottr.util.CStruct import CLong, CStruct, CStructTypeMapping
+from io_scene_sottr.util.CStruct import CFloat, CLong, CStruct, CStructTypeMapping
+
+class CVec3(CStruct):
+    x: CFloat
+    y: CFloat
+    z: CFloat
+
+class CVec4(CStruct):
+    x: CFloat
+    y: CFloat
+    z: CFloat
+    w: CFloat
 
 class _VectorTypeMapping(CStructTypeMapping[Vector, CVec4]):
     def map_from_c(self, c_value: CVec4, offset: int, context: object) -> Vector:

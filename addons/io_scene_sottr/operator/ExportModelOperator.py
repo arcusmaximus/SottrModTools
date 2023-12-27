@@ -8,6 +8,7 @@ from io_scene_sottr.BlenderNaming import BlenderNaming
 from io_scene_sottr.ModelExporter import ModelExporter
 from io_scene_sottr.ModelSplitter import ModelSplitter
 from io_scene_sottr.operator.OperatorCommon import OperatorCommon
+from io_scene_sottr.operator.OperatorContext import OperatorContext
 from io_scene_sottr.util.DictionaryExtensions import DictionaryExtensions
 from io_scene_sottr.util.Enumerable import Enumerable
 
@@ -25,43 +26,47 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
     bl_label = "Export"
 
     def invoke(self, context: Context, event: Event) -> set[str]:       # type: ignore
-        bl_mesh_objs_to_export = self.get_mesh_objects_to_export(False)
-        if len(bl_mesh_objs_to_export) == 0:
-            self.report({ "ERROR" }, "No SOTTR meshes found in scene.")
-            return { "CANCELLED" }
+        with OperatorContext.begin(self):
+            bl_mesh_objs_to_export = self.get_mesh_objects_to_export(False)
+            if len(bl_mesh_objs_to_export) == 0:
+                OperatorContext.log_error("No SOTTR meshes found in scene.")
+                return { "CANCELLED" }
 
-        folder_path: str
-        if getattr(self.properties, "filepath"):
-            folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
-        elif context.blend_data.filepath:
-            folder_path = os.path.split(context.blend_data.filepath)[0]
-        else:
-            folder_path = ""
+            folder_path: str
+            if getattr(self.properties, "filepath"):
+                folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
+            elif context.blend_data.filepath:
+                folder_path = os.path.split(context.blend_data.filepath)[0]
+            else:
+                folder_path = ""
 
-        model_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs_to_export).first()).model_id
-        setattr(self.properties, "filepath", os.path.join(folder_path, str(model_id) + self.filename_ext))
-        context.window_manager.fileselect_add(self)
-        return { "RUNNING_MODAL" }
+            model_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs_to_export).first()).model_id
+            setattr(self.properties, "filepath", os.path.join(folder_path, str(model_id) + self.filename_ext))
+            context.window_manager.fileselect_add(self)
+            return { "RUNNING_MODAL" }
 
     def execute(self, context: Context) -> set[str]:
-        bl_local_collection = cast(bpy.types.LayerCollection | None, bpy.context.view_layer.layer_collection.children.get(BlenderNaming.local_collection_name))
-        was_local_collection_excluded = False
-        if bl_local_collection is not None:
-            was_local_collection_excluded = bl_local_collection.exclude
-            bl_local_collection.exclude = False
-        
-        bl_mesh_objs = self.get_mesh_objects_to_export(True)
-        
-        exporter = ModelExporter(OperatorCommon.scale_factor)
-        folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
-        for model_id_set, bl_mesh_objs_of_model in Enumerable(bl_mesh_objs).group_by(lambda o: BlenderNaming.parse_model_name(o)).items():
-            exporter.export_model(folder_path, model_id_set.model_id, model_id_set.model_data_id, bl_mesh_objs_of_model)
-        
-        if bl_local_collection is not None:
-            bl_local_collection.exclude = was_local_collection_excluded
-        
-        self.report({ "INFO" }, "Model successfully exported.")
-        return { "FINISHED" }
+        with OperatorContext.begin(self):
+            bl_local_collection = cast(bpy.types.LayerCollection | None, bpy.context.view_layer.layer_collection.children.get(BlenderNaming.local_collection_name))
+            was_local_collection_excluded = False
+            if bl_local_collection is not None:
+                was_local_collection_excluded = bl_local_collection.exclude
+                bl_local_collection.exclude = False
+            
+            bl_mesh_objs = self.get_mesh_objects_to_export(True)
+            
+            exporter = ModelExporter(OperatorCommon.scale_factor)
+            folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
+            for model_id_set, bl_mesh_objs_of_model in Enumerable(bl_mesh_objs).group_by(lambda o: BlenderNaming.parse_model_name(o)).items():
+                exporter.export_model(folder_path, model_id_set.model_id, model_id_set.model_data_id, bl_mesh_objs_of_model)
+            
+            if bl_local_collection is not None:
+                bl_local_collection.exclude = was_local_collection_excluded
+            
+            if not OperatorContext.warnings_logged and not OperatorContext.errors_logged:
+                OperatorContext.log_info("Model successfully exported.")
+            
+            return { "FINISHED" }
 
     def get_mesh_objects_to_export(self, split_global_meshes: bool) -> set[bpy.types.Object]:
         bl_mesh_objs_by_model_id: dict[int, list[bpy.types.Object]] = {}

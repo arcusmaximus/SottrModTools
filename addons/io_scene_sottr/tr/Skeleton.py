@@ -1,4 +1,5 @@
 from ctypes import sizeof
+from typing import NamedTuple
 from io_scene_sottr.tr.ResourceReader import ResourceReader
 from io_scene_sottr.tr.Bone import Bone
 from io_scene_sottr.tr.ResourceReference import ResourceReference
@@ -19,11 +20,11 @@ class _SkeletonHeader(CStruct):
     field_2C: CInt
     bone_id_mappings_ref: ResourceReference | None
 
-    num_mappings_2: CByte
+    num_blend_shape_id_mappings: CByte
     field_39: CByte
     field_3A: CShort
     field_3C: CInt
-    mappings_2_ref: ResourceReference | None
+    blend_shape_id_mappings_ref: ResourceReference | None
 
     field_48: CLong
     field_50: ResourceReference | None
@@ -45,12 +46,18 @@ class _SkeletonHeader(CStruct):
 assert(sizeof(_SkeletonHeader) == 0x88)
 
 class Skeleton(SlotsBase):
+    class IdMapping(NamedTuple):
+        global_id: int
+        local_id: int
+
     id: int
     bones: list[Bone]
+    blend_shape_id_mappings: list[IdMapping]
 
     def __init__(self, id: int) -> None:
         self.id = id
         self.bones = []
+        self.blend_shape_id_mappings = []
 
     def read(self, reader: ResourceReader) -> None:
         header = reader.read_struct(_SkeletonHeader)
@@ -75,3 +82,10 @@ class Skeleton(SlotsBase):
                 global_bone_id = reader.read_uint16()
                 local_bone_id = reader.read_uint16()
                 self.bones[local_bone_id].global_id = global_bone_id
+
+        if header.blend_shape_id_mappings_ref is not None:
+            reader.seek(header.blend_shape_id_mappings_ref)
+            for _ in range(header.num_blend_shape_id_mappings):
+                global_blend_shape_id = reader.read_uint16()
+                local_blend_shape_id = reader.read_uint16()
+                self.blend_shape_id_mappings.append(Skeleton.IdMapping(global_blend_shape_id, local_blend_shape_id))

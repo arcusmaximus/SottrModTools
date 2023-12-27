@@ -10,6 +10,7 @@ using SottrModManager.Shared;
 using SottrModManager.Shared.Cdc;
 using SottrModManager.Shared.Util;
 using SottrModManager.Mod;
+using System.Collections.Generic;
 
 namespace SottrModManager
 {

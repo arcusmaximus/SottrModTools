@@ -7,17 +7,21 @@ from io_scene_sottr.util.SlotsBase import SlotsBase
 
 class BlenderHelper:
     @staticmethod
+    def select_object(bl_obj: bpy.types.Object) -> None:
+        bpy.ops.object.select_all(action = "DESELECT")          # type: ignore
+        bl_obj.select_set(True)
+        bpy.context.view_layer.objects.active = bl_obj
+
+    @staticmethod
     def enter_edit_mode(bl_obj: bpy.types.Object | None = None) -> "BlenderEditContext":
         if bl_obj is not None:
-            bpy.ops.object.select_all(action = "DESELECT")          # type: ignore
-            bl_obj.select_set(True)
-            bpy.context.view_layer.objects.active = bl_obj
+            BlenderHelper.select_object(bl_obj)
         
         return BlenderEditContext()
 
     @staticmethod
-    def prepare_for_export(bl_obj: bpy.types.Object) -> "BlenderExportContext":
-        return BlenderExportContext(bl_obj)
+    def prepare_for_model_export(bl_obj: bpy.types.Object) -> "BlenderModelExportContext":
+        return BlenderModelExportContext(bl_obj)
 
     @staticmethod
     def create_object(bl_data: bpy.types.ID | None, name: str | None = None) -> bpy.types.Object:
@@ -88,6 +92,10 @@ class BlenderHelper:
             else:
                 getattr(bl_bone, "layers")[1] = True
                 getattr(bl_bone, "layers")[0] = False
+    
+    @staticmethod
+    def temporarily_show_all_bones(bl_armature_obj: bpy.types.Object) -> "BlenderShowAllBonesContext":
+        return BlenderShowAllBonesContext(bl_armature_obj)
 
 class BlenderEditContext(SlotsBase):
     def __init__(self) -> None:
@@ -99,7 +107,7 @@ class BlenderEditContext(SlotsBase):
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         bpy.ops.object.mode_set(mode = "OBJECT")            # type: ignore
 
-class BlenderExportContext(SlotsBase):
+class BlenderModelExportContext(SlotsBase):
     bl_obj: bpy.types.Object
     modifiers_enabled: list[bool]
     shape_key_values: list[float]
@@ -150,3 +158,39 @@ class BlenderExportContext(SlotsBase):
         self.bl_obj.active_shape_key_index = self.active_shape_key_idx
         self.bl_obj.show_only_shape_key = self.only_active_shape_key
         bl_mesh.use_auto_smooth = self.use_auto_smooth
+
+class BlenderShowAllBonesContext(SlotsBase):
+    bl_armature_obj: bpy.types.Object
+    hidden_bone_set_indices: list[int]
+
+    def __init__(self, bl_armature_obj: bpy.types.Object) -> None:
+        self.bl_armature_obj = bl_armature_obj
+        self.hidden_bone_set_indices = []
+
+        if cast(tuple[int, ...], bpy.app.version) >= (4, 0, 0):
+            bl_bone_collections = cast(bpy.types.Armature, bl_armature_obj.data).collections
+            for i, bl_bone_collection in enumerate(bl_bone_collections):
+                if not bl_bone_collection.is_visible:
+                    self.hidden_bone_set_indices.append(i)
+                
+                bl_bone_collection.is_visible = True
+        else:
+            bl_layers = cast(list[bool], getattr(bl_armature_obj.data, "layers"))
+            for i, layer_visible in enumerate(bl_layers):
+                if not layer_visible:
+                    self.hidden_bone_set_indices.append(i)
+                
+                bl_layers[i] = True
+    
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        if cast(tuple[int, ...], bpy.app.version) >= (4, 0, 0):
+            bl_bone_collections = cast(bpy.types.Armature, self.bl_armature_obj.data).collections
+            for i in self.hidden_bone_set_indices:
+                bl_bone_collections[i].is_visible = False
+        else:
+            bl_layers = cast(list[bool], getattr(self.bl_armature_obj.data, "layers"))
+            for i in self.hidden_bone_set_indices:
+                bl_layers[i] = False

@@ -1,9 +1,9 @@
 bl_info = {
     "name": "SOTTR mesh support",
-    "description": "Import/export files in the Shadow of the Tomb Raider format",
+    "description": "Import/export files for Shadow of the Tomb Raider",
     "author": "arc_",
     "blender": (3, 6, 5),
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "location": "File > Import-Export",
     "support": "COMMUNITY",
     "category": "Import-Export"
@@ -15,7 +15,9 @@ from bpy.types import Context, Menu
 from io_scene_sottr.tr.CStructTypeMappings import CStructTypeMappings
 CStructTypeMappings.register()
 
+from io_scene_sottr.operator.ImportAnimationOperator import ImportAnimationOperator
 from io_scene_sottr.operator.ImportObjectOperator import ImportObjectOperator
+from io_scene_sottr.operator.ExportAnimationOperator import ExportAnimationOperator
 from io_scene_sottr.operator.ExportModelOperator import ExportModelOperator
 
 class SottrOperator(Protocol):
@@ -24,7 +26,9 @@ class SottrOperator(Protocol):
     bl_menu_item_name: str
 
 operators: list[SottrOperator] = [
+    ImportAnimationOperator,
     ImportObjectOperator,
+    ExportAnimationOperator,
     ExportModelOperator
 ]
 

@@ -64,7 +64,7 @@ When modding SOTTR, you'll encounter the following file types:
 
   Catch-all resource type used for (almost) everything not listed above.
 
-There are a few other extensions such as .tr11anim and .tr11script, which are however unexplored and not moddable.
+There are a few other extensions such as .tr11script, which are however unexplored and not moddable.
 
 ## Installation
 
@@ -259,6 +259,48 @@ As mentioned before, the addon creates model files from scratch, so there's no n
 The addon will automatically add a Triangulate modifier to meshes that don't have one yet, and temporarily disable
 all other modifiers so they don't affect the export result.
 
+## Animation modding
+
+Apart from models, the Blender addon also supports importing and exporting animations (.tr11anim files).
+You can animate bone positions/rotations/scales and blendshape values.
+
+To find an animation to modify, you can use a binary template to browse the .tr11animlib files in e.g. tr11_lara.drm.
+These files map animation names to IDs, where the IDs correspond to the names of the .tr11anim files.
+
+You can also check the appendix at the end of this page to find the IDs of the photo mode poses.
+
+Once you've found an animation you'd like to edit or replace, you'll want to do the following:
+
+- Import tr11_lara.tr11objectref from tr11_lara.drm and delete the dummy model, keeping just the skeleton.
+- Import the head, torso, and leg models of some outfit.
+- Import the .tr11anim file (File → Import → SOTTR animation).
+- Edit the animation. While imported animations have a keyframe on every frame, this is not required for
+  custom animations.
+- Export the animation to a .tr11anim file (File → Export → SOTTR animation). As with models, there's no
+  need to overwrite an existing file.
+
+The addon supports bone constraints. In fact, it automatically creates constraints on a few (hidden by default)
+bones of the tr11_lara skeleton, as this is necessary for the animation to play correctly ingame.
+
+The animation's duration is determined by the Blender scene's end frame, and its speed by the FPS Base.
+
+## External references
+
+Most SOTTR resources reference other resources. A .tr11objectref references an object. An object references
+a skeleton and models. A model references materials, which in turn reference textures and shaders, and so on.
+
+You can change a model's material references by simply applying different materials in Blender. However,
+by using the binary templates, you can edit other references as well. For example, you could make an
+object point to a different skeleton.
+
+When changing such an external reference, you can make it point to any resource in the game,
+*even if that resource is not included in the DRM*. The mod manager will automatically
+add the referenced resource (and any resources it references in turn) to the DRM so that the game
+won't crash.
+
+This also means you can simply overwrite a resource by a copy of any other resource. For example,
+you could overwrite a material by another and change just one texture reference, keeping the
+shader references and the other textures. 
 
 ## Mod packaging
 
@@ -306,7 +348,7 @@ can choose the one they like.
 > This window is also shown if the mod contains only one variation, which can be useful
 > if you have no variations but still want to present users with e.g. a readme before installing.
 
-## Appendix - Outfit list
+## Appendix 1: Outfit reference
 
 | Ingame name | Name in globalcollectibleinfo.drm | Model .drm prefix |
 | ----------- | ---------------------------------- | ------------------ |
@@ -375,3 +417,45 @@ can choose the one they like.
 | Yaway's Battle Tunic | Assault_01_Torso | paperdoll_piece_tr11_lara_assault_01_torso |
 | Yaway's Wooden Greaves | Assault_01_Legs | paperdoll_piece_tr11_lara_assault_01_legs |
 | (Main menu) |  | paperdoll_generator_lara_menu |
+
+## Appendix 2: Photo mode reference
+
+The .tr11anim files listed below can be found in tr11_lara.drm.
+
+### Face
+
+| Ingame name | .tr11anim ID |
+| ----------- | ------------ |
+| Neutral | 30901 |
+| Smiling | 30900 |
+| Happy | 30899 |
+| Sly | 30898 |
+| Sad | 30897 |
+| Surprised | 30896 |
+| Disgusted | 30895 |
+| Angry | 30894 |
+| Wonderment | 30893 |
+| Displeased | 30892 |
+| Smug | 33016 |
+| Annoyed | 33018 |
+| Innocent | 33017 |
+
+### Body
+
+| Ingame name | .tr11anim ID |
+| ----------- | ------------ |
+| Celebrating | 33015 |
+| Exulting | 33014 |
+| Victorious | 33013 |
+| Flexing | 33006 |
+| Framing High | 33005 |
+| Framing Eye Level | 32998 |
+| Thumbs Up | 33003 |
+| Scouting | 33012 |
+| Sneaking | 33001 |
+| Kneeling | 32999 |
+| Folded | 33011 |
+| Balancing Left | 33004 |
+| Balancing Right | 33007 |
+| Predatory | 32997 |
+| Successful | 33010 |

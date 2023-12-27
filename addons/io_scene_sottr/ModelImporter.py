@@ -134,7 +134,7 @@ class ModelImporter(SlotsBase):
         self.create_uv_maps(bl_mesh, tr_mesh)
         self.apply_materials(bl_mesh, tr_model, tr_mesh)
         self.create_vertex_groups(bl_obj, tr_mesh, tr_skeleton)
-        self.create_shape_keys(bl_obj, tr_mesh)
+        self.create_shape_keys(bl_obj, tr_mesh, tr_skeleton)
         
         bpy.ops.object.shade_smooth()                           # type: ignore
         if has_blend_shapes:
@@ -273,7 +273,7 @@ class ModelImporter(SlotsBase):
 
         bl_vertex_groups: list[bpy.types.VertexGroup] = []
         for model_bone_index in tr_mesh.bone_indices:
-            vertex_group_name = BlenderNaming.make_local_bone_name(tr_skeleton.bones[model_bone_index].global_id, model_bone_index)
+            vertex_group_name = BlenderNaming.make_bone_name(None, tr_skeleton.bones[model_bone_index].global_id, model_bone_index)
             bl_vertex_groups.append(bl_obj.vertex_groups.new(name = vertex_group_name))
 
         for vertex_idx, vertex in enumerate(tr_mesh.vertices):
@@ -286,17 +286,24 @@ class ModelImporter(SlotsBase):
                     if weight > 0:
                         bl_vertex_groups[mesh_bone_index].add([vertex_idx], weight, "ADD")
     
-    def create_shape_keys(self, bl_obj: bpy.types.Object, tr_mesh: Mesh) -> None:
+    def create_shape_keys(self, bl_obj: bpy.types.Object, tr_mesh: Mesh, tr_skeleton: Skeleton | None) -> None:
         if not Enumerable(tr_mesh.blend_shapes).any(lambda b: b is not None):
             return
 
         bl_obj.shape_key_add(name = "Basis")
 
-        for i, tr_blendshape in enumerate(tr_mesh.blend_shapes):
+        global_blend_shape_ids: dict[int, int]
+        if tr_skeleton is not None:
+            global_blend_shape_ids = Enumerable(tr_skeleton.blend_shape_id_mappings).to_dict(lambda m: m.local_id, lambda m: m.global_id)
+        else:
+            global_blend_shape_ids = {}
+
+        for local_blend_shape_id, tr_blendshape in enumerate(tr_mesh.blend_shapes):
             if tr_blendshape is None:
                 continue
-
-            bl_shape_key = bl_obj.shape_key_add(name = BlenderNaming.make_shape_key_name(i), from_mix = False)
+            
+            global_blend_shape_id = global_blend_shape_ids.get(local_blend_shape_id)
+            bl_shape_key = bl_obj.shape_key_add(name = BlenderNaming.make_shape_key_name(global_blend_shape_id, local_blend_shape_id), from_mix = False)
             for vertex_idx, offsets in tr_blendshape.vertices.items():
                 shape_key_point = cast(bpy.types.ShapeKeyPoint, bl_shape_key.data[vertex_idx])
                 base_pos = Vector(tr_mesh.vertices[vertex_idx].attributes[Hashes.position])
@@ -334,7 +341,7 @@ class ModelImporter(SlotsBase):
                 bone_child_indices[tr_bone.parent_id].append(i)
 
         for i, tr_bone in enumerate(tr_skeleton.bones):
-            bl_bone = bl_armature.edit_bones.new(BlenderNaming.make_local_bone_name(tr_bone.global_id, i))
+            bl_bone = bl_armature.edit_bones.new(BlenderNaming.make_bone_name(None, tr_bone.global_id, i))
 
             bone_length: float
             if len(bone_child_indices[i]) > 0:
@@ -349,7 +356,7 @@ class ModelImporter(SlotsBase):
             if tr_bone.parent_id < 0:
                 bl_bone.tail = bl_bone.head + tail_offset
             else:
-                bl_bone.parent = bl_armature.edit_bones[BlenderNaming.make_local_bone_name(tr_skeleton.bones[tr_bone.parent_id].global_id, tr_bone.parent_id)]
+                bl_bone.parent = bl_armature.edit_bones[BlenderNaming.make_bone_name(None, tr_skeleton.bones[tr_bone.parent_id].global_id, tr_bone.parent_id)]
                 tail1 = bl_bone.head + tail_offset
                 tail2 = bl_bone.head - tail_offset
                 if (tail1 - bone_heads[tr_bone.parent_id]).length > (tail2 - bone_heads[tr_bone.parent_id]).length:

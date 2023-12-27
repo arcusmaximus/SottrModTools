@@ -81,7 +81,7 @@ class ModelExporter(SlotsBase):
                                            .select_many(lambda m: (m.shape_keys and Enumerable(m.shape_keys.key_blocks).skip(1) or []))
         if bl_shape_keys.any():
             tr_model_data.header.has_blend_shapes = True
-            tr_model_data.header.num_blend_shapes = bl_shape_keys.max(lambda bl_shape_key: BlenderNaming.parse_shape_key_name(bl_shape_key.name)) + 1
+            tr_model_data.header.num_blend_shapes = bl_shape_keys.max(lambda bl_shape_key: BlenderNaming.parse_shape_key_name(bl_shape_key.name).local_id) + 1
         
         for bl_obj in bl_objs:
             tr_model_data.meshes.append(self.create_mesh(tr_model, tr_model_data, bl_obj))
@@ -91,7 +91,7 @@ class ModelExporter(SlotsBase):
         return tr_model_data
     
     def create_mesh(self, tr_model: Model, tr_model_data: ModelData, bl_obj: bpy.types.Object) -> Mesh:
-        with BlenderHelper.prepare_for_export(bl_obj):
+        with BlenderHelper.prepare_for_model_export(bl_obj):
             if not Enumerable(bl_obj.modifiers).of_type(bpy.types.TriangulateModifier).any():
                 bl_obj.modifiers.new("Triangulate", "TRIANGULATE")
 
@@ -111,7 +111,7 @@ class ModelExporter(SlotsBase):
             self.populate_vertex_format(tr_mesh.vertex_format, bl_mesh_maps)
             bl_corner_to_tr_vertex = self.create_vertices(tr_mesh, bl_mesh, bl_mesh_maps, use_16bit_skin_indices)
             self.create_mesh_parts(tr_model, tr_mesh, bl_mesh, bl_corner_to_tr_vertex, use_16bit_skin_indices)
-            self.create_shape_keys(tr_model_data, tr_mesh, bl_obj, bl_mesh, bl_corner_to_tr_vertex)
+            self.create_blend_shapes(tr_model_data, tr_mesh, bl_obj, bl_mesh, bl_corner_to_tr_vertex)
             self.shrink_uvs(tr_mesh, bl_mesh_maps)
 
             return tr_mesh
@@ -145,7 +145,7 @@ class ModelExporter(SlotsBase):
         return bl_uv_maps
     
     def collect_bl_vertex_groups(self, bl_obj: bpy.types.Object) -> dict[int, bpy.types.VertexGroup]:
-        return Enumerable(bl_obj.vertex_groups).to_dict(lambda g: BlenderNaming.parse_local_bone_name(g.name).local_id)
+        return Enumerable(bl_obj.vertex_groups).to_dict(lambda g: BlenderNaming.get_bone_local_id(g.name))
     
     def populate_vertex_format(self, tr_vertex_format: VertexFormat, bl_mesh_maps: _BlenderMeshMaps) -> None:
         tr_vertex_format.hash = random.randint(0, 0xFFFFFFFFFFFFFFFF)
@@ -216,7 +216,11 @@ class ModelExporter(SlotsBase):
             tr_vertex.attributes[attr_name_hash] = tuple(cast(Sequence[float], bl_color_map.data[bl_vertex_idx].color))
         
         for attr_name_hash, bl_uv_map in bl_mesh_maps.uv_maps.items():
-            tr_vertex.attributes[attr_name_hash] = cast(tuple[float, ...], cast(Vector, bl_uv_map.data[bl_corner_idx].uv).copy())
+            uv_coord = cast(Vector, bl_uv_map.data[bl_corner_idx].uv)
+            if abs(uv_coord.x) > 15 or abs(uv_coord.y) > 15:
+                raise Exception(f"Mesh {bl_mesh.name} has out-of-bounds UV coordinates. Please check and fix UV map {bl_uv_map.name}.")
+            
+            tr_vertex.attributes[attr_name_hash] = cast(tuple[float, ...], uv_coord.copy())
 
         if len(bl_mesh_maps.vertex_groups) == 0:
             return tr_vertex
@@ -282,7 +286,7 @@ class ModelExporter(SlotsBase):
             
             tr_mesh.parts.append(tr_mesh_part)
 
-    def create_shape_keys(self, tr_model_data: ModelData, tr_mesh: Mesh, bl_obj: bpy.types.Object, bl_mesh: bpy.types.Mesh, bl_corner_to_tr_vertex: list[int]) -> None:
+    def create_blend_shapes(self, tr_model_data: ModelData, tr_mesh: Mesh, bl_obj: bpy.types.Object, bl_mesh: bpy.types.Mesh, bl_corner_to_tr_vertex: list[int]) -> None:
         tr_mesh.blend_shapes = [None] * tr_model_data.header.num_blend_shapes
         if cast(bpy.types.Key | None, bl_mesh.shape_keys) is None:
             return
@@ -305,7 +309,7 @@ class ModelExporter(SlotsBase):
         color_offset = Vector((0.0, 0.0, 0.4, 0.0))                         # Z component = normal blending suppression strength
         for bl_shape_key_idx in range(1, len(bl_mesh.shape_keys.key_blocks)):
             bl_obj.active_shape_key_index = bl_shape_key_idx
-            tr_blend_shape_idx = BlenderNaming.parse_shape_key_name(bl_obj.active_shape_key.name)
+            tr_blend_shape_idx = BlenderNaming.parse_shape_key_name(bl_obj.active_shape_key.name).local_id
 
             bl_mesh = self.get_evaluated_bl_mesh(bl_obj)
             bl_mesh.calc_normals_split()

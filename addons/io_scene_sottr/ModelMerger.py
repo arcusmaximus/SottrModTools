@@ -29,7 +29,7 @@ class ModelMerger(SlotsBase):
                                                 .distinct()                                                                 \
                                                 .to_list()
         for bl_mesh_obj in bl_mesh_objs:
-            self.move_mesh_to_global_armature(bl_mesh_obj, bl_global_armature_obj)
+            self.move_mesh_to_global_armature(bl_local_armature_obj, bl_mesh_obj, bl_global_armature_obj)
         
         for model_id_set in model_id_sets:
             bl_local_empty = BlenderHelper.create_object(None, BlenderNaming.make_local_empty_name(model_id_set.model_id, model_id_set.model_data_id))
@@ -72,8 +72,8 @@ class ModelMerger(SlotsBase):
             if cast(bpy.types.Bone | None, bl_bone.parent) is None:
                 continue
 
-            child_bone_ids  = BlenderNaming.parse_local_bone_name(bl_bone.name)
-            parent_bone_ids = BlenderNaming.parse_local_bone_name(bl_bone.parent.name)
+            child_bone_ids  = BlenderNaming.parse_bone_name(bl_bone.name)
+            parent_bone_ids = BlenderNaming.parse_bone_name(bl_bone.parent.name)
             if child_bone_ids.global_id is not None and parent_bone_ids.global_id is not None:
                 bone_parents[child_bone_ids.global_id] = parent_bone_ids.global_id
 
@@ -83,8 +83,8 @@ class ModelMerger(SlotsBase):
         bl_global_armature = cast(bpy.types.Armature, bl_global_armature_obj.data)
         with BlenderHelper.enter_edit_mode():
             for child_bone_id, parent_bone_id in bone_parents.items():
-                bl_child_bone = bl_global_armature.edit_bones[BlenderNaming.make_global_bone_name(child_bone_id)]
-                bl_parent_bone = bl_global_armature.edit_bones[BlenderNaming.make_global_bone_name(parent_bone_id)]
+                bl_child_bone  = bl_global_armature.edit_bones[BlenderNaming.make_bone_name(None, child_bone_id, None)]
+                bl_parent_bone = bl_global_armature.edit_bones[BlenderNaming.make_bone_name(None, parent_bone_id, None)]
                 bl_child_bone.parent = bl_parent_bone
     
     def get_visible_global_bones_from_local_armature(self, bl_local_armature_obj: bpy.types.Object) -> list[int]:
@@ -94,7 +94,7 @@ class ModelMerger(SlotsBase):
             if not BlenderHelper.is_bone_visible(bl_local_armature, bl_bone):
                 continue
 
-            bone_ids = BlenderNaming.parse_local_bone_name(bl_bone.name)
+            bone_ids = BlenderNaming.parse_bone_name(bl_bone.name)
             if bone_ids.global_id is None:
                 continue
 
@@ -105,26 +105,28 @@ class ModelMerger(SlotsBase):
     def apply_visible_global_bones_to_global_armature(self, bl_global_armature_obj: bpy.types.Object, visible_bone_ids: list[int]) -> None:
         bl_global_armature = cast(bpy.types.Armature, bl_global_armature_obj.data)
         for bone_id in visible_bone_ids:
-            BlenderHelper.set_bone_visible(bl_global_armature, bl_global_armature.bones[BlenderNaming.make_global_bone_name(bone_id)], True)
+            BlenderHelper.set_bone_visible(bl_global_armature, bl_global_armature.bones[BlenderNaming.make_bone_name(None, bone_id, None)], True)
     
     def convert_local_armature_to_global(self, bl_local_armature_obj: bpy.types.Object, bl_existing_global_armature_obj: bpy.types.Object | None) -> None:
         bl_existing_global_armature = bl_existing_global_armature_obj is not None and cast(bpy.types.Armature, bl_existing_global_armature_obj.data) or None
         bl_local_armature = cast(bpy.types.Armature, bl_local_armature_obj.data)
+        local_skeleton_id = BlenderNaming.parse_local_armature_name(bl_local_armature.name)
 
         with BlenderHelper.enter_edit_mode():
             for local_bone_name in Enumerable(bl_local_armature.edit_bones).select(lambda b: b.name).to_list():
                 bl_bone = bl_local_armature.edit_bones[local_bone_name]
-                global_bone_id = BlenderNaming.parse_local_bone_name(local_bone_name).global_id
-                if global_bone_id is None:
-                    bl_local_armature.edit_bones.remove(bl_bone)
+                local_bone_id_set = BlenderNaming.parse_bone_name(local_bone_name)
+                if local_bone_id_set.global_id is None:
+                    bl_bone.name = BlenderNaming.make_bone_name(local_skeleton_id, local_bone_id_set.global_id, local_bone_id_set.local_id)
                 else:
-                    global_bone_name = BlenderNaming.make_global_bone_name(global_bone_id)
+                    global_bone_name = BlenderNaming.make_bone_name(None, local_bone_id_set.global_id, None)
                     if bl_existing_global_armature is None or bl_existing_global_armature.bones.get(global_bone_name) is None:
                         bl_bone.name = global_bone_name
                     else:
                         bl_local_armature.edit_bones.remove(bl_bone)
     
-    def move_mesh_to_global_armature(self, bl_mesh_obj: bpy.types.Object, bl_global_armature_obj: bpy.types.Object) -> None:
+    def move_mesh_to_global_armature(self, bl_local_armature_obj: bpy.types.Object, bl_mesh_obj: bpy.types.Object, bl_global_armature_obj: bpy.types.Object) -> None:
+        local_skeleton_id = BlenderNaming.parse_local_armature_name(bl_local_armature_obj.name)
         bl_mesh_obj.parent = bl_global_armature_obj
                 
         bl_armature_modifier = Enumerable(bl_mesh_obj.modifiers).of_type(bpy.types.ArmatureModifier).first_or_none()
@@ -132,9 +134,9 @@ class ModelMerger(SlotsBase):
             bl_armature_modifier.object = bl_global_armature_obj
         
         for vertex_group_name in Enumerable(bl_mesh_obj.vertex_groups).select(lambda g: g.name).to_list():
-            local_bone_ids = BlenderNaming.parse_local_bone_name(vertex_group_name)
+            local_bone_ids = BlenderNaming.parse_bone_name(vertex_group_name)
             bl_vertex_group = bl_mesh_obj.vertex_groups[vertex_group_name]
             if local_bone_ids.global_id is None:
-                bl_mesh_obj.vertex_groups.remove(bl_vertex_group)
+                bl_vertex_group.name = BlenderNaming.make_bone_name(local_skeleton_id, local_bone_ids.global_id, local_bone_ids.local_id)
             else:
-                bl_vertex_group.name = BlenderNaming.make_global_bone_name(local_bone_ids.global_id)
+                bl_vertex_group.name = BlenderNaming.make_bone_name(None, local_bone_ids.global_id, None)

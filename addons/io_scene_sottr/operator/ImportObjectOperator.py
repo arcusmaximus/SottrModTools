@@ -8,6 +8,7 @@ from io_scene_sottr.BlenderNaming import BlenderNaming
 from io_scene_sottr.ModelImporter import ModelImporter
 from io_scene_sottr.ModelMerger import ModelMerger
 from io_scene_sottr.operator.OperatorCommon import OperatorCommon
+from io_scene_sottr.operator.OperatorContext import OperatorContext
 from io_scene_sottr.util.Enumerable import Enumerable
 
 class ImportObjectOperator(Operator, ImportHelper):         # type: ignore
@@ -37,18 +38,19 @@ class ImportObjectOperator(Operator, ImportHelper):         # type: ignore
     bl_label = "Import"
 
     def execute(self, context: Context) -> set[str]:
-        importer = ModelImporter(
-            OperatorCommon.scale_factor,
-            getattr(self.properties, "import_unlinked_models"),
-            getattr(self.properties, "import_lods"),
-            getattr(self.properties, "split_into_parts")
-        )
-        import_result = importer.import_collection(getattr(self.properties, "filepath"))
+        with OperatorContext.begin(self):
+            importer = ModelImporter(
+                OperatorCommon.scale_factor,
+                getattr(self.properties, "import_unlinked_models"),
+                getattr(self.properties, "import_lods"),
+                getattr(self.properties, "split_into_parts")
+            )
+            import_result = importer.import_collection(getattr(self.properties, "filepath"))
 
-        if getattr(self.properties, "merge_with_existing_armatures") and import_result.bl_armature_obj is not None:
-            self.merge()
+            if getattr(self.properties, "merge_with_existing_armatures") and import_result.bl_armature_obj is not None:
+                self.merge()
 
-        return { "FINISHED" }
+            return { "FINISHED" }
 
     def merge(self) -> None:
         bl_armature_objs = Enumerable(bpy.context.scene.objects).where(lambda o: isinstance(o.data, bpy.types.Armature)).to_list()

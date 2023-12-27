@@ -24,15 +24,15 @@ class _ObjectHeader(CStruct):
     field_14: CInt
     field_18: CLong
     field_20: CLong
-    num_external_component_types: CInt
+    num_simple_components: CInt
     field_2C: CInt
-    external_components_ref: ResourceReference | None
-    num_internal_component_types: CInt
+    simple_components_ref: ResourceReference | None
+    num_transformed_component_types: CInt
     field_3C: CInt
-    internal_components_ref: ResourceReference | None
-    int_dict_size: CInt
+    transformed_components_ref: ResourceReference | None
+    num_transformed_component_counts: CInt
     field_4C: CInt
-    int_dict_pairs_ref: ResourceReference | None
+    transformed_component_counts_ref: ResourceReference | None
     model_refs: CArray[ResourceReference | None, Literal[2]]
     field_68: CLong
     field_70: CLong
@@ -90,13 +90,13 @@ class Collection(SlotsBase):
         self.__reader = reader
         self.header = reader.read_struct(_ObjectHeader)
 
-        if self.header.external_components_ref is not None:
-            reader.seek(self.header.external_components_ref)
-            self.__read_component_arrays(reader, self.header.num_external_component_types, True)
+        if self.header.simple_components_ref is not None:
+            reader.seek(self.header.simple_components_ref)
+            self.__read_component_arrays(reader, self.header.num_simple_components, True)
 
-        if self.header.internal_components_ref is not None:
-            reader.seek(self.header.internal_components_ref)
-            self.__read_component_arrays(reader, self.header.num_internal_component_types, False)
+        if self.header.transformed_components_ref is not None:
+            reader.seek(self.header.transformed_components_ref)
+            self.__read_component_arrays(reader, self.header.num_transformed_component_types, False)
     
     def get_model_instances(self) -> list[ModelInstance]:
         instances: list[Collection.ModelInstance] = Enumerable(self.root_model_resources).select(lambda r: Collection.ModelInstance(r, Matrix())).to_list()
@@ -185,6 +185,16 @@ class Collection(SlotsBase):
                 return file_path
         
         return None
+    
+    @staticmethod
+    def parse_resource_file_path(file_path: str) -> ResourceKey:
+        file_name, file_extension = os.path.splitext(os.path.basename(file_path))
+        resource_id = int(file_name)
+        for resource_type, resource_type_info in Collection.__resource_type_infos.items():
+            if file_extension in resource_type_info.extensions:
+                return ResourceKey(resource_type, resource_id)
+        
+        raise Exception(f"{file_path} is not a valid resource file path")
     
     def get_resource_reader(self, resource: ResourceKey, has_references: bool) -> ResourceReader | None:
         file_path = self.get_resource_file_path(resource)

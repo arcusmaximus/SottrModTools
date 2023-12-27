@@ -34,8 +34,8 @@ class Model(SlotsBase):
 
     def write(self, writer: ResourceBuilder) -> None:
         writer.write_ref(self.model_data_resource)
-        texture_refs_ref = writer.write_local_ref()
-        material_refs_ref = writer.write_local_ref()
+        texture_refs_ref = writer.write_internal_ref()
+        material_refs_ref = writer.write_internal_ref()
 
         texture_refs_ref.offset = writer.position
         writer.write_uint64(0)

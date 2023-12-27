@@ -44,7 +44,7 @@ class ModelSplitter(SlotsBase):
 
             bone_names_by_global_id: dict[int, str] = {}
             for bl_bone in cast(bpy.types.Armature, bl_armature_obj.data).bones:
-                global_bone_id = BlenderNaming.parse_local_bone_name(bl_bone.name).global_id
+                global_bone_id = BlenderNaming.parse_bone_name(bl_bone.name).global_id
                 if global_bone_id is not None:
                     bone_names_by_global_id[global_bone_id] = bl_bone.name
             
@@ -68,7 +68,7 @@ class ModelSplitter(SlotsBase):
             bl_local_armature_obj = bpy.data.objects[local_armature.name]
             bl_local_armature = cast(bpy.types.Armature, bl_local_armature_obj.data)
             for bl_bone in bl_local_armature.bones:
-                global_bone_id = BlenderNaming.parse_local_bone_name(bl_bone.name).global_id
+                global_bone_id = BlenderNaming.parse_bone_name(bl_bone.name).global_id
                 if global_bone_id is None:
                     continue
 
@@ -122,10 +122,16 @@ class ModelSplitter(SlotsBase):
 
         local_skeleton_ids_by_vertex_group_idx: list[list[int]] = []
         for bl_global_bone_vertex_group in bl_global_mesh_obj.vertex_groups:
-            global_bone_id = BlenderNaming.parse_global_bone_name(bl_global_bone_vertex_group.name)
-            local_skeleton_ids = local_skeleton_ids_by_global_bone_id.get(global_bone_id)
-            if local_skeleton_ids is None:
-                raise Exception(f"Vertex group {bl_global_bone_vertex_group.name} in mesh {bl_global_mesh_obj.name} has no corresponding bone.")
+            local_skeleton_ids: list[int] | None
+            bone_id_set = BlenderNaming.parse_bone_name(bl_global_bone_vertex_group.name)
+            if bone_id_set.skeleton_id is not None:
+                local_skeleton_ids = [bone_id_set.skeleton_id]
+            elif bone_id_set.global_id is not None:
+                local_skeleton_ids = local_skeleton_ids_by_global_bone_id.get(bone_id_set.global_id)
+                if local_skeleton_ids is None:
+                    raise Exception(f"Vertex group {bl_global_bone_vertex_group.name} in mesh {bl_global_mesh_obj.name} has no corresponding bone.")
+            else:
+                raise Exception(f"Vertex group {bl_global_bone_vertex_group.name} in mesh {bl_global_mesh_obj.name} must have a skeleton ID or global bone ID.")
             
             local_skeleton_ids_by_vertex_group_idx.append(local_skeleton_ids)
         
@@ -178,14 +184,20 @@ class ModelSplitter(SlotsBase):
             bl_vertex_group = bl_global_mesh_obj.vertex_groups[i]
             if bl_vertex_group.name.startswith(ModelSplitter.local_skeleton_vertex_group_prefix):
                 bl_global_mesh_obj.vertex_groups.remove(bl_vertex_group)
+                continue
+            
+            bone_id_set = BlenderNaming.parse_bone_name(bl_vertex_group.name)
+            local_bone_name: str | None = None
+            if bone_id_set.local_id is not None:
+                local_bone_name = BlenderNaming.make_bone_name(None, bone_id_set.global_id, bone_id_set.local_id)
+            elif bone_id_set.global_id is not None:
+                local_bone_name = local_armature.bone_names_by_global_id.get(bone_id_set.global_id)
+            
+            if local_bone_name is None:
+                bl_global_mesh_obj.vertex_groups.remove(bl_vertex_group)
             else:
-                global_bone_id = BlenderNaming.parse_global_bone_name(bl_vertex_group.name)
-                local_bone_name = local_armature.bone_names_by_global_id.get(global_bone_id)
-                if local_bone_name is None:
-                    bl_global_mesh_obj.vertex_groups.remove(bl_vertex_group)
-                else:
-                    bl_vertex_group.name = local_bone_name
-                    i += 1
+                bl_vertex_group.name = local_bone_name
+                i += 1
     
     def make_local_skeleton_vertex_group_name(self, local_skeleton_id: int):
         return ModelSplitter.local_skeleton_vertex_group_prefix + str(local_skeleton_id)
