@@ -198,19 +198,6 @@ The way it works is as follows:
   visible seams ingame, however, so it's better to split the meshes yourself in a place where the seams are
   minimized or hidden.
 
-It's important to note that, while all bones in an outfit piece have a local ID, not all of them have a global ID.
-This applies to the physics bones in an outfit-specific loose strip of fabric, for example.
-Such bones have an "x" in place of a global ID in their name, and are not included in the merged skeleton —
-which means you also can't weight meshes for them there.
-
-If you have such a situation, you can do the following:
-
-- Create a base version of the outfit based on the merged skeleton (where physics bones are not available).
-- Export it to create the split meshes in the hidden collection.
-- Delete the merged skeleton and meshes from the scene, and bring the split skeletons and meshes
-  out of the hidden collection. You can also delete the Empty objects parented to the split skeletons.
-- Finish the outfit based on the split skeletons (where all bones are available) and export again.
-
 ### Mesh editing
 
 Previous modding tools have resorted to patching/amending the original file, which limited the changes you could make.
