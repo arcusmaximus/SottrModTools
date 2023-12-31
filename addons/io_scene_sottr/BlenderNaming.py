@@ -1,4 +1,3 @@
-import bpy
 import re
 from typing import ClassVar, Iterable, NamedTuple
 
@@ -36,30 +35,24 @@ class BlenderNaming:
         return BlenderNaming.make_mesh_name("split", model_id, model_data_id, mesh_idx)
     
     @staticmethod
-    def try_parse_mesh_name(name_or_bl_obj: str | bpy.types.Object) -> BlenderMeshIdSet | None:
-        def try_parse(name: str) -> BlenderMeshIdSet | None:
-            match = re.fullmatch(r"\w+_model_(\d+)_(\d+)_(\d+)(?:\.\d+)?", name)
-            if match is None:
-                return None
-        
-            return BlenderMeshIdSet(int(match.group(1)), int(match.group(2)), int(match.group(3)))
-
-        if isinstance(name_or_bl_obj, str):
-            return try_parse(name_or_bl_obj)
-        else:
-            return try_parse(name_or_bl_obj.data.name) or try_parse(name_or_bl_obj.name)
+    def try_parse_mesh_name(name: str) -> BlenderMeshIdSet | None:
+        match = re.fullmatch(r"\w+_model_(\d+)_(\d+)_(\d+)(?:\.\d+)?", name)
+        if match is None:
+            return None
+    
+        return BlenderMeshIdSet(int(match.group(1)), int(match.group(2)), int(match.group(3)))
     
     @staticmethod
-    def parse_mesh_name(name_or_bl_obj: str | bpy.types.Object) -> BlenderMeshIdSet:
-        mesh_id_set = BlenderNaming.try_parse_mesh_name(name_or_bl_obj)
+    def parse_mesh_name(name: str) -> BlenderMeshIdSet:
+        mesh_id_set = BlenderNaming.try_parse_mesh_name(name)
         if mesh_id_set is None:
-            raise Exception((name_or_bl_obj if isinstance(name_or_bl_obj, str) else name_or_bl_obj.data.name) + " is not a valid mesh name.")
+            raise Exception(f"{name} is not a valid mesh name.")
 
         return mesh_id_set
     
     @staticmethod
-    def parse_model_name(name_or_bl_obj: str | bpy.types.Object) -> BlenderModelIdSet:
-        mesh_id_set = BlenderNaming.parse_mesh_name(name_or_bl_obj)
+    def parse_model_name(name: str) -> BlenderModelIdSet:
+        mesh_id_set = BlenderNaming.parse_mesh_name(name)
         return BlenderModelIdSet(mesh_id_set.model_id, mesh_id_set.model_data_id)
     
     @staticmethod

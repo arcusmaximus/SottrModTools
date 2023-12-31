@@ -25,7 +25,7 @@ class ModelMerger(SlotsBase):
         BlenderHelper.move_object_to_collection(bl_local_armature_obj, self.bl_local_collection)
 
         bl_mesh_objs = Enumerable(cast(Iterable[bpy.types.Object], bl_local_armature_obj.children)).where(lambda o: isinstance(o.data, bpy.types.Mesh)).to_list()
-        model_id_sets = Enumerable(bl_mesh_objs).select(lambda o: BlenderNaming.parse_model_name(o))                        \
+        model_id_sets = Enumerable(bl_mesh_objs).select(lambda o: BlenderNaming.parse_model_name(o.name))                   \
                                                 .distinct()                                                                 \
                                                 .to_list()
         for bl_mesh_obj in bl_mesh_objs:
@@ -39,7 +39,7 @@ class ModelMerger(SlotsBase):
         return bl_global_armature_obj
 
     def add_local_armature_to_global(self, bl_global_armature_obj: bpy.types.Object | None, bl_local_armature_obj: bpy.types.Object) -> bpy.types.Object:
-        local_skeleton_id = BlenderNaming.parse_local_armature_name(bl_local_armature_obj.data.name)
+        local_skeleton_id = BlenderNaming.parse_local_armature_name(bl_local_armature_obj.name)
         global_bone_parent_ids = self.get_global_bone_parents_from_local_armature(bl_local_armature_obj)
         global_visible_bone_ids = self.get_visible_global_bones_from_local_armature(bl_local_armature_obj)
 
@@ -55,7 +55,7 @@ class ModelMerger(SlotsBase):
             global_armature_name = BlenderNaming.make_global_armature_name([local_skeleton_id])
         else:
             global_armature_name = BlenderNaming.make_global_armature_name(
-                Enumerable(BlenderNaming.parse_global_armature_name(bl_global_armature_obj.data.name)).concat([local_skeleton_id]))
+                Enumerable(BlenderNaming.parse_global_armature_name(bl_global_armature_obj.name)).concat([local_skeleton_id]))
             
             BlenderHelper.join_objects(bl_global_armature_obj, [bl_copied_local_armature_obj])
             self.apply_global_bone_parents_to_global_armature(bl_global_armature_obj, global_bone_parent_ids)
@@ -110,7 +110,7 @@ class ModelMerger(SlotsBase):
     def convert_local_armature_to_global(self, bl_local_armature_obj: bpy.types.Object, bl_existing_global_armature_obj: bpy.types.Object | None) -> None:
         bl_existing_global_armature = bl_existing_global_armature_obj is not None and cast(bpy.types.Armature, bl_existing_global_armature_obj.data) or None
         bl_local_armature = cast(bpy.types.Armature, bl_local_armature_obj.data)
-        local_skeleton_id = BlenderNaming.parse_local_armature_name(bl_local_armature.name)
+        local_skeleton_id = BlenderNaming.parse_local_armature_name(bl_local_armature_obj.name)
 
         with BlenderHelper.enter_edit_mode():
             for local_bone_name in Enumerable(bl_local_armature.edit_bones).select(lambda b: b.name).to_list():

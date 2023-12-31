@@ -611,9 +611,9 @@ class Animation(SlotsBase):
         num_elements_per_attr: int,
         element_size_in_bits: int
     ) -> _AnimationDataHeader:
-        fixed_attrs: dict[_ItemAttributeKey, Vector] = {}
-        animated_attr_min_values: dict[_ItemAttributeKey, Vector] = {}
-        animated_attr_max_values: dict[_ItemAttributeKey, Vector] = {}
+        fixed_attrs: dict[_ItemAttributeKey, list[float]] = {}
+        animated_attr_min_values: dict[_ItemAttributeKey, list[float]] = {}
+        animated_attr_max_values: dict[_ItemAttributeKey, list[float]] = {}
 
         for item_idx, global_item_id in enumerate(item_frames.keys()):
             for attr_idx in range(num_attrs_per_item):
@@ -626,10 +626,10 @@ class Animation(SlotsBase):
                     if attr_key not in animated_attr_min_values:
                         existing_fixed_attr_value = fixed_attrs.get(attr_key)
                         if existing_fixed_attr_value is None:
-                            fixed_attrs[attr_key] = Vector(attr_value)
-                        elif (existing_fixed_attr_value - attr_value).length > 0.0001:
-                            animated_attr_min_values[attr_key] = Vector(fixed_attrs[attr_key])
-                            animated_attr_max_values[attr_key] = Vector(fixed_attrs[attr_key])
+                            fixed_attrs[attr_key] = list(attr_value)
+                        elif (tuple(existing_fixed_attr_value) != tuple(attr_value)):
+                            animated_attr_min_values[attr_key] = list(fixed_attrs[attr_key])
+                            animated_attr_max_values[attr_key] = list(fixed_attrs[attr_key])
                             del fixed_attrs[attr_key]
                     
                     if attr_key in animated_attr_min_values:
@@ -665,3 +665,4 @@ class Animation(SlotsBase):
             adjustment_floats,
             frame_batch_sizes
         )
+    

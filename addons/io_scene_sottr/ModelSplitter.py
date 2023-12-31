@@ -34,11 +34,11 @@ class ModelSplitter(SlotsBase):
         return Enumerable(local_armatures.values()).select(lambda a: bpy.data.objects[a.name]).to_list()
     
     def get_local_armatures(self, bl_global_armature_obj: bpy.types.Object) -> dict[int, _LocalArmature]:
-        local_skeleton_ids = BlenderNaming.parse_global_armature_name(bl_global_armature_obj.data.name)
+        local_skeleton_ids = BlenderNaming.parse_global_armature_name(bl_global_armature_obj.name)
         local_armatures: dict[int, _LocalArmature] = {}
         
         for bl_armature_obj in Enumerable(bpy.context.scene.objects).where(lambda o: isinstance(o.data, bpy.types.Armature)):
-            local_skeleton_id = BlenderNaming.try_parse_local_armature_name(bl_armature_obj.data.name)
+            local_skeleton_id = BlenderNaming.try_parse_local_armature_name(bl_armature_obj.name)
             if local_skeleton_id is None or local_skeleton_id not in local_skeleton_ids:
                 continue
 

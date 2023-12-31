@@ -136,7 +136,7 @@ class AnimationImporter(SlotsBase):
         if not bl_mesh.shape_keys.animation_data:
             bl_mesh.shape_keys.animation_data_create()
         
-        mesh_id_set = BlenderNaming.parse_mesh_name(bl_mesh_obj)
+        mesh_id_set = BlenderNaming.parse_mesh_name(bl_mesh_obj.name)
         action_name = BlenderNaming.make_action_name(animation.id, mesh_id_set.model_data_id, mesh_id_set.mesh_idx)
         bl_action = bpy.data.actions.get(action_name) or bpy.data.actions.new(action_name)
         bl_mesh.shape_keys.animation_data.action = bl_action

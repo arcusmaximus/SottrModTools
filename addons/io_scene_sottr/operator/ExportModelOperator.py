@@ -40,7 +40,7 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
             else:
                 folder_path = ""
 
-            model_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs_to_export).first()).model_id
+            model_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs_to_export).first().name).model_id
             setattr(self.properties, "filepath", os.path.join(folder_path, str(model_id) + self.filename_ext))
             context.window_manager.fileselect_add(self)
             return { "RUNNING_MODAL" }
@@ -57,7 +57,7 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
             
             exporter = ModelExporter(OperatorCommon.scale_factor)
             folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
-            for model_id_set, bl_mesh_objs_of_model in Enumerable(bl_mesh_objs).group_by(lambda o: BlenderNaming.parse_model_name(o)).items():
+            for model_id_set, bl_mesh_objs_of_model in Enumerable(bl_mesh_objs).group_by(lambda o: BlenderNaming.parse_model_name(o.name)).items():
                 exporter.export_model(folder_path, model_id_set.model_id, model_id_set.model_data_id, bl_mesh_objs_of_model)
             
             if bl_local_collection is not None:
@@ -71,7 +71,7 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
     def get_mesh_objects_to_export(self, split_global_meshes: bool) -> set[bpy.types.Object]:
         bl_mesh_objs_by_model_id: dict[int, list[bpy.types.Object]] = {}
         for bl_obj in Enumerable(bpy.context.scene.objects).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
-            mesh_id_set = BlenderNaming.try_parse_mesh_name(bl_obj)
+            mesh_id_set = BlenderNaming.try_parse_mesh_name(bl_obj.name)
             if mesh_id_set is not None and not self.is_in_local_collection(bl_obj):
                 DictionaryExtensions.get_or_add(bl_mesh_objs_by_model_id, mesh_id_set.model_id, lambda: []).append(bl_obj)
 
@@ -89,7 +89,7 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
             bl_obj = bpy.data.objects[object_name]
 
             if isinstance(bl_obj.data, bpy.types.Mesh):
-                mesh_id_set = BlenderNaming.try_parse_mesh_name(bl_obj)
+                mesh_id_set = BlenderNaming.try_parse_mesh_name(bl_obj.name)
                 if mesh_id_set is None:
                     continue
 
@@ -114,4 +114,4 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
     
     def get_mesh_children_of_armature(self, bl_armature_obj: bpy.types.Object) -> Iterable[bpy.types.Object]:
         return Enumerable(cast(Iterable[bpy.types.Object], bl_armature_obj.children)).where(
-            lambda o: isinstance(o.data, bpy.types.Mesh) and BlenderNaming.try_parse_mesh_name(o) is not None)
+            lambda o: isinstance(o.data, bpy.types.Mesh) and BlenderNaming.try_parse_mesh_name(o.name) is not None)

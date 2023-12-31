@@ -54,7 +54,7 @@ class ImportObjectOperator(Operator, ImportHelper):         # type: ignore
 
     def merge(self) -> None:
         bl_armature_objs = Enumerable(bpy.context.scene.objects).where(lambda o: isinstance(o.data, bpy.types.Armature)).to_list()
-        bl_global_armature_obj = Enumerable(bl_armature_objs).first_or_none(lambda o: BlenderNaming.is_global_armature_name(o.data.name))
+        bl_global_armature_obj = Enumerable(bl_armature_objs).first_or_none(lambda o: BlenderNaming.is_global_armature_name(o.name))
         if bl_global_armature_obj is None and len(bl_armature_objs) == 1:
             return
 
