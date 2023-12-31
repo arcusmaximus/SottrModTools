@@ -269,7 +269,11 @@ Once you've found an animation you'd like to edit or replace, you'll want to do 
 The addon supports bone constraints. In fact, it automatically creates constraints on a few (hidden by default)
 bones of the tr11_lara skeleton, as this is necessary for the animation to play correctly ingame.
 
-The animation's duration is determined by the Blender scene's end frame, and its speed by the FPS Base.
+The animation's frame count is determined by the Blender scene's end frame.
+Its speed is in turn determined by the Blender scene's *FPS Base* (see Output tab → Format panel;
+you'll need to set the *Frame Rate* to *Custom* to see the Base). Note that the Base works in
+the opposite way as the FPS: a higher Base will result in each frame taking more time and the
+animation thus being slower overall, not faster.
 
 ## External references
 
