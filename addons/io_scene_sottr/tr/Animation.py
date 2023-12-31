@@ -531,13 +531,13 @@ class Animation(SlotsBase):
                     
                     for elem_idx in range(num_elements_per_attr):
                         offset_adjustment_float = data_header.adjustment_floats[adjustment_floats_idx]
-                        scale_adjustment_float  = data_header.adjustment_floats[adjustment_floats_idx + 3]
+                        scale_adjustment_float  = data_header.adjustment_floats[adjustment_floats_idx + num_elements_per_attr]
                         element_value = (attr_value[elem_idx] - offset_adjustment_float) / scale_adjustment_float
                         element_value = int(element_value * ((1 << element_size) - 1))
                         bitstream_writer.write(element_value, element_size)
                         adjustment_floats_idx += 1
                     
-                    adjustment_floats_idx += 3
+                    adjustment_floats_idx += num_elements_per_attr
 
             bitstream_writer.flush()
             writer.align(4)
