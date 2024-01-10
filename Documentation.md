@@ -58,7 +58,7 @@ When modding SOTTR, you'll encounter the following file types:
 
   The root resource of certain special .drm files containing lists of game content,
   such as collectibles or outfit traits. Just like .tr11objectref, this resource type contains nothing more than a reference
-  to a .tr11dtp resource with the actual lists.
+  to a .tr11dtp resource with the actual data.
         
   .tr11contentref resources can be found in .drm files starting with "global," such as globalcollectibleinfo.drm.
 
