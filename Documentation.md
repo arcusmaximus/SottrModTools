@@ -2,6 +2,8 @@
 
 This page will give a quick introduction to the various file types involved, and then explain how to create and package mods.
 
+If you're reading on GitHub, you can access the table of contents using the button on the rightmost side of the toolbar.
+
 ## File extensions
 
 When modding SOTTR, you'll encounter the following file types:
