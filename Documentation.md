@@ -103,8 +103,9 @@ The import filechooser has the following options on the right hand side:
 
 - **Merge with existing armature(s)**
 
-  In SOTTR, each of Lara's outfits is split into as many as four pieces (head/hair/torso/legs), with each piece having its own skeleton.
-  What's more, different skeletons typically have different IDs for the same bone. This of course complicates rigging.
+  In SOTTR, each of Lara's outfits is split into as many as four pieces (head/hair/torso/legs), with each piece having its
+  own partial skeleton. What's more, different skeletons typically have different IDs for the same bone.
+  This of course complicates rigging.
 
   To solve this problem, the addon can merge the different skeletons into one skeleton that covers the whole outfit.
   Simply import one outfit piece, then import another (and another...) into the same Blender scene with this option
@@ -152,7 +153,7 @@ The addon imports mesh normals, with an important exception: if a mesh has blend
 The reason is that Blender doesn't support custom vertex normals in blend shapes, only positions.
 
 After importing, it's recommended to use Blender's "Face Orientation" overlay to verify that no faces ended up pointing inside out.
-This tends to be the case for the teeth in head meshes for example. Incorrectly oriented faces will appear black ingame.
+This tends to be the case for the teeth in head meshes for example. Incorrectly oriented faces will appear blackened ingame.
 
 If you want to remove the custom normals for other meshes (e.g. because they get in the way during editing), you can do so by
 selecting the mesh, switching to the Data tab (green triangle) in Blender's Properties panel, expanding the "Geometry Data" header,
@@ -177,9 +178,9 @@ and is compatible across outfits.
 The way it works is as follows:
 
 - When you import the first model, you'll notice that each bone in the armature has two IDs in its name.
-  The first is the *global ID*, which is referenced by animations and is therefore the same for
-  this bone across all pieces of all outfits. The second is the *local ID*, which is referenced
-  by the weights of the model but is different in each outfit piece.
+  The first is the *global ID*, which is referenced by animations and is the same for this bone across
+  all pieces of all outfits. The second is the *local ID*, which is referenced by the weights of the model
+  but is different in every outfit piece.
 
 - When you import a second model with the "Merge with existing armature(s)" option enabled,
   the addon will create a new armature containing the bones of both the first and second skeleton
@@ -200,6 +201,10 @@ The way it works is as follows:
   If a mesh spans multiple skeletons, the addon will automatically split it up. This tends to result in
   visible seams ingame, however, so it's better to split the meshes yourself in a place where the seams are
   minimized or hidden.
+
+Certain bones are not driven by animations but by a physics simulation — typically used to make strips of cloth
+flutter around. These bones do not have a global ID. Instead, they have only a local ID in the original skeleton,
+and a skeleton ID + a local ID in the merged skeleton.
 
 ### Mesh editing
 
@@ -225,8 +230,8 @@ on a custom mesh would be quite the undertaking. Fortunately, it's not necessary
 meaning all you really have to do is transfer the weights. The full-detail head mesh isn't weighted for facial bones,
 but the LOD meshes are, which is where the "Import LODs" option comes in handy.
 
-Lara's hair, in turn, is stored in a PureHair file that's referenced by the object metadata. You can't remove it through
-mesh editing — instead, you need to use the binary templates. This is done as follows:
+Lara's hair, in turn, is stored in a [PureHair](https://en.wikipedia.org/wiki/TressFX) file that's referenced by the object metadata.
+You can't remove it through mesh editing — instead, you need to use the binary templates. This is done as follows:
 
 - Open the head's .tr11objectref in one of the supported hex editors.
 - Apply the "tr11objectref" template.
@@ -261,7 +266,7 @@ You can also check the appendix at the end of this page to find the IDs of the p
 
 Once you've found an animation you'd like to edit or replace, you'll want to do the following:
 
-- Import tr11_lara.tr11objectref from tr11_lara.drm and delete the dummy model, keeping just the skeleton.
+- Import tr11_lara.tr11objectref from tr11_lara.drm and delete the dummy mesh, keeping just the skeleton.
 - Import the head, torso, and leg models of some outfit.
 - Import the .tr11anim file (File → Import → SOTTR animation).
 - Edit the animation. While imported animations have a keyframe on every frame, this is not required for
