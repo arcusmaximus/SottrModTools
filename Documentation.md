@@ -79,7 +79,8 @@ The Blender addon can be installed as follows. Note that it requires Blender **3
 - Select io_scene_sottr.zip.
 - Enable the checkmark next to "Import-Export: SOTTR mesh support."
 
-Finally, the binary templates simply need to be placed in the correct folder:
+Finally, the binary templates (if you want to use them) simply need to be placed in the correct folder
+depending on which hex editor you have:
 
 - ImHex: "patterns" subfolder.
 - 010 Editor: "010 Templates" subfolder.
