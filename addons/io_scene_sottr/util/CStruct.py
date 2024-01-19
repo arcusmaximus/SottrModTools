@@ -163,7 +163,7 @@ class CStructMeta(type(ctypes.Structure)):
                 if field_type_mapping is not None:
                     field_name = CStructMeta.get_c_field_name(field_name)
                     field_type = field_type_mapping.c_type
-                elif issubclass(field_type, CStructBase):
+                elif issubclass(field_type, CStruct):                           # type: ignore
                     field_name = CStructMeta.get_c_field_name(field_name)
                 
                 field_types.append((field_name, field_type))
@@ -202,7 +202,14 @@ class CStructMeta(type(ctypes.Structure)):
         
         return property(get, set)
 
-class CStructBase(ctypes.Structure, metaclass=CStructMeta):
+if typing.TYPE_CHECKING:
+    struct_secondary_base = typing.Protocol
+    struct_metaclass = type
+else:
+    struct_secondary_base = object
+    struct_metaclass = CStructMeta
+
+class CStruct(ctypes.Structure, struct_secondary_base, metaclass=struct_metaclass):         # type: ignore
     _field_infos_: dict[str, CStructField] = {}
     
     @staticmethod
@@ -216,8 +223,8 @@ class CStructBase(ctypes.Structure, metaclass=CStructMeta):
                 c_value = getattr(self, CStructMeta.get_c_field_name(field_name))
                 mapped_value = field_info.type_mapping.map_from_c(c_value, offset_in_parent + field_info.offset, context)
                 setattr(self, field_name, mapped_value)
-            elif issubclass(field_info.type, CStructBase):
-                struct_value = typing.cast(CStructBase, getattr(self, CStructMeta.get_c_field_name(field_name)))
+            elif issubclass(field_info.type, CStruct):                                      # type: ignore
+                struct_value = typing.cast(CStruct, getattr(self, CStructMeta.get_c_field_name(field_name)))
                 struct_value.map_fields_from_c(context, offset_in_parent + field_info.offset)
                 setattr(self, field_name, struct_value)
     
@@ -227,17 +234,10 @@ class CStructBase(ctypes.Structure, metaclass=CStructMeta):
                 mapped_value = getattr(self, field_name)
                 c_value = field_info.type_mapping.map_to_c(mapped_value, offset_in_parent + field_info.offset, context)
                 setattr(self, CStructMeta.get_c_field_name(field_name), c_value)
-            elif issubclass(field_info.type, CStructBase):
-                struct_value = typing.cast(CStructBase, getattr(self, field_name))
+            elif issubclass(field_info.type, CStruct):                                      # type: ignore
+                struct_value = typing.cast(CStruct, getattr(self, field_name))
                 struct_value.map_fields_to_c(context, offset_in_parent + field_info.offset)
                 setattr(self, CStructMeta.get_c_field_name(field_name), struct_value)
-
-if typing.TYPE_CHECKING:
-    class CStruct(CStructBase, typing.Protocol):        # type: ignore
-        pass
-else:
-    class CStruct(CStructBase):
-        pass
 
 class CFlag:
     flags_field_name: str

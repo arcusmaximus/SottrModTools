@@ -182,6 +182,9 @@ class Enumerable(Generic[T]):
     
     def to_list(self) -> list[T]:
         return list(self)
+    
+    def to_set(self) -> set[T]:
+        return set(self)
 
     @overload
     def to_dict(self, key_selector: Callable[[T], U]) -> dict[U, T]: ...

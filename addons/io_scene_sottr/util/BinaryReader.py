@@ -149,3 +149,10 @@ class BinaryReader(SlotsBase):
         result.map_fields_from_c(self)
         self.position += ctypes.sizeof(t)
         return result
+
+    def read_struct_list(self, t: type[TStruct], count: int) -> list[TStruct]:
+        result: list[TStruct] = []
+        for _ in range(count):
+            result.append(self.read_struct(t))
+        
+        return result
