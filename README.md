@@ -4,6 +4,8 @@ This repository contains modding tools for Shadow of the Tomb Raider.
 
 [Download from NexusMods](https://www.nexusmods.com/shadowofthetombraider/mods/185?tab=files)
 
+[Documentation](https://github.com/arcusmaximus/SottrModTools/blob/main/Documentation.md)
+
 ## Mod Manager
 
 A standalone tool for installing/uninstalling mods. Temporarily disabling is also possible.
