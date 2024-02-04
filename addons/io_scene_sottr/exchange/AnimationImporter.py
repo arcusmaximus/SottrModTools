@@ -34,15 +34,14 @@ class AnimationImporter(SlotsBase):
         bpy.context.scene.render.fps_base = animation.ms_per_frame
 
         if bpy.context.object:
-            bpy.ops.object.mode_set(mode = "OBJECT")        # type: ignore
+            bpy.ops.object.mode_set(mode = "OBJECT")
 
         self.import_bone_animation(bl_armature_obj, animation)
         for bl_mesh_obj in Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
             self.import_blend_shape_animation(bl_mesh_obj, animation)
 
     def import_bone_animation(self, bl_armature_obj: bpy.types.Object, animation: Animation) -> None:
-        for bl_bone in bl_armature_obj.pose.bones:
-            cast(Matrix, bl_bone.matrix_basis).identity()
+        BlenderHelper.reset_pose(bl_armature_obj)
         
         bl_fcurves: dict[_ItemAttrKey, list[bpy.types.FCurve]] = self.create_bone_fcurves(bl_armature_obj, animation)
         rest_matrices: dict[int, Matrix] = self.get_armature_space_rest_matrices(bl_armature_obj)

@@ -822,10 +822,10 @@ typedef struct
     if (IsValidRef(treeRef))
     {
         SeekToRef(treeRef);
-        NodeTree tree;
+        NodeTree tree <open=true>;
         ReturnFromRef();
     }
-} ActionGraph;
+} ActionGraph <open=true>;
 
 RefDefinitions refDefinitions;
 ActionGraph actionGraph;

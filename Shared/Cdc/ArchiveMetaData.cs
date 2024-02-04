@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace SottrModManager.Shared.Cdc
 {
     public class ArchiveMetaData
     {
+        private readonly string _enabledFilePath;
+
         private ArchiveMetaData(string filePath)
         {
             FilePath = filePath;
+            _enabledFilePath = Regex.Replace(filePath, @"\.disabled", "");
         }
 
         public static ArchiveMetaData Create(string filePath, int gameId, int version, int packageId, int dlcIndex)
@@ -30,6 +34,32 @@ namespace SottrModManager.Shared.Cdc
         public string FilePath
         {
             get;
+            private set;
+        }
+
+        public bool Enabled
+        {
+            get { return File.Exists(_enabledFilePath); }
+            set
+            {
+                string disabledFilePath = _enabledFilePath + ".disabled";
+                if (value)
+                {
+                    if (File.Exists(disabledFilePath))
+                    {
+                        File.Move(disabledFilePath, _enabledFilePath);
+                        FilePath = _enabledFilePath;
+                    }
+                }
+                else
+                {
+                    if (File.Exists(_enabledFilePath))
+                    {
+                        File.Move(_enabledFilePath, disabledFilePath);
+                        FilePath = disabledFilePath;
+                    }
+                }
+            }
         }
 
         public static ArchiveMetaData Load(string filePath)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -22,6 +21,7 @@ namespace SottrModManager.Shared.Cdc
         {
             FolderPath = folderPath;
 
+            Dictionary<int, ArchiveMetaData> metaDatas = new();
             foreach (string nfoFilePath in Directory.EnumerateFiles(folderPath))
             {
                 if (!nfoFilePath.EndsWith(".nfo") && !nfoFilePath.EndsWith(".nfo.disabled"))
@@ -30,13 +30,18 @@ namespace SottrModManager.Shared.Cdc
                 if (Path.GetFileName(nfoFilePath).StartsWith(ModArchivePrefix) ? !includeMods : !includeGame)
                     continue;
 
-                string archiveFilePath = Regex.Replace(nfoFilePath, @"\.nfo(\.disabled)?$", ".tiger");
-                Load(archiveFilePath);
+                ArchiveMetaData metaData = ArchiveMetaData.Load(nfoFilePath);
+                metaDatas[metaData.DlcIndex] = metaData;
+            }
 
-                foreach (string localizationArchivePath in GetLocalizationArchivePaths(archiveFilePath))
-                {
-                    Load(localizationArchivePath);
-                }
+            foreach (string archiveFilePath in Directory.EnumerateFiles(folderPath, "*.tiger"))
+            {
+                using Stream stream = File.OpenRead(archiveFilePath);
+                using BinaryReader reader = new BinaryReader(stream);
+                var header = reader.ReadStruct<Archive.ArchiveHeader>();
+                ArchiveMetaData metaData = metaDatas.GetOrDefault(header.Id);
+                if (metaData != null)
+                    Load(archiveFilePath, metaData);
             }
 
             foreach (Archive archive in GetSortedArchives())
@@ -64,12 +69,9 @@ namespace SottrModManager.Shared.Cdc
 
         public IReadOnlyCollection<ArchiveFileReference> Files => _files.Values;
 
-        private void Load(string archiveFilePath)
+        private void Load(string archiveFilePath, ArchiveMetaData metaData)
         {
-            if (!File.Exists(archiveFilePath))
-                return;
-
-            Archive archive = Archive.Open(archiveFilePath);
+            Archive archive = Archive.Open(archiveFilePath, metaData);
             var archiveKey = (archive.Id, archive.SubId);
             if (!_archives.ContainsKey(archiveKey))
                 _archives.Add(archiveKey, archive);
@@ -77,7 +79,7 @@ namespace SottrModManager.Shared.Cdc
                 _duplicateArchives.Add(archive);
         }
 
-        public Archive CreateModArchive(string modName, int maxResourceCollections)
+        public Dictionary<ulong, Archive> CreateModArchives(string modName, Dictionary<ulong, int> maxFilesByLocale)
         {
             lock (_lock)
             {
@@ -87,18 +89,63 @@ namespace SottrModManager.Shared.Cdc
                 int gameId = _archives.Values.First().MetaData.GameId;
                 int version = _archives.Values.Max(a => a.MetaData.Version) + 1;
                 int id = _archives.Values.Max(a => a.Id) + 1;
-
-                string filePath = Path.Combine(FolderPath, $"{ModArchivePrefix}{simplifiedName}.000.000.tiger");
-                Archive archive = Archive.Create(filePath, gameId, version, id, maxResourceCollections);
-
                 string steamId = _archives.Values.First().MetaData.CustomEntries.FirstOrDefault(c => c.StartsWith("steamID:"));
-                if (steamId != null)
-                    archive.MetaData.CustomEntries.Add(steamId);
 
-                archive.MetaData.CustomEntries.Add("mod:" + modName);
-                archive.MetaData.Save();
-                return archive;
+                string nfoFilePath = Path.Combine(FolderPath, $"{ModArchivePrefix}{simplifiedName}.000.000.nfo");
+                ArchiveMetaData metaData = ArchiveMetaData.Create(nfoFilePath, gameId, version, id, id);
+                if (steamId != null)
+                    metaData.CustomEntries.Add(steamId);
+
+                metaData.CustomEntries.Add("mod:" + modName);
+                metaData.Save();
+
+                int subId = 0;
+
+                Dictionary<ulong, Archive> archives = new();
+                SpecMasksToc toc = new SpecMasksToc();
+                foreach ((ulong locale, int maxFiles) in maxFilesByLocale.OrderByDescending(p => p.Key))
+                {
+                    string archiveFileName = $"{ModArchivePrefix}{simplifiedName}.000{MakeLocaleSuffix(locale)}.000.tiger";
+                    toc.Entries.Add(locale, archiveFileName);
+                    archives.Add(locale, Archive.Create(Path.Combine(FolderPath, archiveFileName), metaData, subId, maxFiles));
+                    subId++;
+                }
+
+                if (toc.Entries.Count > 1)
+                    toc.Write(SpecMasksToc.GetFilePathForArchive(Path.ChangeExtension(nfoFilePath, ".tiger")));
+
+                return archives;
             }
+        }
+
+        private static string MakeLocaleSuffix(ulong locale)
+        {
+            if (locale == 0xFFFFFFFFFFFFFFFF)
+                return "";
+
+            int textFlags = (int)(locale & 0xFFFFFFF);
+            string textLanguage;
+            if (textFlags == 0xFFFFFFF)
+                textLanguage = "alltxt";
+            else
+                textLanguage = Enum.GetValues(typeof(LocaleLanguage)).Cast<LocaleLanguage>().First(l => (textFlags & (int)l) != 0).ToString().ToLower();
+
+            int voiceFlags = (int)((locale >> 28) & 0xFFFFFFF);
+            string voiceLanguage;
+            if (voiceFlags == 0xFFFFFFF)
+                voiceLanguage = "allvo";
+            else
+                voiceLanguage = Enum.GetValues(typeof(LocaleLanguage)).Cast<LocaleLanguage>().First(l => (voiceFlags & (int)l) != 0).ToString().ToLower();
+
+            int platformFlags = (int)(locale >> 56);
+            string platform = platformFlags switch
+            {
+                0xFF => "allplt",
+                0x20 => "neutral",
+                _ => platformFlags.ToString("X02")
+            };
+
+            return $"_{textLanguage}_{voiceLanguage}_{platform}";
         }
 
         public void Add(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
@@ -113,15 +160,19 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public void Enable(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
+        public void Enable(int archiveId, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
             lock (_lock)
             {
+                Archive archive = _archives[(archiveId, 0)];
+                if (archive.MetaData.Enabled)
+                    return;
+
                 try
                 {
                     progress.Begin($"Enabling mod {archive.ModName}...");
 
-                    archive.Enabled = true;
+                    archive.MetaData.Enabled = true;
 
                     List<Archive> sortedArchives = GetSortedArchives();
                     int index = sortedArchives.IndexOf(archive);
@@ -135,26 +186,34 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public void Disable(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
+        public void Disable(int archiveId, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
             lock (_lock)
             {
-                Disable(archive, gameResourceUsageCache, progress, $"Disabling mod {archive.ModName}...", cancellationToken);
+                Archive archive = _archives[(archiveId, 0)];
+                Disable(archiveId, gameResourceUsageCache, progress, $"Disabling mod {archive.ModName}...", cancellationToken);
             }
         }
 
-        private void Disable(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, string statusText, CancellationToken cancellationToken)
+        private void Disable(int archiveId, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, string statusText, CancellationToken cancellationToken)
         {
+            Archive archive = _archives[(archiveId, 0)];
+            if (!archive.MetaData.Enabled)
+                return;
+
             try
             {
                 progress.Begin(statusText);
 
                 List<Archive> sortedArchives = GetSortedArchives();
                 int index = sortedArchives.IndexOf(archive);
-                archive.Enabled = false;
+                archive.MetaData.Enabled = false;
                 if (index >= 0)
                 {
-                    sortedArchives.RemoveAt(index);
+                    while (index < sortedArchives.Count && sortedArchives[index].Id == archiveId)
+                    {
+                        sortedArchives.RemoveAt(index);
+                    }
                     UpdateResourceReferences(sortedArchives, index, gameResourceUsageCache, progress, cancellationToken);
                 }
                 else
@@ -168,15 +227,19 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public void Delete(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
+        public void Delete(int archiveId, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
             lock (_lock)
             {
-                Disable(archive, gameResourceUsageCache, progress, $"Removing mod {archive.ModName}...", cancellationToken);
-                archive.Delete();
-                archive.Dispose();
-                if (!_duplicateArchives.Remove(archive))
-                    _archives.Remove((archive.Id, archive.SubId));
+                Disable(archiveId, gameResourceUsageCache, progress, $"Removing mod {_archives[(archiveId, 0)].ModName}...", cancellationToken);
+
+                foreach (Archive archive in _archives.Values.Where(a => a.Id == archiveId).Concat(_duplicateArchives.Where(a => a.Id == archiveId)).ToList())
+                {
+                    archive.Delete();
+                    archive.Dispose();
+                    if (!_duplicateArchives.Remove(archive))
+                        _archives.Remove((archive.Id, archive.SubId));
+                }
             }
         }
 
@@ -295,7 +358,7 @@ namespace SottrModManager.Shared.Cdc
 
         public List<Archive> GetSortedArchives()
         {
-            List<Archive> sortedArchives = _archives.Values.Where(a => a.Enabled).ToList();
+            List<Archive> sortedArchives = _archives.Values.Where(a => a.MetaData.Enabled).ToList();
             sortedArchives.Sort(CompareArchivePriority);
             return sortedArchives;
         }
@@ -319,46 +382,6 @@ namespace SottrModManager.Shared.Cdc
                 return comparison;
 
             return a.SubId.CompareTo(b.SubId);
-        }
-
-        private static IEnumerable<string> GetLocalizationArchivePaths(string baseArchiveFilePath)
-        {
-            string folderPath = Path.GetDirectoryName(baseArchiveFilePath);
-
-            string specMasksName = Path.GetFileName(baseArchiveFilePath);
-            if (specMasksName == "bigfile.000.tiger")
-            {
-                specMasksName = "game";
-            }
-            else
-            {
-                specMasksName = Regex.Replace(specMasksName, @"^bigfile\.", "");
-                specMasksName = Regex.Replace(specMasksName, @"\.\d{3}\.\d{3}\.tiger$", "");
-            }
-
-            string specMasksFilePath = Path.Combine(folderPath, specMasksName + ".specmasks.toc");
-            if (!File.Exists(specMasksFilePath))
-                yield break;
-
-            using StreamReader reader = new StreamReader(specMasksFilePath);
-            reader.ReadLine();
-            string line;
-            while ((line = reader.ReadLine()) != null)
-            {
-                int spacePos = line.IndexOf(' ');
-                if (spacePos < 0)
-                    continue;
-
-                ulong archiveLocale = ulong.Parse(line.Substring(0, spacePos), NumberStyles.AllowHexSpecifier);
-                if (archiveLocale == 0xFFFFFFFFFFFFFFFF)
-                    continue;
-
-                string localizationArchiveFileName = line.Substring(spacePos + 1);
-                if (!localizationArchiveFileName.EndsWith(".000.tiger"))
-                    continue;
-
-                yield return Path.Combine(folderPath, localizationArchiveFileName);
-            }
         }
 
         public void CloseStreams()

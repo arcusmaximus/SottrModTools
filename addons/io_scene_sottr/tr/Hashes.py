@@ -23,4 +23,9 @@ class Hashes:
     texcoord3           = Crc32.calculate(b"Texcoord3")
     texcoord4           = Crc32.calculate(b"Texcoord4")
 
-    meshref             = _Hashes__hash_simple(b"meshref")
+    cloth                               = _Hashes__hash_simple(b"cloth")
+    genericboxshapelist                 = _Hashes__hash_simple(b"genericboxshapelist")
+    genericcapsuleshapelist             = _Hashes__hash_simple(b"genericcapsuleshapelist")
+    genericdoubleradiicapsuleshapelist  = _Hashes__hash_simple(b"genericdoubleradiicapsuleshapelist")
+    genericsphereshapelist              = _Hashes__hash_simple(b"genericsphereshapelist")
+    meshref                             = _Hashes__hash_simple(b"meshref")

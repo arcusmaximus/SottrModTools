@@ -1,11 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 
 namespace SottrModManager.Shared.Util
 {
     public static class CollectionExtensions
     {
+        public static int LastIndexOf<T>(this IEnumerable<T> items, Func<T, bool> predicate)
+        {
+            int lastIndex = -1;
+            int index = 0;
+            foreach (T item in items)
+            {
+                if (predicate(item))
+                    lastIndex = index;
+
+                index++;
+            }
+            return lastIndex;
+        }
+
         public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
         {
             dict.TryGetValue(key, out TValue value);
@@ -33,6 +48,14 @@ namespace SottrModManager.Shared.Util
             foreach (T item in items)
             {
                 list.Add(item);
+            }
+        }
+
+        public static void RemoveAll<TKey, TValue>(this IDictionary<TKey, TValue> dict, Func<KeyValuePair<TKey, TValue>, bool> predicate)
+        {
+            foreach (TKey key in dict.Where(predicate).Select(p => p.Key).ToList())
+            {
+                dict.Remove(key);
             }
         }
     }

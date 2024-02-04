@@ -1,28 +1,17 @@
-from typing import Iterable, cast
 import bpy
-from bpy.types import Context, Menu, Operator, Event
-from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty                            # type: ignore
-from io_scene_sottr.AnimationImporter import AnimationImporter
+from io_scene_sottr.exchange.AnimationImporter import AnimationImporter
 from io_scene_sottr.BlenderNaming import BlenderNaming
+from io_scene_sottr.operator.BlenderOperatorBase import ImportOperatorBase, ImportOperatorProperties
 from io_scene_sottr.operator.OperatorCommon import OperatorCommon
 from io_scene_sottr.operator.OperatorContext import OperatorContext
 from io_scene_sottr.util.Enumerable import Enumerable
 
-class ImportAnimationOperator(Operator, ImportHelper):          # type: ignore
+class ImportAnimationOperator(ImportOperatorBase[ImportOperatorProperties]):
     bl_idname = "import_scene.tr11anim"
-    
-    bl_menu = cast(Menu, bpy.types.TOPBAR_MT_file_import)
     bl_menu_item_name = "SOTTR animation (.tr11anim)"
-
     filename_ext = ".tr11anim"
-    filter_glob: StringProperty(                                # type: ignore
-        default = "*" + filename_ext,
-        options = { "HIDDEN" }
-    )
-    bl_label = "Import"
 
-    def invoke(self, context: Context, event: Event) -> set[str]:       # type: ignore
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> set[str]:
         with OperatorContext.begin(self):
             bl_armature_obj = self.get_target_armature()
             if bl_armature_obj is None:
@@ -31,7 +20,7 @@ class ImportAnimationOperator(Operator, ImportHelper):          # type: ignore
             context.window_manager.fileselect_add(self)
             return { "RUNNING_MODAL" }
     
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: bpy.types.Context) -> set[str]:
         with OperatorContext.begin(self):
             bl_armature_obj = self.get_target_armature()
             if bl_armature_obj is None:
@@ -61,5 +50,4 @@ class ImportAnimationOperator(Operator, ImportHelper):          # type: ignore
         return bl_armature_objs[0]
     
     def is_in_local_collection(self, bl_obj: bpy.types.Object) -> bool:
-        bl_collections = Enumerable(cast(Iterable[bpy.types.Collection], bl_obj.users_collection))
-        return bl_collections.any(lambda c: c.name == BlenderNaming.local_collection_name)
+        return Enumerable(bl_obj.users_collection).any(lambda c: c.name == BlenderNaming.local_collection_name)

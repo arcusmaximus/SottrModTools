@@ -46,6 +46,7 @@ class MaterialImporter(SlotsBase):
             bl_normal_node.location = (300, -250)
             cast(bpy.types.NodeSocketFloat, bl_normal_node.inputs[0]).default_value = 0.5
             bl_material.node_tree.links.new(bl_texture_nodes.normal.outputs[0], bl_normal_node.inputs[1])
+            bl_material.node_tree.links.new(bl_normal_node.outputs[0], bl_diffuse_shader_node.inputs[2])
 
         bl_mix_node = bl_material.node_tree.nodes.new("ShaderNodeMixShader")
         bl_mix_node.location = (500, 0)
@@ -57,8 +58,6 @@ class MaterialImporter(SlotsBase):
         bl_output_node = bl_material.node_tree.nodes.new("ShaderNodeOutputMaterial")
         bl_output_node.location = (700, 0)
         bl_material.node_tree.links.new(bl_mix_node.outputs[0], bl_output_node.inputs[0])
-        if bl_normal_node is not None:
-            bl_material.node_tree.links.new(bl_normal_node.outputs[0], bl_output_node.inputs[2])
 
         return bl_material
 

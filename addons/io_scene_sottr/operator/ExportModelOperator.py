@@ -1,47 +1,45 @@
 import os
-from typing import Iterable, cast
+from typing import Annotated, Iterable, Protocol, cast
 import bpy
-from bpy.types import Context, Menu, Operator, Event
-from bpy.props import StringProperty                                    # type: ignore
-from bpy_extras.io_utils import ExportHelper
+from bpy.types import Context, Event
 from io_scene_sottr.BlenderNaming import BlenderNaming
-from io_scene_sottr.ModelExporter import ModelExporter
+from io_scene_sottr.exchange.ClothExporter import ClothExporter
+from io_scene_sottr.exchange.ModelExporter import ModelExporter
 from io_scene_sottr.ModelSplitter import ModelSplitter
+from io_scene_sottr.exchange.SkeletonExporter import SkeletonExporter
+from io_scene_sottr.operator.BlenderOperatorBase import ExportOperatorBase, ExportOperatorProperties
 from io_scene_sottr.operator.OperatorCommon import OperatorCommon
 from io_scene_sottr.operator.OperatorContext import OperatorContext
+from io_scene_sottr.properties.BlenderPropertyGroup import Prop
 from io_scene_sottr.util.DictionaryExtensions import DictionaryExtensions
 from io_scene_sottr.util.Enumerable import Enumerable
 
-class ExportModelOperator(Operator, ExportHelper):                      # type: ignore
-    bl_idname = "export_scene.tr11model"
-    
-    bl_menu = cast(Menu, bpy.types.TOPBAR_MT_file_export)
-    bl_menu_item_name = "SOTTR model (.tr11model)"
-    
-    filename_ext = ".tr11model"
-    filter_glob: StringProperty(                                        # type: ignore
-        default = "*" + filename_ext,
-        options = { "HIDDEN" }
-    )
-    bl_label = "Export"
+class _Properties(ExportOperatorProperties, Protocol):
+    export_skeleton: Annotated[bool, Prop("Export skeleton")]
+    export_cloth: Annotated[bool, Prop("Export cloth")]
 
-    def invoke(self, context: Context, event: Event) -> set[str]:       # type: ignore
+class ExportModelOperator(ExportOperatorBase[_Properties]):
+    bl_idname = "export_scene.tr11model"
+    bl_menu_item_name = "SOTTR model (.tr11model)"
+    filename_ext = ".tr11model"
+
+    def invoke(self, context: Context, event: Event) -> set[str]:
         with OperatorContext.begin(self):
-            bl_mesh_objs_to_export = self.get_mesh_objects_to_export(False)
-            if len(bl_mesh_objs_to_export) == 0:
+            bl_mesh_objs = self.get_mesh_objects_to_export(False)
+            if len(bl_mesh_objs) == 0:
                 OperatorContext.log_error("No SOTTR meshes found in scene.")
                 return { "CANCELLED" }
 
             folder_path: str
-            if getattr(self.properties, "filepath"):
-                folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
+            if self.properties.filepath:
+                folder_path = os.path.split(self.properties.filepath)[0]
             elif context.blend_data.filepath:
                 folder_path = os.path.split(context.blend_data.filepath)[0]
             else:
                 folder_path = ""
 
-            model_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs_to_export).first().name).model_id
-            setattr(self.properties, "filepath", os.path.join(folder_path, str(model_id) + self.filename_ext))
+            model_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs).first().name).model_id
+            self.properties.filepath = os.path.join(folder_path, str(model_id) + self.filename_ext)
             context.window_manager.fileselect_add(self)
             return { "RUNNING_MODAL" }
 
@@ -55,10 +53,22 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
             
             bl_mesh_objs = self.get_mesh_objects_to_export(True)
             
-            exporter = ModelExporter(OperatorCommon.scale_factor)
-            folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
+            model_exporter = ModelExporter(OperatorCommon.scale_factor)
+            folder_path = os.path.split(self.properties.filepath)[0]
             for model_id_set, bl_mesh_objs_of_model in Enumerable(bl_mesh_objs).group_by(lambda o: BlenderNaming.parse_model_name(o.name)).items():
-                exporter.export_model(folder_path, model_id_set.model_id, model_id_set.model_data_id, bl_mesh_objs_of_model)
+                model_exporter.export_model(folder_path, model_id_set.model_id, model_id_set.model_data_id, bl_mesh_objs_of_model)
+            
+            if self.properties.export_skeleton:
+                skeleton_exporter = SkeletonExporter(OperatorCommon.scale_factor)
+                for bl_armature_obj in Enumerable(bl_mesh_objs).select(lambda o: o.parent).where(lambda o: o and isinstance(o.data, bpy.types.Armature)).distinct():
+                    skeleton_exporter.export(folder_path, bl_armature_obj)
+            
+            if self.properties.export_cloth:
+                bl_unsplit_mesh_objs = self.get_mesh_objects_to_export(False)
+                bl_armature_obj = Enumerable(bl_unsplit_mesh_objs).select(lambda o: o.parent).first_or_none(lambda o: o and isinstance(o.data, bpy.types.Armature))
+                if bl_armature_obj is not None:
+                    cloth_exporter = ClothExporter(OperatorCommon.scale_factor)
+                    cloth_exporter.export_cloths(folder_path, bl_armature_obj, self.get_local_armatures())
             
             if bl_local_collection is not None:
                 bl_local_collection.exclude = was_local_collection_excluded
@@ -109,9 +119,12 @@ class ExportModelOperator(Operator, ExportHelper):                      # type: 
         return bl_mesh_objs_to_export
     
     def is_in_local_collection(self, bl_obj: bpy.types.Object) -> bool:
-        bl_collections = Enumerable(cast(Iterable[bpy.types.Collection], bl_obj.users_collection))
-        return bl_collections.any(lambda c: c.name == BlenderNaming.local_collection_name)
+        return Enumerable(bl_obj.users_collection).any(lambda c: c.name == BlenderNaming.local_collection_name)
     
     def get_mesh_children_of_armature(self, bl_armature_obj: bpy.types.Object) -> Iterable[bpy.types.Object]:
-        return Enumerable(cast(Iterable[bpy.types.Object], bl_armature_obj.children)).where(
+        return Enumerable(bl_armature_obj.children).where(
             lambda o: isinstance(o.data, bpy.types.Mesh) and BlenderNaming.try_parse_mesh_name(o.name) is not None)
+
+    def get_local_armatures(self) -> dict[int, bpy.types.Object]:
+        return Enumerable(bpy.context.scene.objects).where(lambda o: isinstance(o.data, bpy.types.Armature) and self.is_in_local_collection(o)) \
+                                                    .to_dict(lambda o: BlenderNaming.parse_local_armature_name(o.name))

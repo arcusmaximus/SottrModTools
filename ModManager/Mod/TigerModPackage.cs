@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using SottrModManager.Shared.Cdc;
 using SottrModManager.Shared.Util;
 
@@ -7,24 +8,33 @@ namespace SottrModManager.Mod
 {
     internal class TigerModPackage : ModPackage
     {
-        private readonly Archive _archive;
+        private readonly Dictionary<int, Archive> _archivesBySubId;
+        private readonly Dictionary<ArchiveFileKey, ArchiveFileReference> _files = new();
         private readonly Dictionary<ResourceKey, ResourceReference> _resources = new();
 
-        public TigerModPackage(string filePath)
+        public TigerModPackage(string nfoFilePath, List<string> archiveFilePaths)
         {
-            _archive = Archive.Open(filePath);
-            Name = _archive.ModName;
+            ArchiveMetaData metaData = ArchiveMetaData.Load(nfoFilePath);
+            _archivesBySubId = archiveFilePaths.Select(p => Archive.Open(p, metaData))
+                                               .ToDictionary(a => a.SubId);
+            Name = _archivesBySubId.Values.First().ModName;
 
-            foreach (ArchiveFileReference fileRef in _archive.Files)
+            foreach (Archive archive in _archivesBySubId.Values)
             {
-                ResourceCollection collection = _archive.GetResourceCollection(fileRef);
-                if (collection == null)
-                    continue;
-
-                foreach (ResourceReference resourceRef in collection.ResourceReferences)
+                foreach (ArchiveFileReference fileRef in archive.Files)
                 {
-                    if (resourceRef.ArchiveId == _archive.Id)
-                        _resources[new ResourceKey(resourceRef.Type, resourceRef.SubType, resourceRef.Id)] = resourceRef;
+                    ResourceCollection collection = archive.GetResourceCollection(fileRef);
+                    if (collection == null)
+                    {
+                        _files[fileRef] = fileRef;
+                        continue;
+                    }
+
+                    foreach (ResourceReference resourceRef in collection.ResourceReferences)
+                    {
+                        if (resourceRef.ArchiveId == archive.Id)
+                            _resources[resourceRef] = resourceRef;
+                    }
                 }
             }
         }
@@ -34,12 +44,20 @@ namespace SottrModManager.Mod
             get;
         }
 
-        public override IEnumerable<ResourceKey> Resources => _resources.Keys;
+        public override ICollection<ArchiveFileKey> Files => _files.Keys;
+
+        public override Stream OpenFile(ArchiveFileKey fileKey)
+        {
+            ArchiveFileReference fileRef = _files.GetOrDefault(fileKey);
+            return fileRef != null ? _archivesBySubId[fileRef.ArchiveSubId].OpenFile(fileRef) : null;
+        }
+
+        public override ICollection<ResourceKey> Resources => _resources.Keys;
 
         public override Stream OpenResource(ResourceKey resourceKey)
         {
             ResourceReference resourceRef = _resources.GetOrDefault(resourceKey);
-            return resourceRef != null ? _archive.OpenResource(_resources[resourceKey]) : null;
+            return resourceRef != null ? _archivesBySubId[resourceRef.ArchiveSubId].OpenResource(_resources[resourceKey]) : null;
         }
 
         public override string ToString()
@@ -50,7 +68,10 @@ namespace SottrModManager.Mod
         public override void Dispose()
         {
             base.Dispose();
-            _archive.Dispose();
+            foreach (Archive archive in _archivesBySubId.Values)
+            {
+                archive.Dispose();
+            }
         }
     }
 }

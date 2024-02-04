@@ -1,6 +1,7 @@
 {
     "typeCheckingMode": "strict",
     "reportDeprecated": "none",
+    "reportUnknownMemberType": "none",
     "reportCallInDefaultInitializer": "error",
     "reportImplicitStringConcatenation": "error",
     "reportImportCycles": "error",

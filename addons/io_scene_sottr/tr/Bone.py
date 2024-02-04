@@ -15,6 +15,7 @@ class Bone(CStruct):
     field_3C: CInt
 
     global_id: int | None
-    _ignored_fields_ = ("global_id",)
+    counterpart_local_id: int | None
+    _ignored_fields_ = ("global_id", "counterpart_local_id")
 
 assert(sizeof(Bone) == 0x40)

@@ -2,7 +2,7 @@
 
 struct Bone
 {
-    Vector position;
+    Vector4 position;
     Quaternion orientation;
     float distanceFromParent;
     u32 flags;
@@ -22,10 +22,52 @@ struct BoneArray
         Bone bones[numBones] @ bonesRef.targetPos;
 };
 
-struct BoneIdMapping
+struct IdMapping
 {
-    u16 animBoneId;
-    u16 skeletonBoneId;
+    u16 globalId;
+    u16 localId;
+} [[format("formatIdMapping")]];
+
+fn formatIdMapping(IdMapping mapping)
+{
+    return std::format("{} -> {}", mapping.globalId, mapping.localId);
+};
+
+struct CounterpartRange
+{
+    u16 localIdRange1Start;
+    u16 localIdRange2Start;
+    u16 count;
+    if (count == 0)
+        break;
+};
+
+struct ExtraBoneInfo
+{
+    u8 type;
+    padding[1];
+    u16 localBoneId;
+    u16 numAssociatedLocalBoneIds;
+    padding[2];
+    
+    InternalRef associatedLocalBoneIdsRef;
+    if (associatedLocalBoneIdsRef.targetPos >= 0)
+        u16 associatedLocalBoneIds[numAssociatedLocalBoneIds] @ associatedLocalBoneIdsRef.targetPos;
+    
+    InternalRef floatsRef;
+    if (floatsRef.targetPos >= 0)
+        float floats[numAssociatedLocalBoneIds] @ floatsRef.targetPos;
+    
+    InternalRef quaternionRef;
+    if (quaternionRef.targetPos >= 0)
+        Quaternion quaternion @ quaternionRef.targetPos;
+};
+
+struct ExtraBoneInfoRef
+{
+    InternalRef extraBoneInfoRef;
+    if (extraBoneInfoRef.targetPos >= 0)
+        ExtraBoneInfo extraBoneInfo @ extraBoneInfoRef.targetPos;
 };
 
 struct Skeleton
@@ -33,30 +75,34 @@ struct Skeleton
     InternalRef boneArrayRef;
     BoneArray boneArray @ boneArrayRef.targetPos;
     
-    u16 numWords3;
-    u16;
-    u32;
-    InternalRef;
+    u16 numAnimIdMappings;
+    padding[6];
+    InternalRef counterpartRangesRef;
+    if (counterpartRangesRef.targetPos >= 0)
+        CounterpartRange counterpartRanges[while(true)] @ counterpartRangesRef.targetPos;
     
     u64 numWords1;
     InternalRef words1Ref;
     if (words1Ref.targetPos >= 0)
         u16 words1[numWords1] @ words1Ref.targetPos;
     
-    u16 numMappings1;
+    u16 numBoneIdMappings;
     padding[6];
-    InternalRef mappings1Ref;
-    if (mappings1Ref.targetPos >= 0)
-        BoneIdMapping mappings1[numMappings1] @ mappings1Ref.targetPos [[single_color]];
+    InternalRef boneIdMappingsRef;
+    if (boneIdMappingsRef.targetPos >= 0)
+        IdMapping boneIdMappings[numBoneIdMappings] @ boneIdMappingsRef.targetPos [[single_color]];
     
-    u8 numMappings2;
+    u8 numBlendShapeIdMappings;
     padding[7];
-    InternalRef mappings2Ref;
-    if (mappings2Ref.targetPos >= 0)
-        BoneIdMapping mappings2[numMappings2] @ mappings2Ref.targetPos [[single_color]];
+    InternalRef blendShapeIdMappingsRef;
+    if (blendShapeIdMappingsRef.targetPos >= 0)
+        IdMapping blendShapeIdMappings[numBlendShapeIdMappings] @ blendShapeIdMappingsRef.targetPos [[single_color]];
     
-    u64;
-    InternalRef;
+    u8 numExtraBoneInfos;
+    padding[7];
+    InternalRef extraBoneInfoRefsRef;
+    if (extraBoneInfoRefsRef.targetPos >= 0)
+        ExtraBoneInfoRef extraBoneInfoRefs[numExtraBoneInfos] @ extraBoneInfoRefsRef.targetPos;
     
     u8 numWords2;
     padding[7];
@@ -68,17 +114,15 @@ struct Skeleton
     if (boneBytesRef.targetPos >= 0)
         u8 boneBytes[boneArray.numBones] @ boneBytesRef.targetPos;
     
-    InternalRef words3ARef;
-    if (words3ARef.targetPos >= 0)
-        u16 words3A[numWords3] @ words3ARef.targetPos;
+    InternalRef localBoneIdsByAnimIdRef;
+    if (localBoneIdsByAnimIdRef.targetPos >= 0)
+        u16 localBoneIdsByAnimId[numAnimIdMappings] @ localBoneIdsByAnimIdRef.targetPos;
     
-    InternalRef words3BRef;
-    if (words3BRef.targetPos >= 0)
-        u16 words3B[numWords3] @ words3BRef.targetPos;
+    InternalRef animBoneIdsByLocalIdRef;
+    if (animBoneIdsByLocalIdRef.targetPos >= 0)
+        u16 animBoneIdsByLocalId[numAnimIdMappings] @ animBoneIdsByLocalIdRef.targetPos;
     
-    u16;
-    u16;
-    u32;
+    u16 unknownCounts[4];
 };
 
 RefDefinitions refDefinitions @ 0;

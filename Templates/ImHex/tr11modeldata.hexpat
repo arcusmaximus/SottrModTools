@@ -17,8 +17,8 @@ struct ModelDataHeader
     u32;
     u32;
     u32;
-    Vector boundingBoxMin;
-    Vector boundingBoxMax;
+    Vector4 boundingBoxMin;
+    Vector4 boundingBoxMax;
     padding[0xF8 - $];
     u64 meshPartsPos;
     u64 meshDescriptorsPos;
@@ -209,7 +209,7 @@ struct MeshContent
 
 struct MeshPart
 {
-    Vector field_0;
+    Vector4 field_0;
     u32 firstIndexIdx;
     u32 numTriangles;
     u32 field_18;

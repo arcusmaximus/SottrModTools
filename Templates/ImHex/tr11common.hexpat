@@ -1,3 +1,4 @@
+#include <std/core.pat>
 #include <std/io.pat>
 #include <std/mem.pat>
 #include <std/string.pat>
@@ -25,6 +26,17 @@ enum ResourceType : u8
 };
 
 u32 gResourceBodyPos;
+s16 gRefIndexByFilePos[std::mem::size() / 4];
+
+fn getRefIndex(u32 filePos)
+{
+    return gRefIndexByFilePos[filePos / 4] - 1;
+};
+
+fn setRefIndex(u32 filePos, s16 refIdx)
+{
+    gRefIndexByFilePos[filePos / 4] = refIdx + 1;
+};
 
 struct InternalRefValue<auto targetPos>
 {
@@ -49,13 +61,11 @@ struct InternalRef
 
 fn getInternalRefTargetPos(u32 refPos)
 {
-    u32 refOffset = refPos - gResourceBodyPos;
-    for (u32 i = 0, i < refDefinitions.numInternalRefs, i += 1)
-    {
-        if (refDefinitions.internalRefs[i].refOffset == refOffset)
-            return gResourceBodyPos + refDefinitions.internalRefs[i].targetOffset;
-    }
-    return -1;
+    s32 refIdx = getRefIndex(refPos);
+    if (refIdx < 0)
+        return -1;
+       
+    return gResourceBodyPos + refDefinitions.internalRefs[refIdx].targetOffset;
 };
 
 fn formatInternalRef(auto reference)
@@ -70,6 +80,7 @@ struct InternalRefDefinition
 {
     u32 refOffset;
     u32 targetOffset;
+    setRefIndex(gResourceBodyPos + refOffset, std::core::array_index());
     if (revealRefs)
         PlacedInternalRef<gResourceBodyPos + targetOffset> reference @ gResourceBodyPos + refOffset;
 };
@@ -92,13 +103,11 @@ struct ExternalRef
 
 fn getExternalRefResourceType(u32 refPos)
 {
-    u32 refOffset = refPos - gResourceBodyPos;
-    for (u32 i = 0, i < refDefinitions.numPackedExternalRefs, i += 1)
-    {
-        if (refDefinitions.packedExternalRefs[i].value.refOffset * 4 == refOffset)
-            return refDefinitions.packedExternalRefs[i].value.resourceType;
-    }
-    return ResourceType::NONE;
+    s32 refIdx = getRefIndex(refPos);
+    if (refIdx < 0)
+        return ResourceType::NONE;
+       
+    return refDefinitions.packedExternalRefs[refIdx].value.resourceType;
 };
 
 struct PlacedExternalRef<auto resourceType>
@@ -135,6 +144,7 @@ bitfield PackedExternalRefDefinitionValue
 struct PackedExternalRefDefinition
 {
     PackedExternalRefDefinitionValue value [[inline]];
+    setRefIndex(gResourceBodyPos + value.refOffset * 4, std::core::array_index());
     if (revealRefs)
         PlacedExternalRef<value.resourceType> reference @ gResourceBodyPos + value.refOffset * 4;
 };
@@ -160,12 +170,22 @@ struct RefDefinitions
     PackedExternalRefDefinition packedExternalRefs[numPackedExternalRefs];
 } [[color("0000C0")]];
 
-struct Vector
+struct Vector3
+{
+    float x, y, z;
+} [[format("formatVector3"), color("00D0D0")]];
+
+fn formatVector3(Vector3 vector)
+{
+    return std::format("({}, {}, {})", vector.x, vector.y, vector.z);
+};
+
+struct Vector4
 {
     float x, y, z, w;
-} [[format("formatVector"), color("00D0D0")]];
+} [[format("formatVector4"), color("00D0D0")]];
 
-fn formatVector(Vector vector)
+fn formatVector4(Vector4 vector)
 {
     return std::format("({}, {}, {}, {})", vector.x, vector.y, vector.z, vector.w);
 };
@@ -182,7 +202,7 @@ fn formatQuaternion(Quaternion quaternion)
 
 struct Matrix
 {
-    Vector a, b, c, d;
+    Vector4 a, b, c, d;
 };
 
 namespace std

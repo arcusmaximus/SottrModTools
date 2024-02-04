@@ -208,7 +208,14 @@ enum NameHash : u32
     ZONEMARKER = 0x6A21814E
 };
 
-struct InternalComponent
+struct SimpleComponent
+{
+    NameHash type;
+    padding[4];
+    ExternalRef reference;
+} [[format("formatComponentsOfType")]];
+
+struct TransformedComponent
 {
     Matrix transform;
     u32;
@@ -220,19 +227,12 @@ struct InternalComponent
     u64;
 };
 
-struct ExternalComponentsOfType
-{
-    NameHash type;
-    padding[4];
-    ExternalRef reference;
-} [[format("formatComponentsOfType")]];
-
-struct InternalComponentsOfType
+struct TransformedComponentsOfType
 {
     NameHash type;
     u32 count;
     InternalRef componentsRef [[inline]];
-    InternalComponent components[count] @ componentsRef.targetPos;
+    TransformedComponent components[count] @ componentsRef.targetPos;
 } [[format("formatComponentsOfType")]];
 
 fn formatComponentsOfType(auto array)
@@ -240,13 +240,13 @@ fn formatComponentsOfType(auto array)
     return enumToString(array.type);
 };
 
-struct InternalComponentCount
+struct TransformedComponentCount
 {
     NameHash type;
     u32 count;
 } [[format("formatInternalComponentCount")]];
 
-fn formatInternalComponentCount(InternalComponentCount item)
+fn formatInternalComponentCount(TransformedComponentCount item)
 {
     return std::format("{} = {}", enumToString(item.type), item.count);
 };
@@ -261,28 +261,31 @@ struct Object
     InternalRef;
     ExternalRef;
     
-    u32 numExternalComponentTypes;
+    u32 numSimpleComponents;
     padding[4];
-    InternalRef externalComponentsByTypeRef;
-    if (externalComponentsByTypeRef.targetPos >= 0)
-        ExternalComponentsOfType externalComponentsByType[numExternalComponentTypes] @ externalComponentsByTypeRef.targetPos;
+    InternalRef simpleComponentsRef;
+    if (simpleComponentsRef.targetPos >= 0)
+        SimpleComponent simpleComponents[numSimpleComponents] @ simpleComponentsRef.targetPos;
     
-    u32 numInternalComponentTypes;
+    u32 numTransformedComponentTypes;
     padding[4];
-    InternalRef internalComponentsByTypeRef;
-    if (internalComponentsByTypeRef.targetPos >= 0)
-        InternalComponentsOfType internalComponentsByType[numInternalComponentTypes] @ internalComponentsByTypeRef.targetPos;
+    InternalRef transformedComponentsByTypeRef;
+    if (transformedComponentsByTypeRef.targetPos >= 0)
+        TransformedComponentsOfType transformedComponentsByType[numTransformedComponentTypes] @ transformedComponentsByTypeRef.targetPos;
         
-    u64 numInternalComponentCounts;
-    InternalRef internalComponentCountsRef;
-    if (internalComponentCountsRef.targetPos >= 0)
-        InternalComponentCount internalComponentCounts[numInternalComponentCounts] @ internalComponentCountsRef.targetPos;
+    u64 numTransformedComponentCounts;
+    InternalRef transformedComponentCountsRef;
+    if (transformedComponentCountsRef.targetPos >= 0)
+        TransformedComponentCount transformedComponentCounts[numTransformedComponentCounts] @ transformedComponentCountsRef.targetPos;
     
     ExternalRef modelRef1;
     ExternalRef modelRef2;
     ExternalRef;
     ExternalRef;
     ExternalRef skeletonRef;
+    padding[8];
+    ExternalRef;
+    ExternalRef clothDefinitionRef;
 };
 
 RefDefinitions refDefinitions @ 0;

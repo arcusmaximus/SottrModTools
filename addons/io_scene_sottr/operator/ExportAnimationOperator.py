@@ -1,33 +1,23 @@
 import os
-from typing import Iterable, cast
+from typing import Annotated, Protocol
 import bpy
-from bpy.types import Context, Menu, Operator, Event
-from bpy.props import StringProperty, BoolProperty                      # type: ignore
-from bpy_extras.io_utils import ExportHelper
-from io_scene_sottr.AnimationExporter import AnimationExporter
+from io_scene_sottr.exchange.AnimationExporter import AnimationExporter
 from io_scene_sottr.BlenderNaming import BlenderNaming
+from io_scene_sottr.operator.BlenderOperatorBase import ExportOperatorBase, ExportOperatorProperties
 from io_scene_sottr.operator.OperatorCommon import OperatorCommon
 from io_scene_sottr.operator.OperatorContext import OperatorContext
+from io_scene_sottr.properties.BlenderPropertyGroup import Prop
 from io_scene_sottr.util.Enumerable import Enumerable
 
-class ExportAnimationOperator(Operator, ExportHelper):                  # type: ignore
-    bl_idname = "export_scene.tr11anim"
-    
-    bl_menu = cast(Menu, bpy.types.TOPBAR_MT_file_export)
-    bl_menu_item_name = "SOTTR animation (.tr11anim)"
-    
-    filename_ext = ".tr11anim"
-    filter_glob: StringProperty(                                        # type: ignore
-        default = "*" + filename_ext,
-        options = { "HIDDEN" }
-    )
-    apply_lara_bone_fix_constraints: BoolProperty(                       # type: ignore
-        name = "Apply Lara bone fix constraints",
-        default = True
-    )
-    bl_label = "Export"
+class _Properties(ExportOperatorProperties, Protocol):
+    apply_lara_bone_fix_constraints: Annotated[bool, Prop("Apply Lara bone fix constraints", default = True)]
 
-    def invoke(self, context: Context, event: Event) -> set[str]:       # type: ignore
+class ExportAnimationOperator(ExportOperatorBase[_Properties]):
+    bl_idname = "export_scene.tr11anim"
+    bl_menu_item_name = "SOTTR animation (.tr11anim)"    
+    filename_ext = ".tr11anim"
+
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> set[str]:
         with OperatorContext.begin(self):
             bl_armature_obj = self.get_source_armature()
             if bl_armature_obj is None:
@@ -36,26 +26,26 @@ class ExportAnimationOperator(Operator, ExportHelper):                  # type: 
             animation_id = self.get_animation_id(bl_armature_obj)
             if animation_id is not None:
                 folder_path: str
-                if getattr(self.properties, "filepath"):
-                    folder_path = os.path.split(getattr(self.properties, "filepath"))[0]
+                if self.properties.filepath:
+                    folder_path = os.path.split(self.properties.filepath)[0]
                 elif context.blend_data.filepath:
                     folder_path = os.path.split(context.blend_data.filepath)[0]
                 else:
                     folder_path = ""
                 
-                setattr(self.properties, "filepath", os.path.join(folder_path, str(animation_id) + self.filename_ext))
+                self.properties.filepath = os.path.join(folder_path, str(animation_id) + self.filename_ext)
             
             context.window_manager.fileselect_add(self)
             return { "RUNNING_MODAL" }
 
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: bpy.types.Context) -> set[str]:
         with OperatorContext.begin(self):
             bl_armature_obj = self.get_source_armature()
             if bl_armature_obj is None:
                 return { "CANCELLED" }
 
-            exporter = AnimationExporter(OperatorCommon.scale_factor, getattr(self.properties, "apply_lara_bone_fix_constraints"))
-            exporter.export_animation(getattr(self.properties, "filepath"), bl_armature_obj)
+            exporter = AnimationExporter(OperatorCommon.scale_factor, self.properties.apply_lara_bone_fix_constraints)
+            exporter.export_animation(self.properties.filepath, bl_armature_obj)
 
             if not OperatorContext.warnings_logged and not OperatorContext.errors_logged:
                 OperatorContext.log_info("Animation successfully exported.")
@@ -82,8 +72,7 @@ class ExportAnimationOperator(Operator, ExportHelper):                  # type: 
         return bl_armature_objs[0]
     
     def is_in_local_collection(self, bl_obj: bpy.types.Object) -> bool:
-        bl_collections = Enumerable(cast(Iterable[bpy.types.Collection], bl_obj.users_collection))
-        return bl_collections.any(lambda c: c.name == BlenderNaming.local_collection_name)
+        return Enumerable(bl_obj.users_collection).any(lambda c: c.name == BlenderNaming.local_collection_name)
     
     def get_animation_id(self, bl_armature_obj: bpy.types.Object) -> int | None:
         if bl_armature_obj.animation_data and bl_armature_obj.animation_data.action:

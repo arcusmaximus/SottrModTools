@@ -220,9 +220,16 @@ enum TypeNameHash
 
 typedef struct
 {
+    TypeNameHash type <read=EnumToString(this)>;
+    FSkip(4);
+    ExternalRef reference;
+} SimpleComponent <read=EnumToString(type), optimize=false>;
+
+typedef struct
+{
     Matrix transform;
     FSkip(4);
-    int instanceDrawableId;
+    int id;
     
     InternalRef nameRef1;
     if (IsValidRef(nameRef1))
@@ -243,14 +250,7 @@ typedef struct
     quad hash <format=hex>;
     ExternalRef dtpRef;
     quad _;
-} InternalComponent <optimize=false>;
-
-typedef struct
-{
-    TypeNameHash type <read=EnumToString(this)>;
-    FSkip(4);
-    ExternalRef reference;
-} ExternalComponentsOfType <read=EnumToString(type), optimize=false>;
+} TransformedComponent <optimize=false>;
 
 typedef struct
 {
@@ -261,16 +261,16 @@ typedef struct
     if (IsValidRef(componentsRef))
     {
         SeekToRef(componentsRef);
-        InternalComponent components[count];
+        TransformedComponent components[count];
         ReturnFromRef();
     }
-} InternalComponentsOfType <read=EnumToString(type), optimize=false>;
+} TransformedComponentsOfType <read=EnumToString(type), optimize=false>;
 
 typedef struct
 {
     TypeNameHash type <read=EnumToString(this)>;
     int count;
-} InternalComponentCount <read=Str("%s = %d", EnumToString(type), count)>;
+} TransformedComponentCount <read=Str("%s = %d", EnumToString(type), count)>;
 
 typedef struct
 {
@@ -290,32 +290,32 @@ typedef struct
     InternalRef ref1;
     ExternalRef ref2;
     
-    int numExternalComponentTypes;
+    int numSimpleComponents;
     FSkip(4);
-    InternalRef externalComponentsByTypeRef;
-    if (IsValidRef(externalComponentsByTypeRef))
+    InternalRef simpleComponentsRef;
+    if (IsValidRef(simpleComponentsRef))
     {
-        SeekToRef(externalComponentsByTypeRef);
-        ExternalComponentsOfType externalComponentsByType[numExternalComponentTypes];
+        SeekToRef(simpleComponentsRef);
+        SimpleComponent simpleComponents[numSimpleComponents];
         ReturnFromRef();
     }
     
-    int numInternalComponentTypes;
+    int numTransformedComponentTypes;
     FSkip(4);
-    InternalRef internalComponentsByTypeRef;
-    if (IsValidRef(internalComponentsByTypeRef))
+    InternalRef transformedComponentsByTypeRef;
+    if (IsValidRef(transformedComponentsByTypeRef))
     {
-        SeekToRef(internalComponentsByTypeRef);
-        InternalComponentsOfType internalComponentsByType[numInternalComponentTypes];
+        SeekToRef(transformedComponentsByTypeRef);
+        TransformedComponentsOfType transformedComponentsByType[numTransformedComponentTypes];
         ReturnFromRef();
     }
         
-    quad numInternalComponentCounts;
-    InternalRef internalComponentCountsRef;
-    if (IsValidRef(internalComponentCountsRef))
+    quad numTransformedComponentCounts;
+    InternalRef transformedComponentCountsRef;
+    if (IsValidRef(transformedComponentCountsRef))
     {
-        SeekToRef(internalComponentCountsRef);
-        InternalComponentCount internalComponentCounts[numInternalComponentCounts];
+        SeekToRef(transformedComponentCountsRef);
+        TransformedComponentCount transformedComponentCounts[numTransformedComponentCounts];
         ReturnFromRef();
     }
     
@@ -324,7 +324,10 @@ typedef struct
     ExternalRef ref3;
     ExternalRef ref4;
     ExternalRef skeletonRef;
+    FSkip(8);
+    ExternalRef ref5;
+    ExternalRef clothDefinitionRef;
 } Object;
 
 RefDefinitions refDefinitions;
-Object object;
+Object object <open=true>;

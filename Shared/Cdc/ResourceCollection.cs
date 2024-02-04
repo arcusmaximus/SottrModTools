@@ -113,6 +113,32 @@ namespace SottrModManager.Shared.Cdc
             return resourceIdx;
         }
 
+        public int AddResourceReference(ResourceReference resourceRef)
+        {
+            int resourceIdx = _resourceIdentifications.Count;
+            _resourceIdentifications.Add(
+                new ResourceIdentification
+                {
+                    Type = (byte)resourceRef.Type,
+                    SubType = (int)resourceRef.SubType,
+                    Id = resourceRef.Id,
+                    Locale = 0xFFFFFFFFFFFFFFFF
+                }
+            );
+            _resourceLocations.Add(
+                new ResourceLocation
+                {
+                    Type = (int)resourceRef.Type,
+                    Id = resourceRef.Id
+                }
+            );
+            if (_resourceReferences != null)
+                _resourceReferences.Add(resourceRef);
+
+            UpdateResourceReference(resourceIdx, resourceRef);
+            return resourceIdx;
+        }
+
         public void UpdateResourceReference(int resourceIdx, ResourceReference resourceRef)
         {
             ResourceIdentification identification = _resourceIdentifications[resourceIdx];
@@ -180,7 +206,7 @@ namespace SottrModManager.Shared.Cdc
             public int Size;
             public int Flags;
             public int NumResources;
-            public int Primary;
+            public int MainResourceIndex;
             public ulong Locale;
         }
 
@@ -211,14 +237,26 @@ namespace SottrModManager.Shared.Cdc
         [StructLayout(LayoutKind.Sequential)]
         private struct ResourceLocation
         {
-            public int Unknown1;
-            public int Unknown2;
+            public int ResourceKey;
+            public int Padding;
             public short ArchivePart;
             public byte ArchiveId;
             public byte ArchiveSubId;
             public int OffsetInArchive;
             public int SizeInArchive;
             public int OffsetInBatch;
+
+            public int Type
+            {
+                get { return ResourceKey >> 24; }
+                set { ResourceKey = (value << 24) | (ResourceKey & 0x00FFFFFF); }
+            }
+
+            public int Id
+            {
+                get { return ResourceKey & 0x00FFFFFF; }
+                set { ResourceKey = (int)(ResourceKey & 0xFF000000) | value; }
+            }
         }
     }
 }

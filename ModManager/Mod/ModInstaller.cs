@@ -34,7 +34,7 @@ namespace SottrModManager.Mod
             using ZipTempExtractor extractor = new ZipTempExtractor(filePath);
             extractor.Extract(progress, cancellationToken);
 
-            return Install(new FolderModPackage(modName, extractor.FolderPath), progress, cancellationToken);
+            return Install(new FolderModPackage(modName, extractor.FolderPath, _archiveSet, _gameResourceUsageCache), progress, cancellationToken);
         }
 
         public InstalledMod InstallFromFolder(string folderPath, ITaskProgress progress, CancellationToken cancellationToken)
@@ -42,64 +42,74 @@ namespace SottrModManager.Mod
             string modName = Path.GetFileName(folderPath);
             Archive existingArchive = _archiveSet.Archives.FirstOrDefault(a => a.ModName == modName);
             if (existingArchive != null)
-                _archiveSet.Delete(existingArchive, _gameResourceUsageCache, progress, cancellationToken);
+                _archiveSet.Delete(existingArchive.Id, _gameResourceUsageCache, progress, cancellationToken);
 
-            return Install(new FolderModPackage(folderPath), progress, cancellationToken);
+            return Install(new FolderModPackage(folderPath, _archiveSet, _gameResourceUsageCache), progress, cancellationToken);
         }
 
         public void ReinstallAll(ITaskProgress progress, CancellationToken cancellationToken)
         {
-            List<ArchiveInfo> originalArchives = new List<ArchiveInfo>();
-            foreach (Archive archive in _archiveSet.Archives
-                                                   .Concat(_archiveSet.DuplicateArchives)
-                                                   .Where(a => a.ModName != null)
-                                                   .OrderByDescending(a => a.MetaData.Version))
+            List<OriginalModInfo> originalMods = new();
+            foreach (IGrouping<int, Archive> archivesOfId in _archiveSet.Archives
+                                                                        .Concat(_archiveSet.DuplicateArchives)
+                                                                        .Where(a => a.ModName != null)
+                                                                        .GroupBy(a => a.Id)
+                                                                        .OrderByDescending(g => g.First().MetaData.Version))
             {
                 _archiveSet.CloseStreams();
-                ArchiveInfo archiveInfo = new ArchiveInfo
+
+                ArchiveMetaData metaData = archivesOfId.First().MetaData;
+                OriginalModInfo originalModInfo = new OriginalModInfo
                 {
-                    NfoFilePath = Path.Combine(_archiveSet.FolderPath, "_orig_" + Path.GetFileName(archive.NfoFilePath)),
-                    BaseFilePath = Path.Combine(_archiveSet.FolderPath, "_orig_" + Path.GetFileName(archive.BaseFilePath)),
-                    ModName = archive.ModName,
-                    Enabled = archive.Enabled
+                    ModName = archivesOfId.First().ModName,
+                    Enabled = metaData.Enabled,
+                    NfoFilePath = metaData.FilePath + ".orig",
+                    ArchiveFilePaths = new List<string>()
                 };
 
-                File.Delete(archiveInfo.NfoFilePath);
-                File.Move(archive.NfoFilePath, archiveInfo.NfoFilePath);
+                _archiveSet.Disable(archivesOfId.Key, _gameResourceUsageCache, progress, cancellationToken);
 
-                File.Delete(archiveInfo.BaseFilePath);
-                File.Move(archive.BaseFilePath, archiveInfo.BaseFilePath);
+                File.Delete(originalModInfo.NfoFilePath);
+                File.Move(metaData.FilePath, originalModInfo.NfoFilePath);
 
-                _archiveSet.Delete(archive, _gameResourceUsageCache, progress, cancellationToken);
-                originalArchives.Insert(0, archiveInfo);
+                foreach (string archiveFilePath in archivesOfId.Select(a => a.BaseFilePath))
+                {
+                    string origFilePath = archiveFilePath + ".orig";
+                    File.Delete(origFilePath);
+                    File.Move(archiveFilePath, origFilePath);
+                    originalModInfo.ArchiveFilePaths.Add(origFilePath);
+                }
+
+                _archiveSet.Delete(archivesOfId.Key, _gameResourceUsageCache, progress, cancellationToken);
+                originalMods.Insert(0, originalModInfo);
             }
 
-            foreach (ArchiveInfo archiveInfo in originalArchives)
+            foreach (OriginalModInfo originalMod in originalMods)
             {
-                using (ModPackage modPackage = new TigerModPackage(archiveInfo.BaseFilePath))
+                using (ModPackage modPackage = new TigerModPackage(originalMod.NfoFilePath, originalMod.ArchiveFilePaths))
                 {
                     InstalledMod installedMod = Install(modPackage, null, progress, cancellationToken);
                     if (installedMod == null)
                         continue;
 
-                    if (!archiveInfo.Enabled)
-                    {
-                        Archive archive = _archiveSet.GetArchive(installedMod.ArchiveId, 0);
-                        _archiveSet.Disable(archive, _gameResourceUsageCache, progress, cancellationToken);
-                    }
+                    if (!originalMod.Enabled)
+                        _archiveSet.Disable(installedMod.ArchiveId, _gameResourceUsageCache, progress, cancellationToken);
                 }
 
-                File.Delete(archiveInfo.NfoFilePath);
-                File.Delete(archiveInfo.BaseFilePath);
+                File.Delete(originalMod.NfoFilePath);
+                foreach (string archiveFilePath in originalMod.ArchiveFilePaths)
+                {
+                    File.Delete(archiveFilePath);
+                }
             }
         }
 
-        private struct ArchiveInfo
+        private class OriginalModInfo
         {
-            public string NfoFilePath;
-            public string BaseFilePath;
             public string ModName;
             public bool Enabled;
+            public string NfoFilePath;
+            public List<string> ArchiveFilePaths;
         }
 
         private bool IsModAlreadyInstalled(string modName)
@@ -128,7 +138,7 @@ namespace SottrModManager.Mod
 
         private InstalledMod Install(ModPackage modPackage, ModVariation modVariation, ITaskProgress progress, CancellationToken cancellationToken)
         {
-            Archive archive = null;
+            Dictionary<ulong, Archive> archives = null;
             try
             {
                 progress.Begin($"Installing mod {modPackage.Name}...");
@@ -146,38 +156,49 @@ namespace SottrModManager.Mod
 
                 Dictionary<ResourceKey, List<ResourceCollectionItemReference>> modResourceUsages =
                     modResourceKeys.ToDictionary(r => r, r => fullResourceUsageCache.GetUsages(_archiveSet, r).ToList());
+                modResourceUsages.RemoveAll(p => p.Value.Count == 0);
 
-                Dictionary<ulong, ResourceCollection> modResourceCollections = modResourceUsages.Values
-                                                                                                .SelectMany(c => c)
-                                                                                                .Select(c => c.CollectionReference)
-                                                                                                .Distinct()
-                                                                                                .ToDictionary(r => r.NameHash, _archiveSet.GetResourceCollection);
+                Dictionary<ArchiveFileKey, ResourceCollection> modResourceCollections = modResourceUsages.Values
+                                                                                                         .SelectMany(c => c)
+                                                                                                         .Select(c => c.CollectionReference)
+                                                                                                         .Distinct()
+                                                                                                         .ToDictionary(r => (ArchiveFileKey)r, _archiveSet.GetResourceCollection);
 
                 Dictionary<ResourceKey, List<ResourceCollectionItem>> modResourceCollectionItems =
                     modResourceUsages.ToDictionary(
                         p => p.Key,
                         p => p.Value
-                              .Select(r => new ResourceCollectionItem(modResourceCollections[r.CollectionReference.NameHash], r.ResourceIndex))
+                              .Select(r => new ResourceCollectionItem(modResourceCollections[r.CollectionReference], r.ResourceIndex))
                               .ToList()
                 );
 
-                Dictionary<ulong, HashSet<ResourceKey>> resourceRefsToAdd = GetResourceRefsToAdd(modPackage, modVariation, modResourceKeys, fullResourceUsageCache);
+                Dictionary<ArchiveFileKey, HashSet<ResourceKey>> resourceRefsToAdd = GetResourceRefsToAdd(modPackage, modVariation, modResourceKeys, fullResourceUsageCache);
                 AddResourceReferencesToCollections(modResourceCollections, modResourceCollectionItems, resourceRefsToAdd);
 
-                archive = _archiveSet.CreateModArchive(modPackage.Name, 1 + modResourceCollections.Count);
-                AddResourcesToArchive(archive, modPackage, modVariation, modResourceCollectionItems, progress, cancellationToken);
-                AddResourceCollectionsToArchive(archive, modResourceCollections.Values);
+                IEnumerable<ArchiveFileKey> fileKeys = modResourceCollections.Keys.Concat(modPackage.Files).Concat(modVariation?.Files ?? Enumerable.Empty<ArchiveFileKey>());
+                Dictionary<ulong, int> fileCountsByLocale = fileKeys.GroupBy(f => f.Locale).ToDictionary(g => g.Key, g => g.Count());
+                fileCountsByLocale.TryAdd(0xFFFFFFFFFFFFFFFF, 0);
 
-                _archiveSet.Add(archive, _gameResourceUsageCache, progress, cancellationToken);
-                return new InstalledMod(archive.Id, modPackage.Name, true);
+                archives = _archiveSet.CreateModArchives(modPackage.Name, fileCountsByLocale);
+                AddResourcesToArchive(archives[0xFFFFFFFFFFFFFFFF], modPackage, modVariation, modResourceCollectionItems, progress, cancellationToken);
+                AddFilesToArchives(archives, modPackage, modVariation, modResourceCollections.Values);
+
+                foreach (Archive archive in archives.Values.OrderBy(a => a.SubId))
+                {
+                    _archiveSet.Add(archive, _gameResourceUsageCache, progress, cancellationToken);
+                }
+                return new InstalledMod(archives.Values.First().Id, modPackage.Name, true);
             }
             catch
             {
-                if (archive != null)
+                if (archives != null)
                 {
-                    archive.CloseStreams();
-                    File.Delete(Path.ChangeExtension(archive.BaseFilePath, ".nfo"));
-                    File.Delete(archive.BaseFilePath);
+                    foreach (Archive archive in archives.Values)
+                    {
+                        archive.CloseStreams();
+                        File.Delete(archive.MetaData.FilePath);
+                        File.Delete(archive.BaseFilePath);
+                    }
                 }
                 throw;
             }
@@ -188,13 +209,13 @@ namespace SottrModManager.Mod
             }
         }
 
-        private Dictionary<ulong, HashSet<ResourceKey>> GetResourceRefsToAdd(
+        private Dictionary<ArchiveFileKey, HashSet<ResourceKey>> GetResourceRefsToAdd(
             ModPackage modPackage,
             ModVariation modVariation,
             List<ResourceKey> modResourceKeys,
             ResourceUsageCache fullResourceUsageCache)
         {
-            Dictionary<ulong, HashSet<ResourceKey>> resourceRefsToAdd = new();
+            Dictionary<ArchiveFileKey, HashSet<ResourceKey>> resourceRefsToAdd = new();
             foreach (ResourceKey modResourceKey in modResourceKeys)
             {
                 HashSet<ResourceKey> externalResourceKeys = new();
@@ -204,7 +225,7 @@ namespace SottrModManager.Mod
 
                 foreach (ResourceCollectionItemReference modResourceUsage in fullResourceUsageCache.GetUsages(_archiveSet, modResourceKey))
                 {
-                    resourceRefsToAdd.GetOrAdd(modResourceUsage.CollectionReference.NameHash, () => new()).UnionWith(externalResourceKeys);
+                    resourceRefsToAdd.GetOrAdd(modResourceUsage.CollectionReference, () => new()).UnionWith(externalResourceKeys);
                 }
             }
             return resourceRefsToAdd;
@@ -238,8 +259,8 @@ namespace SottrModManager.Mod
                 {
                     MemoryStream memResourceStream = new MemoryStream();
                     resourceStream.CopyTo(memResourceStream);
-                    memResourceStream.Position = 0;
                     resourceStream.Close();
+                    memResourceStream.Position = 0;
                     resourceStream = memResourceStream;
                 }
 
@@ -261,13 +282,13 @@ namespace SottrModManager.Mod
         }
 
         private void AddResourceReferencesToCollections(
-            Dictionary<ulong, ResourceCollection> modResourceCollections,
+            Dictionary<ArchiveFileKey, ResourceCollection> modResourceCollections,
             Dictionary<ResourceKey, List<ResourceCollectionItem>> modResourceCollectionItems,
-            Dictionary<ulong, HashSet<ResourceKey>> resourceRefsToAdd)
+            Dictionary<ArchiveFileKey, HashSet<ResourceKey>> resourceRefsToAdd)
         {
-            foreach ((ulong collectionNameHash, ICollection<ResourceKey> resourcesForCollection) in resourceRefsToAdd)
+            foreach ((ArchiveFileKey collectionKey, ICollection<ResourceKey> resourcesForCollection) in resourceRefsToAdd)
             {
-                ResourceCollection modCollection = modResourceCollections.GetOrDefault(collectionNameHash);
+                ResourceCollection modCollection = modResourceCollections.GetOrDefault(collectionKey);
                 if (modCollection == null)
                     continue;
 
@@ -276,15 +297,14 @@ namespace SottrModManager.Mod
                     if (modCollection.ResourceReferences.Any(r => r.Type == resource.Type && r.Id == resource.Id))
                         continue;
 
+                    int modCollectionResourceIdx = -1;
                     ResourceCollectionItemReference existingUsage = _gameResourceUsageCache.GetUsages(_archiveSet, resource).FirstOrDefault();
-                    if (existingUsage == null)
-                        continue;
-
-                    ResourceCollection sourceCollection = _archiveSet.GetResourceCollection(existingUsage.CollectionReference);
-                    if (sourceCollection == null)
-                        continue;
-
-                    int modCollectionResourceIdx = modCollection.AddResourceReference(sourceCollection, existingUsage.ResourceIndex);
+                    if (existingUsage != null)
+                    {
+                        ResourceCollection sourceCollection = _archiveSet.GetResourceCollection(existingUsage.CollectionReference);
+                        if (sourceCollection != null)
+                            modCollectionResourceIdx = modCollection.AddResourceReference(sourceCollection, existingUsage.ResourceIndex);
+                    }
                     modResourceCollectionItems.GetOrAdd(resource, () => new()).Add(new ResourceCollectionItem(modCollection, modCollectionResourceIdx));
                 }
             }
@@ -304,84 +324,54 @@ namespace SottrModManager.Mod
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                Stream modResourceStream = modVariation?.OpenResource(modResourceKey) ?? modPackage.OpenResource(modResourceKey);
-                if (modResourceStream != null)
-                {
-                    try
-                    {
-                        int? refDefinitionsSize = null;
-
-                        if (modResourceKey.Type == ResourceType.Texture && !(modPackage is TigerModPackage))
-                        {
-                            ConvertTexture(ref modResourceStream, collectionItems);
-                        }
-                        else if (MightHaveRefDefinitions(modResourceKey))
-                        {
-                            ResourceReference existingResourceRef = _gameResourceUsageCache.GetResourceReference(_archiveSet, modResourceKey);
-                            if (existingResourceRef.RefDefinitionsSize > 0)
-                                refDefinitionsSize = GetResourceRefDefinitionsSize(modPackage, modResourceKey);
-                        }
-
-                        ArchiveBlobReference newResource = archive.AddResource(modResourceStream);
-                        foreach (ResourceCollectionItem collectionItem in collectionItems)
-                        {
-                            collectionItem.Collection.UpdateResourceReference(
-                                collectionItem.ResourceIndex,
-                                new ResourceReference(
-                                    modResourceKey.Id,
-                                    modResourceKey.Type,
-                                    modResourceKey.SubType,
-                                    newResource.ArchiveId,
-                                    newResource.ArchiveSubId,
-                                    newResource.ArchivePart,
-                                    newResource.Offset,
-                                    newResource.Length,
-                                    offsetInBatch,
-                                    refDefinitionsSize,
-                                    (int)modResourceStream.Length - (refDefinitionsSize ?? 0)
-                                )
-                            );
-                        }
-
-                        offsetInBatch += (int)modResourceStream.Length;
-                        offsetInBatch = (offsetInBatch + 0xF) & ~0xF;
-                    }
-                    finally
-                    {
-                        modResourceStream.Close();
-                    }
-                }
-
                 resourceIdx++;
                 progress.Report((float)resourceIdx / modResourceCollectionItems.Count);
+
+                Stream modResourceStream = modVariation?.OpenResource(modResourceKey) ?? modPackage.OpenResource(modResourceKey);
+                if (modResourceStream == null)
+                    continue;
+
+                try
+                {
+                    int? refDefinitionsSize = null;
+                    if (MightHaveRefDefinitions(modResourceKey))
+                    {
+                        ResourceReference existingResourceRef = collectionItems[0].ResourceIndex >= 0 ? collectionItems[0].Collection.ResourceReferences[collectionItems[0].ResourceIndex] : null;
+                        if (existingResourceRef == null || existingResourceRef.RefDefinitionsSize > 0)
+                            refDefinitionsSize = GetResourceRefDefinitionsSize(modPackage, modResourceKey);
+                    }
+
+                    ArchiveBlobReference newResource = archive.AddResource(modResourceStream);
+                    ResourceReference newResourceRef =
+                        new ResourceReference(
+                            modResourceKey.Id,
+                            modResourceKey.Type,
+                            modResourceKey.SubType,
+                            newResource.ArchiveId,
+                            newResource.ArchiveSubId,
+                            newResource.ArchivePart,
+                            newResource.Offset,
+                            newResource.Length,
+                            offsetInBatch,
+                            refDefinitionsSize,
+                            (int)modResourceStream.Length - (refDefinitionsSize ?? 0)
+                        );
+                    foreach (ResourceCollectionItem collectionItem in collectionItems)
+                    {
+                        if (collectionItem.ResourceIndex < 0)
+                            collectionItem.Collection.AddResourceReference(newResourceRef);
+                        else
+                            collectionItem.Collection.UpdateResourceReference(collectionItem.ResourceIndex, newResourceRef);
+                    }
+
+                    offsetInBatch += (int)modResourceStream.Length;
+                    offsetInBatch = (offsetInBatch + 0xF) & ~0xF;
+                }
+                finally
+                {
+                    modResourceStream.Close();
+                }
             }
-        }
-
-        private void ConvertTexture(ref Stream modResourceStream, List<ResourceCollectionItem> collectionItems)
-        {
-            Stream textureStream = new MemoryStream();
-            CdcTexture texture = CdcTexture.ReadFromDds(modResourceStream);
-
-            uint originalFormat = GetOriginalTextureFormat(collectionItems);
-            if (CdcTexture.IsSrgbFormat(originalFormat))
-                texture.Header.Format = CdcTexture.MapRegularFormatToSrgb(texture.Header.Format);
-
-            texture.Write(textureStream);
-            textureStream.Position = 0;
-
-            modResourceStream.Close();
-            modResourceStream = textureStream;
-        }
-
-        private uint GetOriginalTextureFormat(List<ResourceCollectionItem> collectionItems)
-        {
-            if (collectionItems.Count == 0)
-                return 0;
-
-            Stream origTextureStream = _archiveSet.OpenResource(collectionItems[0].Collection.ResourceReferences[collectionItems[0].ResourceIndex]);
-            BinaryReader reader = new BinaryReader(origTextureStream);
-            CdcTexture.CdcTextureHeader header = reader.ReadStruct<CdcTexture.CdcTextureHeader>();
-            return header.Format;
         }
         
         private static int GetResourceRefDefinitionsSize(ModPackage modPackage, ResourceKey resourceKey)
@@ -390,15 +380,59 @@ namespace SottrModManager.Mod
             return ResourceRefDefinitions.ReadHeaderAndGetSize(stream);
         }
 
-        private void AddResourceCollectionsToArchive(Archive archive, IEnumerable<ResourceCollection> resourceCollections)
+        private static void AddFilesToArchives(Dictionary<ulong, Archive> archives, ModPackage modPackage, ModVariation modVariation, IEnumerable<ResourceCollection> resourceCollections)
         {
-            foreach (ResourceCollection resourceCollection in resourceCollections.OrderBy(r => r.NameHash))
+            SortedDictionary<ArchiveFileKey, object> files = new();
+
+            foreach (ArchiveFileKey fileKey in modPackage.Files)
             {
-                MemoryStream collectionStream = new MemoryStream();
-                resourceCollection.Write(collectionStream);
-                collectionStream.TryGetBuffer(out ArraySegment<byte> collectionData);
-                archive.AddFile(resourceCollection.NameHash, 0xFFFFFFFFFFFFFFFF, collectionData);
+                files.Add(fileKey, modPackage);
             }
+
+            if (modVariation != null)
+            {
+                foreach (ArchiveFileKey fileKey in modVariation.Files)
+                {
+                    files.Add(fileKey, modVariation);
+                }
+            }
+
+            foreach (ResourceCollection resourceCollection in resourceCollections)
+            {
+                files.Add(new ArchiveFileKey(resourceCollection.NameHash, resourceCollection.Locale), resourceCollection);
+            }
+
+            foreach ((ArchiveFileKey fileKey, object value) in files)
+            {
+                switch (value)
+                {
+                    case ModPackage _:
+                        AddFileToArchive(archives, fileKey, modPackage.OpenFile(fileKey));
+                        break;
+
+                    case ModVariation _:
+                        AddFileToArchive(archives, fileKey, modVariation.OpenFile(fileKey));
+                        break;
+
+                    case ResourceCollection resourceCollection:
+                        MemoryStream collectionStream = new MemoryStream();
+                        resourceCollection.Write(collectionStream);
+                        collectionStream.TryGetBuffer(out ArraySegment<byte> collectionData);
+                        archives[resourceCollection.Locale].AddFile(resourceCollection.NameHash, resourceCollection.Locale, collectionData);
+                        break;
+                }
+            }
+        }
+
+        private static void AddFileToArchive(Dictionary<ulong, Archive> archives, ArchiveFileKey fileKey, Stream stream)
+        {
+            if (stream == null)
+                return;
+
+            byte[] data = new byte[stream.Length];
+            stream.Read(data);
+            stream.Close();
+            archives[fileKey.Locale].AddFile(fileKey, data);
         }
 
         private static bool MightHaveRefDefinitions(ResourceKey resourceKey)

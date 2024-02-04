@@ -19,4 +19,4 @@ typedef struct
 } GlobalContentReference;
 
 RefDefinitions refDefinitions;
-GlobalContentReference reference;
+GlobalContentReference reference <open=true>;

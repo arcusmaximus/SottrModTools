@@ -44,7 +44,7 @@ struct ShaderLib
     ShaderType type <style=sHeading1>;
     int numShadersTimes4 <style=sHeading2>;
     FSkip(4);
-    ShaderOffset shaderOffsets[numShadersTimes4 / 4];
+    ShaderOffset shaderOffsets[numShadersTimes4 / 4] <open=true>;
 };
 
-ShaderLib lib;
+ShaderLib lib <open=true>;

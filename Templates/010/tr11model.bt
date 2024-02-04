@@ -31,4 +31,4 @@ typedef struct
 } Model;
 
 RefDefinitions refDefinitions;
-Model model;
+Model model <open=true>;

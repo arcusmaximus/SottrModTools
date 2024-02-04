@@ -10,7 +10,6 @@ using SottrModManager.Shared;
 using SottrModManager.Shared.Cdc;
 using SottrModManager.Shared.Util;
 using SottrModManager.Mod;
-using System.Collections.Generic;
 
 namespace SottrModManager
 {
@@ -50,16 +49,15 @@ namespace SottrModManager
 
             if (!_gameResourceUsages.Load(_archiveSet.FolderPath))
             {
-                using ArchiveSet gameArchiveSet = new ArchiveSet(_archiveSet.FolderPath, true, false);
-                await Task.Run(() => _gameResourceUsages.AddArchiveSet(gameArchiveSet, this, _cancellationTokenSource.Token));
-                _gameResourceUsages.Save(_archiveSet.FolderPath);
+                using (ArchiveSet gameArchiveSet = new ArchiveSet(_archiveSet.FolderPath, true, false))
+                {
+                    await Task.Run(() => _gameResourceUsages.AddArchiveSet(gameArchiveSet, this, _cancellationTokenSource.Token));
+                    _gameResourceUsages.Save(_archiveSet.FolderPath);
+                }
+            }
 
+            if (_archiveSet.DuplicateArchives.Count > 0)
                 await ReinstallMods();
-            }
-            else if (_archiveSet.DuplicateArchives.Count > 0)
-            {
-                await ReinstallMods();
-            }
         }
 
         private void MainForm_Resize(object sender, EventArgs e)
@@ -119,16 +117,13 @@ namespace SottrModManager
                 return;
 
             InstalledMod mod = _installedMods[e.NewIndex];
-            Archive archive = _archiveSet.GetArchive(mod.ArchiveId, 0);
-            if (mod.Enabled == archive.Enabled)
-                return;
 
             try
             {
                 if (mod.Enabled)
-                    await Task.Run(() => _archiveSet.Enable(archive, _gameResourceUsages, this, _cancellationTokenSource.Token));
+                    await Task.Run(() => _archiveSet.Enable(mod.ArchiveId, _gameResourceUsages, this, _cancellationTokenSource.Token));
                 else
-                    await Task.Run(() => _archiveSet.Disable(archive, _gameResourceUsages, this, _cancellationTokenSource.Token));
+                    await Task.Run(() => _archiveSet.Disable(mod.ArchiveId, _gameResourceUsages, this, _cancellationTokenSource.Token));
             }
             catch (Exception ex)
             {
@@ -163,8 +158,7 @@ namespace SottrModManager
                 foreach (int index in _lvMods.SelectedIndices.Cast<int>().OrderByDescending(i => i).ToList())
                 {
                     InstalledMod mod = _installedMods[index];
-                    Archive archive = _archiveSet.GetArchive(mod.ArchiveId, 0);
-                    await Task.Run(() => _archiveSet.Delete(archive, _gameResourceUsages, this, _cancellationTokenSource.Token));
+                    await Task.Run(() => _archiveSet.Delete(mod.ArchiveId, _gameResourceUsages, this, _cancellationTokenSource.Token));
                     _installedMods.RemoveAt(index);
                 }
             }
@@ -247,9 +241,9 @@ namespace SottrModManager
             _installedMods.Clear();
             _installedMods.AddRange(
                 _archiveSet.Archives
-                           .Where(a => a.ModName != null)
+                           .Where(a => a.ModName != null && a.SubId == 0)
                            .OrderBy(a => a.MetaData.Version)
-                           .Select(a => new InstalledMod(a.Id, a.ModName, a.Enabled))
+                           .Select(a => new InstalledMod(a.Id, a.ModName, a.MetaData.Enabled))
             );
         }
 

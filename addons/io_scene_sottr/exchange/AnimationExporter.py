@@ -30,7 +30,7 @@ class AnimationExporter(SlotsBase):
 
     def export_animation(self, file_path: str, bl_armature_obj: bpy.types.Object) -> None:
         if bpy.context.object:
-            bpy.ops.object.mode_set(mode = "OBJECT")            # type: ignore
+            bpy.ops.object.mode_set(mode = "OBJECT")
         
         resource_key = Collection.parse_resource_file_path(file_path)
         animation = Animation(resource_key.id)
@@ -230,13 +230,13 @@ class AnimationExporter(SlotsBase):
 
     def bake_bone_constraints(self, bl_armature_obj: bpy.types.Object) -> None:
         BlenderHelper.select_object(bl_armature_obj)
-        bpy.ops.object.mode_set(mode = "POSE")          # type: ignore
+        bpy.ops.object.mode_set(mode = "POSE")
 
         with BlenderHelper.temporarily_show_all_bones(bl_armature_obj):
             for bl_bone in bl_armature_obj.pose.bones:
                 bl_bone.bone.select = len(bl_bone.constraints) > 0
             
-            bpy.ops.nla.bake(                           # type: ignore
+            bpy.ops.nla.bake(
                 frame_start = bpy.context.scene.frame_start,
                 frame_end   = bpy.context.scene.frame_end,
                 only_selected = True,
@@ -244,5 +244,5 @@ class AnimationExporter(SlotsBase):
                 use_current_action = True
             )
 
-        bpy.ops.object.mode_set(mode = "OBJECT")        # type: ignore
+        bpy.ops.object.mode_set(mode = "OBJECT")
     

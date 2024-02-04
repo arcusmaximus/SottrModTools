@@ -1,53 +1,55 @@
-from typing import Iterable, cast
+from typing import Annotated, Protocol
 import bpy
-from bpy.types import Context, Menu, Operator
-from bpy_extras.io_utils import ImportHelper
-from bpy.props import BoolProperty, StringProperty          # type: ignore
+from bpy.types import Context
 from io_scene_sottr.BlenderNaming import BlenderNaming
-
-from io_scene_sottr.ModelImporter import ModelImporter
+from io_scene_sottr.exchange.ClothImporter import ClothImporter
+from io_scene_sottr.exchange.CollisionImporter import CollisionImporter
+from io_scene_sottr.exchange.ModelImporter import ModelImporter
 from io_scene_sottr.ModelMerger import ModelMerger
+from io_scene_sottr.exchange.SkeletonImporter import SkeletonImporter
+from io_scene_sottr.operator.BlenderOperatorBase import ImportOperatorBase, ImportOperatorProperties
 from io_scene_sottr.operator.OperatorCommon import OperatorCommon
 from io_scene_sottr.operator.OperatorContext import OperatorContext
+from io_scene_sottr.properties.BlenderPropertyGroup import Prop
+from io_scene_sottr.tr.Collection import Collection
 from io_scene_sottr.util.Enumerable import Enumerable
 
-class ImportObjectOperator(Operator, ImportHelper):         # type: ignore
+class _Properties(ImportOperatorProperties, Protocol):
+    import_unlinked_models:         Annotated[bool, Prop("Import unlinked models")]
+    import_lods:                    Annotated[bool, Prop("Import LODs")]
+    import_cloth:                   Annotated[bool, Prop("Import cloth and collisions")]
+    split_into_parts:               Annotated[bool, Prop("Split meshes into parts")]
+    merge_with_existing_armatures:  Annotated[bool, Prop("Merge with existing armature(s)", default = True)]
+
+class ImportObjectOperator(ImportOperatorBase[_Properties]):
     bl_idname = "import_scene.tr11objectref"
-    
-    bl_menu = cast(Menu, bpy.types.TOPBAR_MT_file_import)
     bl_menu_item_name = "SOTTR object (.tr11objectref)"
 
     filename_ext = ".tr11objectref"
-    filter_glob: StringProperty(                                # type: ignore
-        default = "*" + filename_ext,
-        options = { "HIDDEN" }
-    )
-    import_unlinked_models: BoolProperty(                       # type: ignore
-        name = "Import unlinked models"
-    )
-    merge_with_existing_armatures: BoolProperty(                # type: ignore
-        name = "Merge with existing armature(s)",
-        default = True
-    )
-    import_lods: BoolProperty(                                  # type: ignore
-        name = "Import LODs"
-    )
-    split_into_parts: BoolProperty(                             # type: ignore
-        name = "Split meshes into parts"
-    )
-    bl_label = "Import"
 
     def execute(self, context: Context) -> set[str]:
         with OperatorContext.begin(self):
-            importer = ModelImporter(
-                OperatorCommon.scale_factor,
-                getattr(self.properties, "import_unlinked_models"),
-                getattr(self.properties, "import_lods"),
-                getattr(self.properties, "split_into_parts")
-            )
-            import_result = importer.import_collection(getattr(self.properties, "filepath"))
+            tr_collection = Collection(self.properties.filepath)
 
-            if getattr(self.properties, "merge_with_existing_armatures") and import_result.bl_armature_obj is not None:
+            skeleton_importer = SkeletonImporter(OperatorCommon.scale_factor)
+            bl_armature_obj = skeleton_importer.import_from_collection(tr_collection)
+            
+            model_importer = ModelImporter(
+                OperatorCommon.scale_factor,
+                self.properties.import_unlinked_models,
+                self.properties.import_lods,
+                self.properties.split_into_parts
+            )
+            model_importer.import_from_collection(tr_collection, bl_armature_obj)
+
+            if self.properties.import_cloth and bl_armature_obj is not None:
+                collision_importer = CollisionImporter(OperatorCommon.scale_factor)
+                collision_importer.import_from_collection(tr_collection, bl_armature_obj)
+                
+                cloth_importer = ClothImporter(OperatorCommon.scale_factor)
+                cloth_importer.import_from_collection(tr_collection, bl_armature_obj)
+
+            if self.properties.merge_with_existing_armatures and bl_armature_obj is not None:
                 self.merge()
 
             return { "FINISHED" }
@@ -63,7 +65,7 @@ class ImportObjectOperator(Operator, ImportHelper):         # type: ignore
             if bl_armature_obj == bl_global_armature_obj:
                 continue
                 
-            if Enumerable(cast(Iterable[bpy.types.Object], bl_armature_obj.children)).any(lambda o: cast(bpy.types.ID | None, o.data) is None and BlenderNaming.is_local_empty_name(o.name)):
+            if Enumerable(bl_armature_obj.children).any(lambda o: not o.data and BlenderNaming.is_local_empty_name(o.name)):
                 continue
             
             bl_global_armature_obj = merger.add(bl_global_armature_obj, bl_armature_obj)

@@ -10,7 +10,7 @@ namespace SottrModManager.Shared.Cdc
     public class ResourceUsageCache
     {
         private const string FileName = "resourceusage.bin";
-        private const int Version = 3;
+        private const int Version = 4;
 
         private readonly ResourceUsageCache _baseCache;
         private readonly Dictionary<ResourceKey, Dictionary<ArchiveFileKey, int>> _usages = new();

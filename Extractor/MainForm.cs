@@ -45,27 +45,20 @@ namespace SottrExtractor
         {
             try
             {
-                ResourceExtractor extractor = new ResourceExtractor(_archiveSet);
+                ResourceExtractor resourceExtractor = new ResourceExtractor(_archiveSet);
+                FileExtractor fileExtractor = new FileExtractor(_archiveSet);
                 string baseFolderPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
 
                 List<ArchiveFileReference> fileRefs = _tvFiles.SelectedFiles;
                 MultiStepTaskProgress progress = new MultiStepTaskProgress(this, fileRefs.Count);
                 foreach (ArchiveFileReference fileRef in fileRefs)
                 {
-                    string filePath = Path.Combine(baseFolderPath, CdcHash.Lookup(fileRef.NameHash));
-                    ResourceCollection collection = _archiveSet.GetResourceCollection(fileRef);
+                    string filePath = GetFilePath(baseFolderPath, fileRef);
+                    ResourceCollection collection = Path.GetExtension(filePath) == ".drm" ? _archiveSet.GetResourceCollection(fileRef) : null;
                     if (collection != null)
-                    {
-                        await Task.Run(() => extractor.Extract(filePath, collection, progress, _cancellationTokenSource.Token));
-                    }
+                        await Task.Run(() => resourceExtractor.Extract(filePath, collection, progress, _cancellationTokenSource.Token));
                     else
-                    {
-                        progress.Begin(string.Empty);
-                        using Stream archiveFileStream = _archiveSet.OpenFile(fileRef);
-                        using Stream extractedFileStream = File.Create(filePath);
-                        archiveFileStream.CopyTo(extractedFileStream);
-                        progress.End();
-                    }
+                        await Task.Run(() => fileExtractor.Extract(filePath, fileRef, progress, _cancellationTokenSource.Token));
                 }
             }
             catch (Exception ex)
@@ -76,6 +69,23 @@ namespace SottrExtractor
             {
                 _archiveSet.CloseStreams();
             }
+        }
+
+        private static string GetFilePath(string baseFolderPath, ArchiveFileReference fileRef)
+        {
+            string fileName = CdcHash.Lookup(fileRef.NameHash) ?? fileRef.NameHash.ToString("X016");
+            if ((fileRef.Locale & 0xFFFFFFF) != 0xFFFFFFF)
+            {
+                string locales = string.Join(
+                    '.',
+                    Enum.GetValues(typeof(LocaleLanguage))
+                        .Cast<LocaleLanguage>()
+                        .Where(l => (fileRef.Locale & (uint)l) != 0)
+                        .Select(l => l.ToString().ToLower())
+                );
+                fileName += "\\" + locales + Path.GetExtension(fileName);
+            }
+            return Path.Combine(baseFolderPath, fileName);
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)

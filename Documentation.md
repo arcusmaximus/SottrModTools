@@ -10,7 +10,9 @@ When modding SOTTR, you'll encounter the following file types:
 
 - **.tiger**
 
-  An archive that contains files and resources. Files have a folder path and filename; resources only have an ID.
+  An archive that contains *resources* and *files*. Resources only have an ID; examples include meshes and textures.
+  Files have a folder path and filename; examples include sound files, string localization files, and .drm resource collections.
+  
   (Previous modding tools have referred to resources as "sections," which is also what the game calls them internally.
   However, this page will refer to them as "resources" for simplicity's sake.)
 
@@ -19,7 +21,7 @@ When modding SOTTR, you'll encounter the following file types:
 
 - **.drm**
 
-  The most common file type found in archives. DRM stands for "Data RAM" in this case, not Digital Rights Management.
+  One of the most common file types found in archives. DRM stands for "Data RAM" in this case, not Digital Rights Management.
   These are essentially resource collections: for a certain ingame object such as an outfit piece or weapon,
   they list which resources (meshes, textures...) should be loaded into memory, and in which archives those
   resources can be found.
@@ -261,7 +263,6 @@ You can animate bone positions/rotations/scales and blendshape values.
 
 To find an animation to modify, you can use a binary template to browse the .tr11animlib files in e.g. tr11_lara.drm.
 These files map animation names to IDs, where the IDs correspond to the names of the .tr11anim files.
-
 You can also check the appendix at the end of this page to find the IDs of the photo mode poses.
 
 Once you've found an animation you'd like to edit or replace, you'll want to do the following:
@@ -283,7 +284,104 @@ you'll need to set the *Frame Rate* to *Custom* to see the Base). Note that the 
 the opposite way as the FPS: a higher Base will result in each frame taking more time and the
 animation thus being slower overall, not faster.
 
-## External references
+## Cloth modding
+
+Not all bones in an outfit are driven by an animation: some are instead driven by a cloth physics simulation.
+You can add these physics to your own models.
+
+The cloth system involves the following concepts:
+* Strip: a patch of fabric (or hair, or rope...) consisting of masses and springs.
+* Mass: a point on a cloth strip that can move around. Each mass has a corresponding bone in the skeleton,
+  which is in turn linked to vertices in the model. (Indeed, one mass typically manages multiple vertices.)
+* Spring: a virtual spring that connects two masses and can stretch, compress, and wiggle around.
+* Collision: a simple, invisible shape (box, sphere, capsule...) which cloth masses are not allowed to move into.
+
+To get started, click File → Import → SOTTR Object as usual and check "Import cloth and collisions" in the
+file chooser before clicking Import. If the outfit has physics, you'll notice that in addition to the model
+and skeleton, you now have a bunch of wireframe meshes. Each such mesh represents a cloth strip:
+the vertices are the masses, and the edges are the springs.
+
+The naming convention for each cloth strip is as follows:
+`<object name>_clothstrip_<skeleton ID>_<cloth definition ID>_<cloth component ID>_<cloth strip ID>`.
+The first three IDs correspond to .tr11dtp files (which you can view and edit with the binary templates).
+The last ID is an arbitrary number that identifies the cloth strip.
+
+If you want to add a new cloth strip, you can duplicate an existing one and change its name so that
+(only) the last ID is a unique number. You can also delete any cloth strip mesh, or edit it in
+whatever way you want.
+
+> [!TIP]
+> If there's only an empty cloth strip with ID 0, that means the outfit doesn't have any physics.
+> You can still add physics in this case, but may have to include the object .tr11dtp file
+> (the one referenced by the .tr11objectref — use the binary templates) in your mod to get things working.
+
+The addon adds a custom "SOTTR Cloth" tab to Blender's sidebar (which you can open by pressing `N`).
+This tab lets you perform various cloth-related operations:
+
+* **Bones**
+  * **Regenerate**
+    
+    After you've added/edited/removed a cloth strip mesh, you can click this button to update
+    the skeleton to match. The addon will create, move, and delete physics bones so there's one bone
+    at each cloth strip vertex (mass). Once you're happy with the bones, you can weight the model to them.
+  
+  * **Pin** (Pose mode)
+    
+    Pins the selected bones, marking them in red. Pinned bones are stuck to the body and don't
+    flutter around. You should pin the bones at the edge of the strip where it attaches to the rest
+    of the outfit.
+  
+  * **Unpin** (Pose mode)
+
+    Unpins the selected bones, marking them in grey. Unpinned bones are free to flutter around.
+  
+  * **Bounceback strength** (Pose mode)
+    
+    Shows, and lets you change, the bounceback strength of the selected bones.
+    This determines how much the mass wants to return to its original location.
+  
+* **Strip**
+  * **Parent**
+    
+    The outfit bone which the selected strip is attached to. This should be a bone that's
+    close to the strip while not being part of it.
+  
+  * **Gravity factor**
+    
+    The gravity multiplier of the selected strip. The default is 1, but you can make it higher or
+    lower, including setting it to 0 or even making it negative.
+  
+  * **Wind factor**
+    
+    Determines how strongly the strip is affected by wind.
+  
+  * **Stiffness**
+    
+    The stiffness of the springs in the strip. With a low stiffness, the springs will flop around
+    a lot, while with a high stiffness, they won't react much to outside movement.
+  
+  * **Dampening**
+    
+    How much spring movement is dampened (slowed down over time).
+
+* **Springs** (Cloth strip edit mode)
+  
+  * **Stretchiness**
+    
+    Shows, and lets you change, the stretchiness of the selected springs (edges).
+    With a value of 0, springs can't stretch beyond their original length.
+    With a value of 1, they're allowed to stretch up to twice their original length.
+
+The addon also imports collisions; they're hidden by default, but you can make them visible
+if you're interested in seeing them. The collisions themselves can't be edited,
+but if you delete one, the exported cloth strips will no longer be linked to it
+and no longer collide with it ingame. (This also means you should normally keep the collisions
+around in your Blender file, as otherwise, the cloth strips won't collide with anything.)
+
+Once you're done making your changes, export the model as usual (File → Export → SOTTR model),
+making sure to check "Export skeleton" and "Export cloth" in the file chooser.
+
+## External resource references
 
 Most SOTTR resources reference other resources. A .tr11objectref references an object. An object references
 a skeleton and models. A model references materials, which in turn reference textures and shaders, and so on.
@@ -301,10 +399,24 @@ This also means you can simply overwrite a resource by a copy of any other resou
 you could overwrite a material by another and change just one texture reference, keeping the
 shader references and the other textures. 
 
+## String modding
+
+Apart from resources, you can also mod files. The most useful file to mod right now is pcx64-w\local\locals.bin,
+which contains all the strings displayed in the game: menu items, subtitles, outfit names/descriptions,
+and so on.
+
+As indicated by the file extension, locals.bin is a binary file, but the extractor automatically converts
+it to JSON for convenience. Once extracted, you can change any strings you like. To keep an overview,
+you can also remove any strings you don't intend to modify.
+
+Once you're done making changes, you can pack your (complete or partial) JSON file into your mod,
+making sure to use the same folder structure and file name as produced by the extractor. The mod
+manager will then create a new locals.bin that includes your changes.
+
 ## Mod packaging
 
-Creating mods for installation with the manager is quite simple: just throw the modified resource files in a
-folder or compressed archive (.zip/.7z/.rar) and you're done. There's no need to include any .drm files
+Creating mods for installation with the manager is quite simple: just put the modified resources and files
+into a folder or compressed archive (.zip/.7z/.rar) and you're done. There's no need to include any .drm files
 (in fact, these aren't extracted in the first place).
 
 > [!TIP]
@@ -320,7 +432,9 @@ For textures, simply use DDS files; the manager will automatically convert them 
 format during installation (again without loss of quality). However, you should make sure to generate mipmaps,
 and ideally use the same compression as the original textures.
 
-You can organize your files in subfolders in any way you like: by file type, by model they belong to... or not at all.
+You can organize your resources in subfolders in any way you like. You can keep the original folder structure,
+but you can also reorganize them or even just throw them all into the same single place.
+This is not the case for files such as locals.bin, however — these have to keep the original folder structure.
 
 Note that a resource may be referenced by multiple .drm resource collections. Modding a texture that you extracted
 for just one outfit may well end up affecting other outfits too.
@@ -335,9 +449,9 @@ This is again quite simple to set up:
 - Within each subfolder, create one or both of the following files:
   - variation.txt: a plaintext file containing a description of the variation.
   - variation.png: a preview image.
-- Place the variation-specific resource files in their respective subfolder (either as direct
+- Place the variation-specific resources and files in their respective subfolder (either as direct
   children or inside deeper subfolders).
-- Place the resource files that are common to all variations in the root of the mod or in
+- Place the resources and files that are common to all variations in the root of the mod or in
   a subfolder that's not (part of) a variation.
 
 When installing a mod with variations, the manager will present users with a window where they

@@ -1,6 +1,6 @@
 import re
 from typing import ClassVar, Iterable, NamedTuple
-
+from io_scene_sottr.tr.Cloth import CollisionKey, CollisionType
 from io_scene_sottr.util.Conditional import coalesce
 from io_scene_sottr.util.Enumerable import Enumerable
 
@@ -22,9 +22,19 @@ class BlenderBlendShapeIdSet(NamedTuple):
     global_id: int | None
     local_id: int
 
+class BlenderClothStripIdSet(NamedTuple):
+    skeleton_id: int
+    definition_id: int
+    component_id: int
+    strip_id: int
+
 class BlenderNaming:
     local_collection_name: ClassVar[str] = "Split meshes for export"
-    hidden_bone_collection_name: ClassVar[str] = "Non-deforming bones"
+    
+    hidden_bone_group_name: ClassVar[str] = "Non-deforming bones"
+
+    pinned_cloth_bone_group_name: ClassVar[str] = "Pinned cloth bones"
+    pinned_cloth_bone_palette_name: ClassVar[str] = "THEME01"
 
     @staticmethod
     def make_mesh_name(collection_name: str, model_id: int, model_data_id: int, mesh_idx: int) -> str:
@@ -149,10 +159,10 @@ class BlenderNaming:
             raise Exception("Must provide at least one ID for bone name")
     
     @staticmethod
-    def parse_bone_name(name: str) -> BlenderBoneIdSet:
+    def try_parse_bone_name(name: str) -> BlenderBoneIdSet | None:
         match = re.fullmatch(r"bone_(x|\d+)(?:_(x|\d+))?(?:_(\d+))?", name)
         if match is None:
-            raise Exception(f"{name} is not a valid bone name.")
+            return None
         
         if match.group(3) is not None:
             return BlenderBoneIdSet(
@@ -172,6 +182,14 @@ class BlenderNaming:
                 int(match.group(1)),
                 None
             )
+    
+    @staticmethod
+    def parse_bone_name(name: str) -> BlenderBoneIdSet:
+        bone_id_set = BlenderNaming.try_parse_bone_name(name)
+        if bone_id_set is None:
+            raise Exception(f"{name} is not a valid bone name.")
+
+        return bone_id_set
     
     @staticmethod
     def get_bone_local_id(name: str) -> int:
@@ -227,6 +245,54 @@ class BlenderNaming:
             return None
         
         return int(match.group(1))
+    
+    @staticmethod
+    def make_cloth_empty_name(collection_name: str) -> str:
+        return BlenderNaming.make_collection_item_name(collection_name, f"cloth")
+    
+    @staticmethod
+    def is_cloth_empty_name(name: str) -> bool:
+        return name.endswith("_cloth")
+    
+    @staticmethod
+    def make_cloth_strip_name(collection_name: str, skeleton_id: int, definition_id: int, component_id: int, strip_id: int) -> str:
+        return BlenderNaming.make_collection_item_name(collection_name, f"clothstrip_{skeleton_id}_{definition_id}_{component_id}_{strip_id}")
+    
+    @staticmethod
+    def try_parse_cloth_strip_name(name: str) -> BlenderClothStripIdSet | None:
+        match = re.fullmatch(r"\w+_clothstrip_(\d+)_(\d+)_(\d+)_(\d+)", name)
+        if match is None:
+            return None
+        
+        return BlenderClothStripIdSet(int(match.group(1)), int(match.group(2)), int(match.group(3)), int(match.group(4)))
+    
+    @staticmethod
+    def parse_cloth_strip_name(name: str) -> BlenderClothStripIdSet:
+        id_set = BlenderNaming.try_parse_cloth_strip_name(name)
+        if id_set is None:
+            raise Exception(f"{name} is not a valid cloth strip name")
+        
+        return id_set
+    
+    @staticmethod
+    def make_collision_empty_name(collection_name: str) -> str:
+        return BlenderNaming.make_collection_item_name(collection_name, "collisions")
+    
+    @staticmethod
+    def is_collision_empty_name(name: str) -> bool:
+        return name.endswith("_collisions")
+    
+    @staticmethod
+    def make_collision_name(collection_name: str, collision_type: CollisionType, collision_hash: int) -> str:
+        return BlenderNaming.make_collection_item_name(collection_name, f"collision_{collision_type.name.lower()}_{collision_hash:016X}")
+    
+    @staticmethod
+    def parse_collision_name(name: str) -> CollisionKey:
+        match = re.fullmatch(r"\w+_collision_([a-z]+)_([0-9A-F]+)", name)
+        if match is None:
+            raise Exception(f"{name} is not a valid collision name")
+        
+        return CollisionKey(CollisionType[match.group(1).upper()], int(match.group(2), base = 16))
 
     @staticmethod
     def make_collection_item_name(collection_name: str, suffix: str) -> str:

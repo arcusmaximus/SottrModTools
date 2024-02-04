@@ -43,7 +43,7 @@ class ModelExporter(SlotsBase):
     
     def export_model(self, folder_path: str, model_id: int, model_data_id: int, bl_objs: list[bpy.types.Object]) -> None:
         if bpy.context.object:
-            bpy.ops.object.mode_set(mode = "OBJECT")            # type: ignore
+            bpy.ops.object.mode_set(mode = "OBJECT")
         
         tr_model = self.create_model(model_id, model_data_id, bl_objs)
         tr_model_data = self.create_model_data(tr_model, bl_objs)
@@ -218,7 +218,7 @@ class ModelExporter(SlotsBase):
         for attr_name_hash, bl_uv_map in bl_mesh_maps.uv_maps.items():
             uv_coord = cast(Vector, bl_uv_map.data[bl_corner_idx].uv)
             if abs(uv_coord.x) > 15 or abs(uv_coord.y) > 15:
-                raise Exception(f"Mesh {bl_mesh.name} has out-of-bounds UV coordinates. Please check and fix UV map {bl_uv_map.name}.")
+                raise Exception(f"Mesh {bl_mesh.name} has out-of-bounds UV coordinates. Please check and fix UV map {bl_uv_map.name}. U and V coordinates should be in the range [-15..15].")
             
             tr_vertex.attributes[attr_name_hash] = cast(tuple[float, ...], uv_coord.copy())
 
@@ -237,6 +237,8 @@ class ModelExporter(SlotsBase):
         if len(vertex_weights) > 0:
             weight_sum = Enumerable(vertex_weights).sum(lambda w: w.weight)
             vertex_weights[0].weight += 255 - weight_sum
+            if vertex_weights[0].weight < 0:
+                raise Exception(f"Mesh {bl_mesh.name} has overweighted vertices. Please normalize the vertex weights.")
 
         skin_indices = [0, 0, 0, 0]
         skin_weights = [0, 0, 0, 0]
@@ -254,13 +256,13 @@ class ModelExporter(SlotsBase):
 
     def create_mesh_parts(self, tr_model: Model, tr_mesh: Mesh, bl_mesh: bpy.types.Mesh, bl_corner_to_tr_vertex: list[int], use_16bit_skin_indices: bool) -> None:
         if len(bl_mesh.materials) == 0:
-            raise Exception(f"Mesh {bl_mesh.name} has no materials assigned.")
+            raise Exception(f"Mesh {bl_mesh.name} has no materials assigned. Please add at least one material.")
         
         bl_faces_by_material_idx: dict[int, list[bpy.types.MeshPolygon]] = Enumerable(bl_mesh.polygons).group_by(lambda p: p.material_index)
         for bl_material_idx, bl_faces in bl_faces_by_material_idx.items():
             bl_material = cast(bpy.types.Material | None, bl_mesh.materials[bl_material_idx])
             if bl_material is None:
-                raise Exception(f"Mesh {bl_mesh.name} has faces referencing an empty material slot.")
+                raise Exception(f"Mesh {bl_mesh.name} has faces referencing an empty material slot. Please populate or delete any such slots.")
 
             tr_material_id = BlenderNaming.parse_material_name(bl_material.name)
 
@@ -275,14 +277,18 @@ class ModelExporter(SlotsBase):
                 tr_mesh_part.texture_indices[i] = 0xFFFFFFFF
 
             tr_mesh_part.indices = array("H", [0]) * (len(bl_faces) * 3)
-            index_idx = 0
+            tr_index_idx = 0
             for bl_face in bl_faces:
                 if bl_face.loop_total != 3:
-                    raise Exception(f"Mesh {bl_mesh.name} contains non-triangular faces.")
+                    raise Exception(f"Mesh {bl_mesh.name} contains non-triangular faces. Please triangulate manually or with a Triangulate modifier.")
 
                 for bl_corner_idx in cast(Iterable[int], bl_face.loop_indices):
-                    tr_mesh_part.indices[index_idx] = bl_corner_to_tr_vertex[bl_corner_idx]
-                    index_idx += 1
+                    tr_vertex_idx = bl_corner_to_tr_vertex[bl_corner_idx]
+                    if tr_vertex_idx > 0xFFFF:
+                        raise Exception(f"Mesh {bl_mesh.name} has too many vertices (maximum is 65536). Please decimate or split it.")
+                    
+                    tr_mesh_part.indices[tr_index_idx] = tr_vertex_idx
+                    tr_index_idx += 1
             
             tr_mesh.parts.append(tr_mesh_part)
 
@@ -296,10 +302,10 @@ class ModelExporter(SlotsBase):
             tr_vertex_to_bl_corner[tr_vertex_idx] = bl_corner_idx
         
         base_vertex_positions = [0] * (len(bl_mesh.vertices) * 3)
-        bl_mesh.vertices.foreach_get("co", base_vertex_positions)      # type: ignore
+        bl_mesh.vertices.foreach_get("co", base_vertex_positions)
         
         base_corner_normals = [0] * (len(bl_mesh.loops) * 3)
-        bl_mesh.loops.foreach_get("normal", base_corner_normals)       # type: ignore
+        bl_mesh.loops.foreach_get("normal", base_corner_normals)
 
         shape_vertex_positions = [0] * (len(bl_mesh.vertices) * 3)
         shape_corner_normals = [0] * (len(bl_mesh.loops) * 3)
@@ -313,8 +319,8 @@ class ModelExporter(SlotsBase):
 
             bl_mesh = self.get_evaluated_bl_mesh(bl_obj)
             bl_mesh.calc_normals_split()
-            bl_mesh.vertices.foreach_get("co", shape_vertex_positions)      # type: ignore
-            bl_mesh.loops.foreach_get("normal", shape_corner_normals)       # type: ignore
+            bl_mesh.vertices.foreach_get("co", shape_vertex_positions)
+            bl_mesh.loops.foreach_get("normal", shape_corner_normals)
             
             tr_blend_shape = BlendShape()
             for tr_vertex_idx, bl_corner_idx in enumerate(tr_vertex_to_bl_corner):
@@ -333,8 +339,8 @@ class ModelExporter(SlotsBase):
                 bl_shape_vertex = bl_mesh.vertices[bl_vertex_idx]
                 bl_shape_corner = bl_mesh.loops[bl_corner_idx]
 
-                if self.are_vectors_equal(base_position, cast(Vector, bl_shape_vertex.co)) and \
-                   self.are_vectors_equal(base_normal,   cast(Vector, bl_shape_corner.normal)):
+                if self.are_vectors_equal(base_position, cast(Vector, bl_shape_vertex.co)): # and \
+                   #self.are_vectors_equal(base_normal,   cast(Vector, bl_shape_corner.normal)):
                     continue
 
                 bl_shape_corner = bl_mesh.loops[bl_corner_idx]

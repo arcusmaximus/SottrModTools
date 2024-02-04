@@ -12,7 +12,7 @@
 
 typedef struct
 {
-    Vector position;
+    Vector4 position;
     Quaternion orientation;
     float distanceFromParent;
     int flags <format=hex>;
@@ -39,9 +39,73 @@ typedef struct
 
 typedef struct
 {
-    ushort animBoneId;
-    ushort skeletonBoneId;
-} BoneIdMapping;
+    ushort globalId;
+    ushort localId;
+} IdMapping <read=Str("%d -> %d", globalId, localId)>;
+
+typedef struct
+{
+    ushort localIdRange1Start;
+    ushort localIdRange2Start;
+    ushort count;
+} CounterpartRange;
+
+typedef struct
+{
+    while (true)
+    {
+        CounterpartRange range;
+        if (range.count == 0)
+            break;
+    }
+} CounterpartRanges;
+
+typedef struct
+{
+    ubyte type;
+    FSkip(1);
+    ushort localBoneId;
+    ushort numAssociatedLocalBoneIds;
+    FSkip(2);
+    
+    InternalRef associatedLocalBoneIdsRef;
+    if (IsValidRef(associatedLocalBoneIdsRef))
+    {
+        SeekToRef(associatedLocalBoneIdsRef);
+        ushort associatedLocalBoneIds[numAssociatedLocalBoneIds];
+        ReturnFromRef();
+    }
+    
+    InternalRef floatsRef;
+    if (IsValidRef(floatsRef))
+    {
+        SeekToRef(floatsRef);
+        float floats[numAssociatedLocalBoneIds];
+        ReturnFromRef();
+    }
+    
+    InternalRef quaternionRef;
+    if (IsValidRef(quaternionRef))
+    {
+        SeekToRef(quaternionRef);
+        Quaternion quaternion;
+        ReturnFromRef();
+    }
+} ExtraBoneInfo;
+
+typedef struct
+{
+    local int i;
+    for (i = 0; i < parentof(this).numExtraBoneInfos; i++)
+    {
+        if (IsValidRef(parentof(this).extraBoneInfoRefs[i]))
+        {
+            SeekToRef(parentof(this).extraBoneInfoRefs[i]);
+            ExtraBoneInfo extraBoneInfo;
+            ReturnFromRef();
+        }
+    }
+} ExtraBoneInfos;
 
 typedef struct
 {
@@ -53,81 +117,95 @@ typedef struct
         ReturnFromRef();
     }
     
-    short numWords3;
-    short padding1;
-    int padding2;
-    InternalRef ref1;
-    
-    quad numWords1;
-    InternalRef words1Ref;
-    if (IsValidRef(words1Ref))
-    {
-        SeekToRef(words1Ref);
-        ushort words1[numWords1] <style=sSection1>;
-        ReturnFromRef();
-    }
-    
-    short numMappings1;
+    short numAnimIdMappings;
     FSkip(6);
-    InternalRef mappings1Ref;
-    if (IsValidRef(mappings1Ref))
+    
+    InternalRef counterpartRangesRef;
+    if (IsValidRef(counterpartRangesRef))
     {
-        SeekToRef(mappings1Ref);
-        BoneIdMapping mappings1[numMappings1] <style=sSection2>;
+        SeekToRef(counterpartRangesRef);
+        CounterpartRanges counterpartRanges;
         ReturnFromRef();
     }
     
-    ubyte numMappings2;
+    short numUnusedWords1;
+    FSkip(6);
+    InternalRef unusedWords1Ref;
+    if (IsValidRef(unusedWords1Ref))
+    {
+        SeekToRef(unusedWords1Ref);
+        ushort unusedWords1[numUnusedWords1] <style=sSection1>;
+        ReturnFromRef();
+    }
+    
+    short numBoneIdMappings;
+    FSkip(6);
+    InternalRef boneIdMappingsRef;
+    if (IsValidRef(boneIdMappingsRef))
+    {
+        SeekToRef(boneIdMappingsRef);
+        IdMapping boneIdMappings[numBoneIdMappings] <style=sSection2>;
+        ReturnFromRef();
+    }
+    
+    ubyte numBlendShapeIdMappings;
     FSkip(7);
-    InternalRef mappings2Ref;
-    if (IsValidRef(mappings2Ref))
+    InternalRef blendShapeIdMappingsRef;
+    if (IsValidRef(blendShapeIdMappingsRef))
     {
-        SeekToRef(mappings2Ref);
-        BoneIdMapping mappings2[numMappings2] <style=sSection2Accent>;
+        SeekToRef(blendShapeIdMappingsRef);
+        IdMapping blendShapeIdMappings[numBlendShapeIdMappings] <style=sSection2Accent>;
         ReturnFromRef();
     }
     
-    quad padding3;
-    InternalRef ref2;
-    
-    ubyte numWords2;
+    ubyte numExtraBoneInfos;
     FSkip(7);
-    InternalRef words2Ref;
-    if (IsValidRef(words2Ref))
+    InternalRef extraBoneInfoRefsRef;
+    if (IsValidRef(extraBoneInfoRefsRef))
     {
-        SeekToRef(words2Ref);
-        ushort words2[numWords2] <style=sSection3>;
+        SeekToRef(extraBoneInfoRefsRef);
+        InternalRef extraBoneInfoRefs[numExtraBoneInfos];
+        ReturnFromRef();
+        
+        ExtraBoneInfos extraBoneInfos;
+    }
+    
+    ubyte numUnusedWords2;
+    FSkip(7);
+    InternalRef unusedWords2Ref;
+    if (IsValidRef(unusedWords2Ref))
+    {
+        SeekToRef(unusedWords2Ref);
+        ushort unusedWords2[numUnusedWords2] <style=sSection3>;
         ReturnFromRef();
     }
     
-    InternalRef boneBytesRef;
-    if (IsValidRef(boneBytesRef))
+    InternalRef unusedBytesRef;
+    if (IsValidRef(unusedBytesRef))
     {
-        SeekToRef(boneBytesRef);
-        byte boneBytes[boneArray.numBones] <style=sDataAccent>;
+        SeekToRef(unusedBytesRef);
+        byte unusedBytes[boneArray.numBones] <style=sDataAccent>;
         ReturnFromRef();
     }
     
-    InternalRef words3ARef;
-    if (IsValidRef(words3ARef))
+    InternalRef localBoneIdsByAnimIdRef;
+    if (IsValidRef(localBoneIdsByAnimIdRef))
     {
-        SeekToRef(words3ARef);
-        ushort words3A[numWords3] <style=sSection4>;
+        SeekToRef(localBoneIdsByAnimIdRef);
+        ushort localBoneIdsByAnimId[numAnimIdMappings] <style=sSection4>;
         ReturnFromRef();
     }
     
-    InternalRef words3BRef;
-    if (IsValidRef(words3BRef))
+    InternalRef animBoneIdsByLocalIdRef;
+    if (IsValidRef(animBoneIdsByLocalIdRef))
     {
-        SeekToRef(words3BRef);
-        ushort words3B[numWords3] <style=sSection4Accent>;
+        SeekToRef(animBoneIdsByLocalIdRef);
+        ushort animBoneIdsByLocalId[numAnimIdMappings] <style=sSection4Accent>;
         ReturnFromRef();
     }
     
-    short padding4;
-    short padding5;
-    int padding6;
+    short unknownCounts[4];
 } Skeleton;
 
 RefDefinitions refDefinitions;
-Skeleton skeleton;
+Skeleton skeleton <open=true>;

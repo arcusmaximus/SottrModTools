@@ -1,10 +1,9 @@
-from typing import Callable, Iterable, NamedTuple, Sequence, TypeVar, cast
 import bpy
-
+from typing import Callable, Iterable, Sequence, TypeVar, cast
 from mathutils import Matrix, Vector
 from io_scene_sottr.BlenderHelper import BlenderHelper
 from io_scene_sottr.BlenderNaming import BlenderNaming
-from io_scene_sottr.MaterialImporter import MaterialImporter
+from io_scene_sottr.exchange.MaterialImporter import MaterialImporter
 from io_scene_sottr.tr.Collection import Collection
 from io_scene_sottr.tr.Enumerations import ResourceType
 from io_scene_sottr.tr.Hashes import Hashes
@@ -18,10 +17,6 @@ from io_scene_sottr.util.Enumerable import Enumerable
 from io_scene_sottr.util.SlotsBase import SlotsBase
 
 T = TypeVar("T")
-
-class ImportResult(NamedTuple):
-    bl_armature_obj: bpy.types.Object | None
-    bl_mesh_objs: list[bpy.types.Object]
 
 class ModelImporter(SlotsBase):
     material_importer: MaterialImporter
@@ -37,8 +32,9 @@ class ModelImporter(SlotsBase):
         self.import_lods = import_lods
         self.split_into_parts = split_into_parts
 
-    def import_collection(self, file_path: str) -> ImportResult:
-        tr_collection = Collection(file_path)
+    def import_from_collection(self, tr_collection: Collection, bl_armature_obj: bpy.types.Object | None) -> list[bpy.types.Object]:
+        if bpy.context.object:
+            bpy.ops.object.mode_set(mode = "OBJECT")
         
         self.import_materials(tr_collection)
 
@@ -48,11 +44,10 @@ class ModelImporter(SlotsBase):
         if self.import_unlinked_models:
             self.import_remaining_models(tr_collection, tr_skeleton, bl_objs_by_model)
         
-        bl_armature_obj = self.create_armature(tr_collection, tr_skeleton)
         if bl_armature_obj is not None:
             self.parent_objects_to_armature(Enumerable(bl_objs_by_model.values()).select_many(lambda o: o), bl_armature_obj)
         
-        return ImportResult(bl_armature_obj, Enumerable(bl_objs_by_model.values()).select_many(lambda m: m).to_list())
+        return Enumerable(bl_objs_by_model.values()).select_many(lambda m: m).to_list()
     
     def import_materials(self, tr_collection: Collection) -> None:
         for material_resource in tr_collection.get_resources(ResourceType.MATERIAL):
@@ -105,9 +100,9 @@ class ModelImporter(SlotsBase):
     
     def import_model(self, tr_collection: Collection, tr_model: Model, tr_model_data: ModelData, tr_skeleton: Skeleton | None) -> list[bpy.types.Object]:
         if bpy.context.object:
-            bpy.ops.object.mode_set(mode = "OBJECT")            # type: ignore
+            bpy.ops.object.mode_set(mode = "OBJECT")
         
-        bpy.ops.object.select_all(action = "DESELECT")          # type: ignore
+        bpy.ops.object.select_all(action = "DESELECT")
         
         bl_mesh_objs: list[bpy.types.Object] = []
 
@@ -136,7 +131,7 @@ class ModelImporter(SlotsBase):
         self.create_vertex_groups(bl_obj, tr_mesh, tr_skeleton)
         self.create_shape_keys(bl_obj, tr_mesh, tr_skeleton)
         
-        bpy.ops.object.shade_smooth()                           # type: ignore
+        bpy.ops.object.shade_smooth()
         if has_blend_shapes:
             self.clean_mesh(bl_mesh)
         else:
@@ -152,11 +147,8 @@ class ModelImporter(SlotsBase):
             for i in range(0, len(tr_mesh_part.indices), 3):
                 faces.append((tr_mesh_part.indices[i], tr_mesh_part.indices[i + 1], tr_mesh_part.indices[i + 2]))
         
-        if bpy.data.meshes.get(name) is not None:
-            raise Exception(f"Mesh {name} has already been imported into this Blender file.")
-        
         bl_mesh: bpy.types.Mesh = bpy.data.meshes.new(name)
-        bl_mesh.from_pydata(vertices, [], faces)                # type: ignore
+        bl_mesh.from_pydata(vertices, [], faces)
         bl_mesh.update()
 
         bl_obj = BlenderHelper.create_object(bl_mesh)
@@ -179,17 +171,17 @@ class ModelImporter(SlotsBase):
         bl_mesh.validate()
 
         with BlenderHelper.enter_edit_mode():
-            bpy.ops.mesh.select_all(action = "SELECT")      # type: ignore
-            bpy.ops.mesh.remove_doubles()                   # type: ignore
-            bpy.ops.mesh.normals_make_consistent()          # type: ignore
-            bpy.ops.mesh.delete_loose()                     # type: ignore
-            bpy.ops.mesh.select_all(action = "DESELECT")    # type: ignore
+            bpy.ops.mesh.select_all(action = "SELECT")
+            bpy.ops.mesh.remove_doubles()
+            bpy.ops.mesh.normals_make_consistent()
+            bpy.ops.mesh.delete_loose()
+            bpy.ops.mesh.select_all(action = "DESELECT")
     
     def remove_loose_vertices(self) -> None:
         with BlenderHelper.enter_edit_mode():
-            bpy.ops.mesh.select_all(action = "SELECT")      # type: ignore
-            bpy.ops.mesh.delete_loose()                     # type: ignore
-            bpy.ops.mesh.select_all(action = "DESELECT")    # type: ignore
+            bpy.ops.mesh.select_all(action = "SELECT")
+            bpy.ops.mesh.delete_loose()
+            bpy.ops.mesh.select_all(action = "DESELECT")
     
     def create_color_maps(self, bl_mesh: bpy.types.Mesh, tr_mesh: Mesh) -> None:
         for color_map_idx, attr_name_hash in enumerate([Hashes.color1, Hashes.color2]):
@@ -197,7 +189,7 @@ class ModelImporter(SlotsBase):
                 continue
 
             bl_color_map = cast(bpy.types.ByteColorAttribute, bl_mesh.color_attributes.new(BlenderNaming.make_color_map_name(color_map_idx), "BYTE_COLOR", "POINT"))
-            bl_color_map.data.foreach_set(              # type: ignore
+            bl_color_map.data.foreach_set(
                 "color",
                 [component for vertex in tr_mesh.vertices for component in vertex.attributes[attr_name_hash]]
             )
@@ -208,7 +200,7 @@ class ModelImporter(SlotsBase):
                 continue
 
             uv_layer = bl_mesh.uv_layers.new(name = BlenderNaming.make_uv_map_name(uv_map_idx))
-            uv_layer.data.foreach_set(          # type: ignore
+            uv_layer.data.foreach_set(
                 "uv",
                 [coord for tr_mesh_part in tr_mesh.parts for index in tr_mesh_part.indices for coord in self.get_vertex_uv(tr_mesh.vertices[index], attr_name_hash)]
             )
@@ -292,77 +284,16 @@ class ModelImporter(SlotsBase):
 
         bl_obj.shape_key_add(name = "Basis")
 
-        global_blend_shape_ids: dict[int, int]
-        if tr_skeleton is not None:
-            global_blend_shape_ids = Enumerable(tr_skeleton.blend_shape_id_mappings).to_dict(lambda m: m.local_id, lambda m: m.global_id)
-        else:
-            global_blend_shape_ids = {}
-
         for local_blend_shape_id, tr_blendshape in enumerate(tr_mesh.blend_shapes):
             if tr_blendshape is None:
                 continue
             
-            global_blend_shape_id = global_blend_shape_ids.get(local_blend_shape_id)
+            global_blend_shape_id = tr_skeleton.global_blend_shape_ids.get(local_blend_shape_id) if tr_skeleton is not None else None
             bl_shape_key = bl_obj.shape_key_add(name = BlenderNaming.make_shape_key_name(global_blend_shape_id, local_blend_shape_id), from_mix = False)
             for vertex_idx, offsets in tr_blendshape.vertices.items():
                 shape_key_point = cast(bpy.types.ShapeKeyPoint, bl_shape_key.data[vertex_idx])
                 base_pos = Vector(tr_mesh.vertices[vertex_idx].attributes[Hashes.position])
                 shape_key_point.co = (base_pos + offsets.position_offset) * self.scale_factor
-    
-    def create_armature(self, tr_collection: Collection, tr_skeleton: Skeleton | None) -> bpy.types.Object | None:
-        if tr_skeleton is None or len(tr_skeleton.bones) == 0:
-            return None
-        
-        armature_name = BlenderNaming.make_local_armature_name(tr_collection.name, tr_skeleton.id)
-        if bpy.data.armatures.get(armature_name) is not None:
-            raise Exception(f"Armature {armature_name} has already been imported into this Blender file.")
-
-        bl_armature = bpy.data.armatures.new(armature_name)
-        bl_armature.display_type = "STICK"
-
-        bl_obj = BlenderHelper.create_object(bl_armature)
-        bl_obj.show_in_front = True
-
-        with BlenderHelper.enter_edit_mode():
-            self.create_bones(bl_armature, tr_skeleton)
-        
-        return bl_obj
-
-    def create_bones(self, bl_armature: bpy.types.Armature, tr_skeleton: Skeleton) -> None:
-        bone_child_indices: list[list[int]] = []
-        bone_heads: list[Vector] = []
-
-        for i, tr_bone in enumerate(tr_skeleton.bones):
-            bone_child_indices.append([])
-            if tr_bone.parent_id < 0:
-                bone_heads.append(tr_bone.relative_location * self.scale_factor)
-            else:
-                bone_heads.append(bone_heads[tr_bone.parent_id] + tr_bone.relative_location * self.scale_factor)
-                bone_child_indices[tr_bone.parent_id].append(i)
-
-        for i, tr_bone in enumerate(tr_skeleton.bones):
-            bl_bone = bl_armature.edit_bones.new(BlenderNaming.make_bone_name(None, tr_bone.global_id, i))
-
-            bone_length: float
-            if len(bone_child_indices[i]) > 0:
-                avg_child_head = Enumerable(bone_child_indices[i]).avg(lambda idx: bone_heads[idx])
-                bone_length = (avg_child_head - bone_heads[i]).length
-            else:
-                bone_length = tr_bone.distance_from_parent * self.scale_factor
-            
-            bl_bone.head = bone_heads[i]
-            
-            tail_offset = cast(Vector, tr_bone.absolute_orientation @ Vector((0, 0, 1))) * max(bone_length, 0.001)
-            if tr_bone.parent_id < 0:
-                bl_bone.tail = bl_bone.head + tail_offset
-            else:
-                bl_bone.parent = bl_armature.edit_bones[BlenderNaming.make_bone_name(None, tr_skeleton.bones[tr_bone.parent_id].global_id, tr_bone.parent_id)]
-                tail1 = bl_bone.head + tail_offset
-                tail2 = bl_bone.head - tail_offset
-                if (tail1 - bone_heads[tr_bone.parent_id]).length > (tail2 - bone_heads[tr_bone.parent_id]).length:
-                    bl_bone.tail = tail1
-                else:
-                    bl_bone.tail = tail2
     
     def parent_objects_to_armature(self, bl_objs: Iterable[bpy.types.Object], bl_armature_obj: bpy.types.Object) -> None:
         used_bone_names: set[str] = set()

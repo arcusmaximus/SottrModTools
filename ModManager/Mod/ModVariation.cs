@@ -29,7 +29,14 @@ namespace SottrModManager.Mod
             get;
         }
 
-        public abstract IEnumerable<ResourceKey> Resources
+        public abstract ICollection<ArchiveFileKey> Files
+        {
+            get;
+        }
+
+        public abstract Stream OpenFile(ArchiveFileKey key);
+
+        public abstract ICollection<ResourceKey> Resources
         {
             get;
         }

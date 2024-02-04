@@ -13,8 +13,13 @@
 
 typedef struct
 {
+    float x, y, z;
+} Vector3 <read=Str("(%f, %f, %f)", x, y, z)>;
+
+typedef struct
+{
     float x, y, z, w;
-} Vector <read=Str("(%f, %f, %f, %f)", x, y, z, w)>;
+} Vector4 <read=Str("(%f, %f, %f, %f)", x, y, z, w)>;
 
 typedef struct
 {
@@ -23,7 +28,7 @@ typedef struct
 
 typedef struct
 {
-    Vector a, b, c, d;
+    Vector4 a, b, c, d;
 } Matrix;
 
 enum ResourceType
@@ -99,7 +104,9 @@ typedef struct
     {
         local int prevPos = FTell();
         FSeek(gResourceBodyPos + refDefinitions.internalRefs[index].targetOffset);
-        byte target <read="">;
+        if (FTell() < FileSize())
+            byte target <read="">;
+        
         FSeek(prevPos);
     }
 } InternalRef <optimize=false, style=sMarker>;

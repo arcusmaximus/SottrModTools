@@ -23,8 +23,8 @@ typedef struct
     int field_14;
     int field_18;
     int field_1C;
-    Vector boundingBoxMin;
-    Vector boundingBoxMax;
+    Vector4 boundingBoxMin;
+    Vector4 boundingBoxMax;
     FSeek(0xF8);
     quad meshPartsPos;
     quad meshDescriptorsPos;
@@ -339,7 +339,7 @@ typedef struct
 
 typedef struct
 {
-    Vector field_0;
+    Vector4 field_0;
     int firstIndexIdx;
     int numTriangles;
     int field_18;
@@ -379,4 +379,4 @@ typedef struct
     MeshPart meshParts[header.numMeshParts];
 } ModelData;
 
-ModelData modelData;
+ModelData modelData <open=true>;

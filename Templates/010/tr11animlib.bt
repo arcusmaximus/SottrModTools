@@ -1,0 +1,42 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11animlib.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse SOTTR .tr11animlib files
+//  Category: SOTTR
+// File Mask: *.tr11animlib
+//------------------------------------------------
+
+#include "tr11common.bt"
+
+typedef struct
+{
+    ushort id;
+    FSkip(0x10 - 2);
+    InternalRef nameRef;
+    if (IsValidRef(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+} Animation <read=Str("%s: %d", name, id), optimize=false>;
+
+typedef struct
+{
+    FSkip(0x10);
+    int numAnimations;
+    FSkip(4);
+    InternalRef animationsRef;
+    if (IsValidRef(animationsRef))
+    {
+        SeekToRef(animationsRef);
+        Animation animations[numAnimations];
+        ReturnFromRef();
+    }
+} AnimLib;
+
+RefDefinitions refDefinitions;
+AnimLib lib <open=true>;

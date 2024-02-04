@@ -33,27 +33,25 @@ namespace SottrModManager.Shared.Cdc
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         };
 
-        private readonly string _enabledNfoFilePath;
         private int _numParts = 1;
         private List<Stream> _partStreams;
         private readonly List<ArchiveFileReference> _fileRefs = new List<ArchiveFileReference>();
         private int _maxFiles;
 
-        private Archive(string nfoFilePath, string baseFilePath)
+        private Archive(string baseFilePath, ArchiveMetaData metaData)
         {
-            _enabledNfoFilePath = Regex.Replace(nfoFilePath, @"\.disabled", "");
             BaseFilePath = baseFilePath;
+            MetaData = metaData;
         }
 
-        public static Archive Create(string baseFilePath, int gameId, int version, int id, int maxFiles)
+        public static Archive Create(string baseFilePath, ArchiveMetaData metaData, int subId, int maxFiles)
         {
-            string nfoFilePath = Path.ChangeExtension(baseFilePath, ".nfo");
-            Archive archive = new Archive(nfoFilePath, baseFilePath)
-            {
-                Id = id,
-                MetaData = ArchiveMetaData.Create(nfoFilePath, gameId, version, id, id),
-                _maxFiles = maxFiles
-            };
+            Archive archive = new Archive(baseFilePath, metaData)
+                              {
+                                  Id = metaData.PackageId,
+                                  SubId = subId,
+                                  _maxFiles = maxFiles
+                              };
 
             Stream stream = File.Open(baseFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
             archive._partStreams = new List<Stream> { stream };
@@ -65,7 +63,8 @@ namespace SottrModManager.Shared.Cdc
                     Magic = 0x53464154,
                     Version = 5,
                     NumParts = 1,
-                    Id = id
+                    Id = archive.Id,
+                    SubId = archive.SubId
                 };
             writer.WriteStruct(ref header);
             writer.Write(Platform);
@@ -79,13 +78,9 @@ namespace SottrModManager.Shared.Cdc
             return archive;
         }
 
-        public static Archive Open(string baseFilePath)
+        public static Archive Open(string baseFilePath, ArchiveMetaData metaData)
         {
-            string nfoFilePath = GetMetaDataFilePath(baseFilePath);
-            Archive archive = new Archive(nfoFilePath, baseFilePath)
-            {
-                MetaData = ArchiveMetaData.Load(nfoFilePath)
-            };
+            Archive archive = new Archive(baseFilePath, metaData);
 
             using Stream stream = File.OpenRead(baseFilePath);
             BinaryReader reader = new BinaryReader(stream);
@@ -139,8 +134,6 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public string NfoFilePath => _enabledNfoFilePath + (Enabled ? "" : ".disabled");
-
         public string BaseFilePath
         {
             get;
@@ -158,29 +151,9 @@ namespace SottrModManager.Shared.Cdc
             private set;
         }
 
-        public bool Enabled
-        {
-            get { return File.Exists(_enabledNfoFilePath); }
-            set
-            {
-                string disabledNfoFilePath = _enabledNfoFilePath + ".disabled";
-                if (value)
-                {
-                    if (File.Exists(disabledNfoFilePath))
-                        File.Move(disabledNfoFilePath, _enabledNfoFilePath);
-                }
-                else
-                {
-                    if (File.Exists(_enabledNfoFilePath))
-                        File.Move(_enabledNfoFilePath, disabledNfoFilePath);
-                }
-            }
-        }
-
         public ArchiveMetaData MetaData
         {
             get;
-            private set;
         }
 
         public string ModName
@@ -196,7 +169,7 @@ namespace SottrModManager.Shared.Cdc
 
         public ResourceCollection GetResourceCollection(ArchiveFileReference file)
         {
-            if (file.ArchiveId != Id)
+            if (file.ArchiveId != Id || file.ArchiveSubId != SubId)
                 throw new ArgumentException();
 
             Stream stream = PartStreams[file.ArchivePart];
@@ -213,7 +186,7 @@ namespace SottrModManager.Shared.Cdc
 
         public Stream OpenFile(ArchiveFileReference fileRef)
         {
-            if (fileRef.ArchiveId != Id)
+            if (fileRef.ArchiveId != Id || fileRef.ArchiveSubId != SubId)
                 throw new ArgumentException();
 
             return new WindowedStream(PartStreams[fileRef.ArchivePart], fileRef.Offset, fileRef.Length);
@@ -221,7 +194,7 @@ namespace SottrModManager.Shared.Cdc
 
         public Stream OpenResource(ResourceReference resourceRef)
         {
-            if (resourceRef.ArchiveId != Id)
+            if (resourceRef.ArchiveId != Id || resourceRef.ArchiveSubId != SubId)
                 throw new ArgumentException();
 
             Stream stream = PartStreams[resourceRef.ArchivePart];
@@ -254,14 +227,14 @@ namespace SottrModManager.Shared.Cdc
                     NameHash = nameHash,
                     Locale = locale,
                     ArchiveId = (byte)Id,
-                    ArchiveSubId = 0,
+                    ArchiveSubId = (byte)SubId,
                     ArchivePart = 0,
                     Offset = offset,
                     UncompressedSize = data.Length
                 };
             indexWriter.WriteStruct(ref entry);
 
-            ArchiveFileReference fileRef = new ArchiveFileReference(nameHash, locale, Id, 0, 0, offset, data.Length);
+            ArchiveFileReference fileRef = new ArchiveFileReference(nameHash, locale, Id, SubId, 0, offset, data.Length);
             _fileRefs.Add(fileRef);
             indexStream.Position = 0xC;
             indexWriter.Write(_fileRefs.Count);
@@ -293,7 +266,7 @@ namespace SottrModManager.Shared.Cdc
 
             writer.Write(LastResourceEndMarker);
 
-            return new ArchiveBlobReference(Id, 0, archivePart, resourceOffset, resourceLength);
+            return new ArchiveBlobReference(Id, SubId, archivePart, resourceOffset, resourceLength);
         }
 
         private void WriteResource(Stream contentStream, BinaryWriter writer)
@@ -354,31 +327,6 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        private static string GetMetaDataFilePath(string baseFilePath)
-        {
-            string nfoFilePath = Path.ChangeExtension(baseFilePath, ".nfo");
-            if (File.Exists(nfoFilePath))
-                return nfoFilePath;
-
-            nfoFilePath += ".disabled";
-            if (File.Exists(nfoFilePath))
-                return nfoFilePath;
-
-            string baseFileName = Path.GetFileName(baseFilePath);
-            int underscoreIdx = baseFileName.IndexOf('_');
-            if (underscoreIdx >= 0)
-            {
-                nfoFilePath = Path.Combine(
-                    Path.GetDirectoryName(baseFilePath),
-                    baseFileName.Substring(0, underscoreIdx) + ".000.nfo"
-                );
-                if (File.Exists(nfoFilePath))
-                    return nfoFilePath;
-            }
-
-            throw new FileNotFoundException();
-        }
-
         public string GetPartFilePath(int part)
         {
             return BaseFilePath.Replace(".000.tiger", $".{part:d03}.tiger");
@@ -398,8 +346,12 @@ namespace SottrModManager.Shared.Cdc
 
         public void Delete()
         {
-            File.Delete(_enabledNfoFilePath);
-            File.Delete(_enabledNfoFilePath + ".disabled");
+            if (SubId == 0)
+            {
+                File.Delete(MetaData.FilePath);
+                File.Delete(SpecMasksToc.GetFilePathForArchive(BaseFilePath));
+            }
+
             Dispose();
             for (int i = 0; i < _numParts; i++)
             {
@@ -418,7 +370,7 @@ namespace SottrModManager.Shared.Cdc
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct ArchiveHeader
+        internal struct ArchiveHeader
         {
             public int Magic;
             public int Version;

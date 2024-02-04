@@ -12,12 +12,19 @@ namespace SottrModManager.Mod
             get;
         }
 
-        public abstract IEnumerable<ResourceKey> Resources
+        public abstract ICollection<ArchiveFileKey> Files
         {
             get;
         }
 
-        public abstract Stream OpenResource(ResourceKey key);
+        public abstract Stream OpenFile(ArchiveFileKey fileKey);
+
+        public abstract ICollection<ResourceKey> Resources
+        {
+            get;
+        }
+
+        public abstract Stream OpenResource(ResourceKey resourceKey);
 
         public List<ModVariation> Variations
         {

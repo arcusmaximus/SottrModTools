@@ -98,8 +98,8 @@ typedef struct
     ushort version;
     FSkip(0x54 - 2);
     char magic[4];
-    ShaderSetRef shaderSets[9];
+    ShaderSetRef shaderSets[9] <open=true>;
 } Material;
 
 RefDefinitions refDefinitions;
-Material material;
+Material material <open=true>;

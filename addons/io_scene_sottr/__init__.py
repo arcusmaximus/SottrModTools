@@ -3,7 +3,7 @@ bl_info = {
     "description": "Import/export files for Shadow of the Tomb Raider",
     "author": "arc_",
     "blender": (3, 6, 5),
-    "version": (1, 1, 2),
+    "version": (1, 2, 0),
     "location": "File > Import-Export",
     "support": "COMMUNITY",
     "category": "Import-Export"
@@ -11,7 +11,6 @@ bl_info = {
 
 from typing import Callable, Protocol
 import bpy
-from bpy.types import Context, Menu
 from io_scene_sottr.tr.CStructTypeMappings import CStructTypeMappings
 CStructTypeMappings.register()
 
@@ -19,38 +18,79 @@ from io_scene_sottr.operator.ImportAnimationOperator import ImportAnimationOpera
 from io_scene_sottr.operator.ImportObjectOperator import ImportObjectOperator
 from io_scene_sottr.operator.ExportAnimationOperator import ExportAnimationOperator
 from io_scene_sottr.operator.ExportModelOperator import ExportModelOperator
+from io_scene_sottr.operator.RegenerateClothBonesOperator import RegenerateClothBonesOperator
+from io_scene_sottr.operator.PinClothBonesOperator import PinClothBonesOperator
+from io_scene_sottr.operator.UnpinClothBonesOperator import UnpinClothBonesOperator
+from io_scene_sottr.properties.BlenderPropertyGroup import BlenderPropertyGroup
+from io_scene_sottr.properties.BoneProperties import BoneClothProperties, BoneProperties
+from io_scene_sottr.properties.ObjectProperties import ObjectClothProperties, ObjectProperties
+from io_scene_sottr.properties.ToolSettingProperties import ToolSettingProperties
+from io_scene_sottr.ui.ClothStripPanel import ClothStripPanel
+from io_scene_sottr.ui.ClothSpringPanel import ClothSpringPanel
+from io_scene_sottr.ui.ClothBonesPanel import ClothBonesPanel
+from io_scene_sottr.ui.BonePanel import BonePanel
 
-class SottrOperator(Protocol):
+class SottrMenuOperator(Protocol):
     bl_idname: str
-    bl_menu: Menu
+    bl_menu: bpy.types.Menu
     bl_menu_item_name: str
 
-operators: list[SottrOperator] = [
+menu_operators: list[SottrMenuOperator] = [
     ImportAnimationOperator,
     ImportObjectOperator,
     ExportAnimationOperator,
     ExportModelOperator
 ]
 
-menu_item_funcs: dict[SottrOperator, Callable[[Menu, Context], None]] = {}
+other_classes: list[type] = [
+    RegenerateClothBonesOperator,
+    PinClothBonesOperator,
+    UnpinClothBonesOperator,
 
-def make_menu_item_func(operator: SottrOperator) -> Callable[[Menu, Context], None]:
-    def draw_menu_item(menu: Menu, context: Context) -> None:
+    ClothBonesPanel,
+    ClothStripPanel,
+    ClothSpringPanel,
+
+    BonePanel
+]
+
+custom_property_groups: list[type[BlenderPropertyGroup]] = [
+    BoneClothProperties,
+    BoneProperties,
+    ObjectClothProperties,
+    ObjectProperties,
+    ToolSettingProperties
+]
+
+menu_item_funcs: dict[SottrMenuOperator, Callable[[bpy.types.Menu, bpy.types.Context], None]] = {}
+
+def make_menu_item_func(operator: SottrMenuOperator) -> Callable[[bpy.types.Menu, bpy.types.Context], None]:
+    def draw_menu_item(menu: bpy.types.Menu, context: bpy.types.Context) -> None:
         menu.layout.operator(operator.bl_idname, text = operator.bl_menu_item_name)
     
     return draw_menu_item
 
 def register() -> None:
-    for operator in operators:
+    for operator in menu_operators:
         bpy.utils.register_class(operator)
-        
         draw_menu_item = make_menu_item_func(operator)
-        operator.bl_menu.append(draw_menu_item)                     # type: ignore
+        operator.bl_menu.append(draw_menu_item)
         menu_item_funcs[operator] = draw_menu_item
+    
+    for cls in other_classes:
+        bpy.utils.register_class(cls)
+    
+    for cls in custom_property_groups:
+        cls.register()
 
 def unregister() -> None:
-    for operator in operators:
-        bpy.utils.unregister_class(operator)                        # type: ignore
-
-        operator.bl_menu.remove(menu_item_funcs[operator])          # type: ignore
+    for operator in menu_operators:
+        bpy.utils.unregister_class(operator)
+        operator.bl_menu.remove(menu_item_funcs[operator])
         del menu_item_funcs[operator]
+
+    for cls in other_classes:
+        bpy.utils.unregister_class(cls)
+
+    for cls in custom_property_groups:
+        cls.unregister()

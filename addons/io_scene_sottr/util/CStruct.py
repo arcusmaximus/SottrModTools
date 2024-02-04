@@ -144,7 +144,7 @@ class CStructField(typing.NamedTuple):
 
 class CStructMeta(type(ctypes.Structure)):
     def __new__(cls: type, class_name: str, bases: tuple[type, ...], namespace: dict[str, typing.Any]) -> type:
-        if class_name != "CStructBase" and class_name != "CStruct":
+        if class_name != "CStruct":
             field_types: list[tuple[str, type]] = []
             field_infos: dict[str, CStructField] = {}
             field_offset = 0

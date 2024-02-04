@@ -1,7 +1,7 @@
 //------------------------------------------------
 //--- 010 Editor v14.0 Binary Template
 //
-//      File: tr11collectibleinfo.bt
+//      File: tr11globalcollectibleinfo.bt
 //   Authors: arc_
 //   Version: 0.1
 //   Purpose: Parse the .tr11dtp file in globalcollectibleinfo.drm
@@ -174,7 +174,10 @@ typedef struct
         ReturnFromRef();
     }
     
-    FSkip(0x1E0 - 0x148);
+    FSkip(0x1D8 - 0x148);
+    byte photoModeFaceChooserDisabled;
+    byte photoModeMuscleSliderDisabled;
+    FSkip(0x1E0 - 0x1DA);
 } Outfit <read=name, optimize=false>;
 
 typedef struct
@@ -233,6 +236,6 @@ InternalRef rootRef;
 if (IsValidRef(rootRef))
 {
     SeekToRef(rootRef);
-    Root root;
+    Root root <open=true>;
     ReturnFromRef();
 }

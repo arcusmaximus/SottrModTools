@@ -1,4 +1,4 @@
-from typing import ClassVar, Iterable, NamedTuple, cast
+from typing import ClassVar, NamedTuple, cast
 import bpy
 from io_scene_sottr.BlenderHelper import BlenderHelper
 from io_scene_sottr.BlenderNaming import BlenderNaming
@@ -21,14 +21,14 @@ class ModelSplitter(SlotsBase):
 
     def split(self, bl_global_armature_obj: bpy.types.Object) -> list[bpy.types.Object]:
         if bpy.context.object:
-            bpy.ops.object.mode_set(mode = "OBJECT")            # type: ignore
+            bpy.ops.object.mode_set(mode = "OBJECT")
 
         local_armatures = self.get_local_armatures(bl_global_armature_obj)
         local_skeleton_ids_by_global_bone_id = self.get_local_skeleton_ids_by_global_bone_id(local_armatures)
 
         self.delete_local_meshes(local_armatures)
 
-        for bl_global_mesh_obj in Enumerable(cast(Iterable[bpy.types.Object], bl_global_armature_obj.children)).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
+        for bl_global_mesh_obj in Enumerable(bl_global_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
             self.split_mesh(bl_global_mesh_obj, local_armatures, local_skeleton_ids_by_global_bone_id)
         
         return Enumerable(local_armatures.values()).select(lambda a: bpy.data.objects[a.name]).to_list()
@@ -48,7 +48,7 @@ class ModelSplitter(SlotsBase):
                 if global_bone_id is not None:
                     bone_names_by_global_id[global_bone_id] = bl_bone.name
             
-            bl_empty_obj = Enumerable(cast(Iterable[bpy.types.Object], bl_armature_obj.children))       \
+            bl_empty_obj = Enumerable(bl_armature_obj.children) \
                                 .first_or_none(lambda o: cast(bpy.types.ID | None, o.data) is None and BlenderNaming.is_local_empty_name(o.name))
             if bl_empty_obj is None:
                 raise Exception(f"Empty object specifying model ID is missing for armature {bl_armature_obj.name}")
@@ -111,7 +111,7 @@ class ModelSplitter(SlotsBase):
             if bl_armature_modifier is not None:
                 bl_armature_modifier.object = bl_local_armature_obj
             
-            bl_local_collection = Enumerable(cast(Iterable[bpy.types.Collection], bl_local_armature_obj.users_collection)).first_or_none()
+            bl_local_collection = Enumerable(bl_local_armature_obj.users_collection).first_or_none()
             if bl_local_collection is not None:
                 BlenderHelper.move_object_to_collection(bl_split_global_mesh_obj, bl_local_collection)
         
@@ -148,7 +148,7 @@ class ModelSplitter(SlotsBase):
         
         bl_splittable_global_mesh_obj = BlenderHelper.duplicate_object(bl_global_mesh_obj)
         if not cast(bpy.types.Mesh, bl_splittable_global_mesh_obj.data).has_custom_normals:
-            bpy.ops.mesh.customdata_custom_splitnormals_add()       # type: ignore
+            bpy.ops.mesh.customdata_custom_splitnormals_add()
 
         for local_skeleton_id, global_vertex_indices in Enumerable(global_vertex_indices_by_local_skeleton_id.items()).order_by_descending(lambda g: len(g[1])):
             if len(global_vertex_indices) == 0:
@@ -165,12 +165,12 @@ class ModelSplitter(SlotsBase):
         with BlenderHelper.enter_edit_mode(bl_mesh_obj):
             bl_mesh_obj.vertex_groups.active = bl_mesh_obj.vertex_groups[vertex_group_name]
 
-            bpy.ops.mesh.select_mode(type = "VERT")             # type: ignore
-            bpy.ops.mesh.select_all(action = "DESELECT")        # type: ignore
-            bpy.ops.object.vertex_group_select()                # type: ignore
-            bpy.ops.mesh.select_mode(type = "FACE")             # type: ignore
+            bpy.ops.mesh.select_mode(type = "VERT")
+            bpy.ops.mesh.select_all(action = "DESELECT")
+            bpy.ops.object.vertex_group_select()
+            bpy.ops.mesh.select_mode(type = "FACE")
             try:
-                bpy.ops.mesh.separate()                         # type: ignore
+                bpy.ops.mesh.separate()
             except:
                 return (bl_mesh_obj, None)
         

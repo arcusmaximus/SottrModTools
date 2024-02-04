@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using SottrModManager.Shared.Cdc;
 using SottrModManager.Shared.Util;
 
@@ -83,18 +82,15 @@ namespace SottrExtractor.Controls
             return rootNode;
         }
 
-        private static string GetLocaleFileName(ulong value)
+        private static string GetLocaleFileName(ulong locale)
         {
-            string fileName = $"Locale {value:X08}";
-            foreach (Locale locale in Enum.GetValues(typeof(Locale)).Cast<Locale>().OrderBy(l => (int)l))
-            {
-                if (((uint)locale & value) != 0)
-                {
-                    fileName += " " + Regex.Replace(locale.ToString(), @"(?<=[a-z])[A-Z0-9]", "-$0").ToLower();
-                    break;
-                }
-            }
-            return fileName;
+            return string.Join(
+                '.',
+                Enum.GetValues(typeof(LocaleLanguage))
+                    .Cast<LocaleLanguage>()
+                    .Where(l => (locale & (uint)l) != 0)
+                    .Select(l => l.ToString().ToLower())
+            );
         }
     }
 }

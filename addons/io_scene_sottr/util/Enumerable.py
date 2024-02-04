@@ -59,6 +59,15 @@ class Enumerable(Generic[T]):
     def select_many(self, mapping: Callable[[T], Iterable[U]]) -> "Enumerable[U]":
         return _SelectManyEnumerable[U](self, mapping)
     
+    @overload
+    def zip(self, other: Iterable[U]) -> "Enumerable[tuple[T, U]]": ...
+    
+    @overload
+    def zip(self, other: Iterable[U], mapping: Callable[[T, U], V]) -> "Enumerable[V]": ...
+
+    def zip(self, other: Iterable[Any], mapping: Callable[[Any, Any], Any] | None = None) -> Any:
+        return _ZipEnumerable[Any](self, other, mapping)
+    
     def distinct(self) -> "Enumerable[T]":
         return Enumerable[T](set(self))
     
@@ -77,6 +86,21 @@ class Enumerable(Generic[T]):
     
     def first(self, predicate: Callable[[T], bool] | None = None) -> T:
         item = self.first_or_none(predicate)
+        if item is None:
+            raise Exception("No items in sequence")
+
+        return item
+    
+    def last_or_none(self, predicate: Callable[[T], bool] | None = None) -> T | None:
+        last_item: T | None = None
+        for item in self:
+            if predicate is None or predicate(item):
+                last_item = item
+        
+        return last_item
+    
+    def last(self, predicate: Callable[[T], bool] | None = None) -> T:
+        item = self.last_or_none(predicate)
         if item is None:
             raise Exception("No items in sequence")
 
@@ -282,3 +306,20 @@ class _SelectManyEnumerable(Enumerable[T]):
     
     def __iter__(self) -> Iterator[T]:
         return itertools.chain.from_iterable(map(self.mapping, self.iterable))
+
+class _ZipEnumerable(Enumerable[T]):
+    iterable2: Iterable[Any]
+    mapping: Callable[[Any, Any], Any] | None
+
+    def __init__(self, iterable: Iterable[Any], iterable2: Iterable[Any], mapping: Callable[[Any, Any], Any] | None) -> None:
+        super().__init__(iterable)
+        self.iterable2 = iterable2
+        self.mapping = mapping
+    
+    def __iter__(self) -> Iterator[T]:
+        result: Iterator[Any] = zip(self.iterable, self.iterable2)
+        mapping = self.mapping
+        if mapping is not None:
+            result = map(lambda p: mapping(p[0], p[1]), result)
+
+        return result
