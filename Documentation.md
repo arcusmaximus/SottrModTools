@@ -311,7 +311,7 @@ If you want to add a new cloth strip, you can duplicate an existing one and chan
 whatever way you want.
 
 > [!TIP]
-> If there's only an empty cloth strip with ID 0, that means the outfit doesn't have any physics.
+> If there's only an empty cloth strip with ID 1111, that means the outfit doesn't have any physics.
 > You can still add physics in this case, but may have to include the object .tr11dtp file
 > (the one referenced by the .tr11objectref — use the binary templates) in your mod to get things working.
 
