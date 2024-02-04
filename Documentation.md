@@ -284,7 +284,7 @@ you'll need to set the *Frame Rate* to *Custom* to see the Base). Note that the 
 the opposite way as the FPS: a higher Base will result in each frame taking more time and the
 animation thus being slower overall, not faster.
 
-## Cloth modding
+## Cloth physics modding
 
 Not all bones in an outfit are driven by an animation: some are instead driven by a cloth physics simulation.
 You can add these physics to your own models.
@@ -399,15 +399,15 @@ This also means you can simply overwrite a resource by a copy of any other resou
 you could overwrite a material by another and change just one texture reference, keeping the
 shader references and the other textures. 
 
-## String modding
+## Text modding
 
 Apart from resources, you can also mod files. The most useful file to mod right now is pcx64-w\local\locals.bin,
-which contains all the strings displayed in the game: menu items, subtitles, outfit names/descriptions,
+which contains all the text displayed in the game: menu items, subtitles, outfit names/descriptions,
 and so on.
 
 As indicated by the file extension, locals.bin is a binary file, but the extractor automatically converts
-it to JSON for convenience. Once extracted, you can change any strings you like. To keep an overview,
-you can also remove any strings you don't intend to modify.
+it to JSON for convenience. Once extracted, you can change any text you like. To keep an overview,
+you can also remove any entries you don't intend to modify.
 
 Once you're done making changes, you can pack your (complete or partial) JSON file into your mod,
 making sure to use the same folder structure and file name as produced by the extractor. The mod
