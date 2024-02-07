@@ -228,16 +228,14 @@ class Cloth(SlotsBase):
 
             reader.seek(dtp_strip.masses_ref)
             for dtp_mass in reader.read_struct_list(_ClothDtpMass, dtp_strip.num_masses):
-                if dtp_mass.anchor_bones_ref is None:
-                    raise Exception()
-
                 mass = ClothMass(dtp_mass.local_bone_id, dtp_mass.position)
                 mass.mass = dtp_mass.mass / 255.0
                 mass.bounceback_factor = dtp_mass.bounce_back_factor / 255.0
                 
-                reader.seek(dtp_mass.anchor_bones_ref)
-                for dtp_anchor_bone in reader.read_struct_list(_ClothDtpAnchorBone, dtp_mass.num_anchor_bones):
-                    mass.anchor_local_bones.append(ClothMassAnchorBone(dtp_anchor_bone.local_bone_id, dtp_anchor_bone.offset))
+                if dtp_mass.anchor_bones_ref is not None:
+                    reader.seek(dtp_mass.anchor_bones_ref)
+                    for dtp_anchor_bone in reader.read_struct_list(_ClothDtpAnchorBone, dtp_mass.num_anchor_bones):
+                        mass.anchor_local_bones.append(ClothMassAnchorBone(dtp_anchor_bone.local_bone_id, dtp_anchor_bone.offset))
                 
                 strip.masses.append(mass)
             

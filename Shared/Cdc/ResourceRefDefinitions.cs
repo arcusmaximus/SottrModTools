@@ -120,12 +120,16 @@ namespace SottrModManager.Shared.Cdc
 
         public ResourceKey GetExternalRefTarget(int refPos)
         {
+            long prevPos = _stream.Position;
+
             _stream.Position = _packedExternalRefDefinitionPosByRefPos[refPos];
             int packedRef = _reader.ReadInt32();
             ResourceType resourceType = (ResourceType)(packedRef >> 25);
 
             _stream.Position = refPos;
             int resourceId = (int)(_reader.ReadUInt32() & 0x7FFFFFFF);
+
+            _stream.Position = prevPos;
 
             return new ResourceKey(resourceType, resourceId);
         }
