@@ -20,14 +20,14 @@ A standalone tool for extracting resources from the game.
 
 ## Blender addon
 
-Can import meshes/materials/skeletons/animations and export meshes/animations.
+Lets you import and export meshes, skeletons, and animations. Custom cloth physics are also possible.
 
 ![Screenshot of the Blender addon](Screenshots/Blender.png)
 
 ## Binary templates
 
 Template files for inspecting and modifying some file types with [ImHex](https://imhex.werwolv.net/) or [010 Editor](https://www.sweetscape.com/).
-Can be used to tweak shader parameters in materials or bone positions in skeletons, for example.
+Can be used to tweak shader parameters in materials, for example.
 
 ![Screenshot of a binary template](Screenshots/Template.png)
 
