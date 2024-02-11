@@ -123,7 +123,7 @@ class ModelMerger(SlotsBase):
         local_skeleton_id = convert_bone_names_to_global and BlenderNaming.parse_local_armature_name(bl_armature_obj.name) or 0
         for bl_bone in cast(bpy.types.Armature, bl_armature_obj.data).bones:
             bone_group = BlenderHelper.get_bone_group(bl_armature_obj, bl_bone)
-            if bone_group is not None:
+            if bone_group is not None and bone_group.name != BlenderNaming.hidden_bone_group_name:
                 bone_name = convert_bone_names_to_global and self.convert_local_bone_name_to_global(local_skeleton_id, bl_bone.name) or bl_bone.name
                 result[bone_name] = bone_group
         

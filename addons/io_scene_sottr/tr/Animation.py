@@ -4,13 +4,13 @@ import math
 from typing import Callable, ClassVar, NamedTuple, Protocol, Sequence, TypeVar, cast
 
 from mathutils import Quaternion, Vector
-from io_scene_sottr.tr.CStructTypeMappings import CVec3
 from io_scene_sottr.tr.ResourceBuilder import ResourceBuilder
 from io_scene_sottr.tr.ResourceReader import ResourceReader
 from io_scene_sottr.tr.ResourceReference import ResourceReference
 from io_scene_sottr.util.BitStreamWriter import BitStreamWriter
 from io_scene_sottr.util.BitstreamReader import BitstreamReader
 from io_scene_sottr.util.CStruct import CByte, CFlag, CInt, CLong, CShort, CStruct, CUShort
+from io_scene_sottr.util.CStructTypeMappings import CVec3
 from io_scene_sottr.util.Enumerable import Enumerable
 from io_scene_sottr.util.SlotsBase import SlotsBase
 

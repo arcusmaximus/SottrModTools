@@ -1,5 +1,6 @@
 from ctypes import sizeof
 from mathutils import Quaternion, Vector
+from io_scene_sottr.tr.BoneConstraint import BoneConstraint
 from io_scene_sottr.util.CStruct import CFloat, CInt, CStruct
 
 class Bone(CStruct):
@@ -16,6 +17,7 @@ class Bone(CStruct):
 
     global_id: int | None
     counterpart_local_id: int | None
-    _ignored_fields_ = ("global_id", "counterpart_local_id")
+    constraints: list[BoneConstraint]
+    _ignored_fields_ = ("global_id", "counterpart_local_id", "constraints")
 
 assert(sizeof(Bone) == 0x40)

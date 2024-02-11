@@ -19,7 +19,7 @@ class UnpinClothBonesOperator(BlenderOperatorBase[BlenderPropertyGroup]):
     
     def execute(self, context: bpy.types.Context) -> set[str]:
         for bl_bone in Enumerable(context.selected_pose_bones).where(UnpinClothBonesOperator.is_cloth_bone):
-            BlenderHelper.move_bone_to_group(context.object, bl_bone.bone, None, None)
+            BlenderHelper.move_bone_to_group(context.object, bl_bone.bone, BlenderNaming.unpinned_cloth_bone_group_name, BlenderNaming.unpinned_cloth_bone_palette_name)
         
         return { "FINISHED" }
 

@@ -1,6 +1,6 @@
 from enum import Enum
 import bpy
-from typing import Any, Callable, ClassVar, Generic, NamedTuple, Protocol, TypeGuard, TypeVar, cast
+from typing import Any, Callable, ClassVar, Generic, Iterator, NamedTuple, Protocol, TypeGuard, TypeVar, cast
 from io_scene_sottr.util.Enumerable import Enumerable
 
 class PropSubType(Enum):
@@ -53,7 +53,13 @@ class EnumProp(NamedTuple):
 class FactoryFunction(Protocol):
     def __call__(self, **kwds: Any) -> Any: ...
 
-TDerived = TypeVar("TDerived", bound = "BlenderPropertyGroup")
+TPropertyGroup = TypeVar("TPropertyGroup", bound = "BlenderPropertyGroup", covariant = True)
+
+class BlenderPropertyGroupCollection(Generic[TPropertyGroup], Protocol):
+    def add(self) -> TPropertyGroup: ...
+    def remove(self, index: int) -> None: ...
+    def clear(self) -> None: ...
+    def __iter__(self) -> Iterator[TPropertyGroup]: ...
 
 class BlenderPropertyGroup(Protocol):
     property_factory_funcs: ClassVar[dict[type, FactoryFunction]] = {
@@ -96,11 +102,17 @@ class BlenderPropertyGroup(Protocol):
         annotations: dict[str, Any] = {}
 
         for property_name, annotation in orig_annotations.items():
-            property_type: type = annotation.__origin__
+            property_type = annotation.__origin__
             property_metadata = annotation.__metadata__[0]
 
             if isinstance(property_metadata, Prop):
-                if BlenderPropertyGroup.is_property_group(property_type):
+                if BlenderPropertyGroup.is_property_group_collection(property_type):
+                    item_type = property_type.__args__[0]
+                    if BlenderPropertyGroup.is_property_group(item_type):
+                        annotations[property_name] = bpy.props.CollectionProperty(name = property_metadata.name, type = item_type.bl_class)
+                    else:
+                        raise Exception(f"Collection property {property_name} in class {class_name} must have a property group as its item type")
+                elif BlenderPropertyGroup.is_property_group(property_type):
                     annotations[property_name] = bpy.props.PointerProperty(name = property_metadata.name, type = property_type.bl_class)
                 else:
                     metadata_dict = BlenderPropertyGroup.get_metadata_dict(property_metadata)
@@ -130,6 +142,10 @@ class BlenderPropertyGroup(Protocol):
     @staticmethod
     def is_property_group(type: type) -> TypeGuard[type["BlenderPropertyGroup"]]:
         return type.__base__ == BlenderPropertyGroup
+    
+    @staticmethod
+    def is_property_group_collection(type: Any) -> bool:
+        return hasattr(type, "__origin__") and getattr(type, "__origin__") == BlenderPropertyGroupCollection
     
     @staticmethod
     def is_attached_property_group(type: type) -> TypeGuard[type["BlenderAttachedPropertyGroup"]]:          # type: ignore

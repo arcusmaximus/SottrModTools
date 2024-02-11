@@ -62,50 +62,127 @@ typedef struct
 
 typedef struct
 {
+    Quaternion quat1;
+    Quaternion quat2;
+    Vector3 vec1;
+    FSkip(4);
+    Vector3 vec2;
+    FSkip(4);
+    Vector3 referencePos;
+    FSkip(4);
+    Quaternion referenceRot;
+    ushort referenceLocalBoneId;
+    ubyte referenceType;
+} BoneConstraint0;
+
+typedef struct
+{
+    Vector4 offset;
+} BoneConstraint1;
+
+typedef struct
+{
+    Quaternion offset;
+} BoneConstraint2;
+
+typedef struct
+{
+    InternalRef sourceVectors1Ref;
+    if (IsValidRef(sourceVectors1Ref))
+    {
+        SeekToRef(sourceVectors1Ref);
+        Vector4 sourceVectors1[parentof(this).numSourceBones];
+        ReturnFromRef();
+    }
+    
+    InternalRef sourceVectors2Ref;
+    if (IsValidRef(sourceVectors2Ref))
+    {
+        SeekToRef(sourceVectors2Ref);
+        Vector4 sourceVectors2[parentof(this).numSourceBones];
+        ReturnFromRef();
+    }
+    
+    InternalRef sourceLocalBoneIdsRef;
+    if (IsValidRef(sourceLocalBoneIdsRef))
+    {
+        SeekToRef(sourceLocalBoneIdsRef);
+        ushort sourceLocalBoneIds[parentof(this).numSourceBones];
+        ReturnFromRef();
+    }
+    
+    ubyte useSourceVectors1;
+    ubyte useSourceVectors2;
+} BoneConstraint3;
+
+typedef struct
+{
     ubyte type;
     FSkip(1);
-    ushort localBoneId;
-    ushort numAssociatedLocalBoneIds;
+    ushort targetLocalBoneId;
+    ushort numSourceBones;
     FSkip(2);
     
-    InternalRef associatedLocalBoneIdsRef;
-    if (IsValidRef(associatedLocalBoneIdsRef))
+    InternalRef sourceLocalBoneIdsRef;
+    if (IsValidRef(sourceLocalBoneIdsRef))
     {
-        SeekToRef(associatedLocalBoneIdsRef);
-        ushort associatedLocalBoneIds[numAssociatedLocalBoneIds];
+        SeekToRef(sourceLocalBoneIdsRef);
+        ushort sourceLocalBoneIds[numSourceBones];
         ReturnFromRef();
     }
     
-    InternalRef floatsRef;
-    if (IsValidRef(floatsRef))
+    InternalRef sourceBoneWeightsRef;
+    if (IsValidRef(sourceBoneWeightsRef))
     {
-        SeekToRef(floatsRef);
-        float floats[numAssociatedLocalBoneIds];
+        SeekToRef(sourceBoneWeightsRef);
+        float sourceBoneWeights[numSourceBones];
         ReturnFromRef();
     }
     
-    InternalRef quaternionRef;
-    if (IsValidRef(quaternionRef))
+    InternalRef extraDataRef;
+    if (IsValidRef(extraDataRef))
     {
-        SeekToRef(quaternionRef);
-        Quaternion quaternion;
+        SeekToRef(extraDataRef);
+        switch (type)
+        {
+            case 0:
+            {
+                BoneConstraint0 extraData;
+                break;
+            }
+            case 1:
+            {
+                BoneConstraint1 extraData;
+                break;
+            }
+            case 2:
+            {
+                BoneConstraint2 extraData;
+                break;
+            }
+            case 3:
+            {
+                BoneConstraint3 extraData;
+                break;
+            }
+        }
         ReturnFromRef();
     }
-} ExtraBoneInfo;
+} BoneConstraint <read=Str("Bone %d Type %d", targetLocalBoneId, type)>;
 
 typedef struct
 {
     local int i;
-    for (i = 0; i < parentof(this).numExtraBoneInfos; i++)
+    for (i = 0; i < parentof(this).numBoneConstraints; i++)
     {
-        if (IsValidRef(parentof(this).extraBoneInfoRefs[i]))
+        if (IsValidRef(parentof(this).boneConstraintRefs[i]))
         {
-            SeekToRef(parentof(this).extraBoneInfoRefs[i]);
-            ExtraBoneInfo extraBoneInfo;
+            SeekToRef(parentof(this).boneConstraintRefs[i]);
+            BoneConstraint constraint;
             ReturnFromRef();
         }
     }
-} ExtraBoneInfos;
+} BoneConstraints;
 
 typedef struct
 {
@@ -158,16 +235,16 @@ typedef struct
         ReturnFromRef();
     }
     
-    ubyte numExtraBoneInfos;
+    ubyte numBoneConstraints;
     FSkip(7);
-    InternalRef extraBoneInfoRefsRef;
-    if (IsValidRef(extraBoneInfoRefsRef))
+    InternalRef boneConstraintRefsRef;
+    if (IsValidRef(boneConstraintRefsRef))
     {
-        SeekToRef(extraBoneInfoRefsRef);
-        InternalRef extraBoneInfoRefs[numExtraBoneInfos];
+        SeekToRef(boneConstraintRefsRef);
+        InternalRef boneConstraintRefs[numBoneConstraints];
         ReturnFromRef();
         
-        ExtraBoneInfos extraBoneInfos;
+        BoneConstraints boneConstraints;
     }
     
     ubyte numUnusedWords2;

@@ -3,6 +3,8 @@ from struct import unpack_from
 from typing import Sequence, TypeVar
 from mathutils import Matrix, Vector
 from io_scene_sottr.util.CStruct import CStruct
+from io_scene_sottr.util.CStructTypeMappings import CVec3, CVec4
+from io_scene_sottr.util.Enumerable import Enumerable
 from io_scene_sottr.util.SlotsBase import SlotsBase
 
 TStruct = TypeVar("TStruct", bound=CStruct)
@@ -122,6 +124,9 @@ class BinaryReader(SlotsBase):
     def read_vec3d_at(self, offset: int) -> Vector:
         return Vector(unpack_from("<3f", self.data, self.position + offset))
     
+    def read_vec3d_list(self, count: int) -> list[Vector]:
+        return Enumerable(self.read_struct_list(CVec3, count)).select(lambda v: v.to_vector()).to_list()
+    
     def read_vec4d(self) -> Vector:
         result = Vector(self.read_vec4d_at(0))
         self.position += 0x10
@@ -129,6 +134,9 @@ class BinaryReader(SlotsBase):
     
     def read_vec4d_at(self, offset: int) -> Vector:
         return Vector(unpack_from("<4f", self.data, self.position + offset))
+    
+    def read_vec4d_list(self, count: int) -> list[Vector]:
+        return Enumerable(self.read_struct_list(CVec4, count)).select(lambda v: v.to_vector()).to_list()
     
     def read_mat4x4(self) -> Matrix:
         result = self.read_mat4x4_at(0)

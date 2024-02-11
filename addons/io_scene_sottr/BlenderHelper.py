@@ -137,7 +137,11 @@ class BlenderHelper:
     def move_bone_to_group(bl_armature_obj: bpy.types.Object, bl_bone: bpy.types.Bone, group_name: str | None, palette: str | None) -> None:
         if BlenderHelper.is_blender_40:
             bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
-            bl_bone.collections.clear()
+
+            for bl_bone_collection in list(bl_bone.collections):
+                if bl_bone_collection.name != BlenderNaming.hidden_bone_group_name:
+                    bl_bone_collection.unassign(bl_bone)
+
             if group_name is not None:
                 bl_bone_collection = bl_armature.collections.get(group_name) or bl_armature.collections.new(group_name)
                 bl_bone_collection.assign(bl_bone)

@@ -1,3 +1,4 @@
+from io import StringIO
 from typing import cast
 import bpy
 import os
@@ -6,6 +7,7 @@ from io_scene_sottr.BlenderHelper import BlenderHelper
 from io_scene_sottr.BlenderNaming import BlenderBoneIdSet, BlenderNaming
 from io_scene_sottr.properties.BoneProperties import BoneProperties
 from io_scene_sottr.tr.Bone import Bone
+from io_scene_sottr.tr.BoneConstraint import BoneConstraint
 from io_scene_sottr.tr.Collection import Collection
 from io_scene_sottr.tr.Enumerations import ResourceType
 from io_scene_sottr.tr.ResourceBuilder import ResourceBuilder
@@ -44,60 +46,80 @@ class SkeletonExporter(SlotsBase):
         
         bone_with_missing_id = Enumerable(bone_ids.items()).first_or_none(lambda p: p[1].local_id is None)
         if bone_with_missing_id is not None:
-            raise Exception(f"Bone {bone_with_missing_id[0].name} in armature {bl_armature_obj.name} doesn't have a local ID. Exporting merged skeletons isn't supported - please export an outfit piece skeleton instead.")
+            raise Exception(f"Bone {bone_with_missing_id[0].name} in armature {bl_armature_obj.name} doesn't have a local ID. " +
+                             "Exporting merged skeletons isn't supported - please export an outfit piece skeleton instead.")
 
         adding_global_bones = True
         prev_local_id = -1
-        for bl_bone, bone_id_set in Enumerable(bone_ids.items()).order_by(lambda p: p[1].local_id):
+        for bl_edit_bone, bone_id_set in Enumerable(bone_ids.items()).order_by(lambda p: p[1].local_id):
             if bone_id_set.local_id is None:
                 raise Exception()
 
             if bone_id_set.local_id != prev_local_id + 1:
-                raise Exception(f"Gap in bone numbering: no bone found with local ID {prev_local_id + 1} in armature {bl_armature_obj.name}. Please ensure that the local IDs start at 0 and are contiguous.")
+                raise Exception(f"Gap in bone numbering: no bone found with local ID {prev_local_id + 1} in armature {bl_armature_obj.name}. " +
+                                 "Please ensure that the local IDs start at 0 and are contiguous.")
             
             if bone_id_set.global_id is None:
                 adding_global_bones = False
             elif not adding_global_bones:
-                raise Exception(f"Bone {bl_bone.name} in armature {bl_armature_obj.name} has a global ID even though the one before it doesn't. " +
+                raise Exception(f"Bone {bl_edit_bone.name} in armature {bl_armature_obj.name} has a global ID even though the one before it doesn't. " +
                                  "The local bone IDs should be numbered so that all the bones with global IDs come first.")
             
             tr_bone = Bone()
-            tr_bone.global_id = bone_id_set.global_id
-            counterpart_bone_name = BoneProperties.get_instance(bl_armature.bones[bl_bone.name]).counterpart_bone_name
-            if len(counterpart_bone_name) > 0:
-                counterpart_bone_id_set = BlenderNaming.try_parse_bone_name(counterpart_bone_name)
-                if counterpart_bone_id_set is None or counterpart_bone_id_set.local_id is None:
-                    raise Exception(f"Invalid counterpart bone name {counterpart_bone_name} in bone {bl_bone.name}")
-                
-                tr_bone.counterpart_local_id = counterpart_bone_id_set.local_id
-            else:
-                tr_bone.counterpart_local_id = None
-            
-            if bl_bone.parent:
-                parent_id_set = bone_ids[bl_bone.parent]
-                if parent_id_set.local_id is None:
-                    raise Exception()
-                
-                if parent_id_set.local_id >= bone_id_set.local_id:
-                    raise Exception(f"Parent {bl_bone.parent.name} has a local ID that's higher than that of its child {bl_bone.name}. It should be lower instead.")
+            bl_bone = bl_armature.bones[bl_edit_bone.name]
+            self.set_bone_common_fields(tr_bone, bl_edit_bone, bone_id_set, bone_ids)
+            self.add_bone_counterpart(tr_bone, bl_bone)
+            self.add_bone_constraints(tr_bone, bl_bone)
 
-                tr_bone.parent_id = parent_id_set.local_id
-                tr_bone.relative_location = (Vector(bl_bone.head) - Vector(bl_bone.parent.head)) / self.scale_factor
-
-                z_axis = (Vector(bl_bone.tail) - Vector(bl_bone.head)).normalized()
-                y_axis = z_axis.cross((z_axis.y, z_axis.z, z_axis.x))
-                x_axis = z_axis.cross(y_axis)
-                tr_bone.absolute_orientation = Matrix(((x_axis.x, y_axis.x, z_axis.x),
-                                                       (x_axis.y, y_axis.y, z_axis.y),
-                                                       (x_axis.z, y_axis.z, z_axis.z))).to_quaternion()
-            else:
-                tr_bone.parent_id = -1
-                tr_bone.relative_location = Vector(bl_bone.head) / self.scale_factor
-                tr_bone.absolute_orientation = Quaternion()
-
-            tr_bone.distance_from_parent = tr_bone.relative_location.length
             tr_skeleton.bones.append(tr_bone)
             prev_local_id = bone_id_set.local_id
+    
+    def set_bone_common_fields(self, tr_bone: Bone, bl_edit_bone: bpy.types.EditBone, bone_id_set: BlenderBoneIdSet, bone_ids: dict[bpy.types.EditBone, BlenderBoneIdSet]) -> None:
+        if bone_id_set.local_id is None:
+            raise Exception()
+        
+        tr_bone.global_id = bone_id_set.global_id
+        
+        if bl_edit_bone.parent:
+            parent_id_set = bone_ids[bl_edit_bone.parent]
+            if parent_id_set.local_id is None:
+                raise Exception()
+            
+            if parent_id_set.local_id >= bone_id_set.local_id:
+                raise Exception(f"Parent {bl_edit_bone.parent.name} has a local ID that's higher than that of its child {bl_edit_bone.name}. It should be lower instead.")
+
+            tr_bone.parent_id = parent_id_set.local_id
+            tr_bone.relative_location = (Vector(bl_edit_bone.head) - Vector(bl_edit_bone.parent.head)) / self.scale_factor
+
+            z_axis = (Vector(bl_edit_bone.tail) - Vector(bl_edit_bone.head)).normalized()
+            y_axis = z_axis.cross((z_axis.y, z_axis.z, z_axis.x))
+            x_axis = z_axis.cross(y_axis)
+            tr_bone.absolute_orientation = Matrix(((x_axis.x, y_axis.x, z_axis.x),
+                                                    (x_axis.y, y_axis.y, z_axis.y),
+                                                    (x_axis.z, y_axis.z, z_axis.z))).to_quaternion()
+        else:
+            tr_bone.parent_id = -1
+            tr_bone.relative_location = Vector(bl_edit_bone.head) / self.scale_factor
+            tr_bone.absolute_orientation = Quaternion()
+
+        tr_bone.distance_from_parent = tr_bone.relative_location.length
+    
+    def add_bone_counterpart(self, tr_bone: Bone, bl_bone: bpy.types.Bone) -> None:
+        counterpart_bone_name = BoneProperties.get_instance(bl_bone).counterpart_bone_name
+        if len(counterpart_bone_name) > 0:
+            counterpart_bone_id_set = BlenderNaming.try_parse_bone_name(counterpart_bone_name)
+            if counterpart_bone_id_set is None or counterpart_bone_id_set.local_id is None:
+                raise Exception(f"Invalid counterpart bone name {counterpart_bone_name} in bone {bl_bone.name}")
+            
+            tr_bone.counterpart_local_id = counterpart_bone_id_set.local_id
+        else:
+            tr_bone.counterpart_local_id = None
+    
+    def add_bone_constraints(self, tr_bone: Bone, bl_bone: bpy.types.Bone) -> None:
+        tr_bone.constraints = []
+        for prop_constraint in BoneProperties.get_instance(bl_bone).constraints:
+            tr_constraint = BoneConstraint.deserialize(StringIO(prop_constraint.data))
+            tr_bone.constraints.append(tr_constraint)
 
     def add_blend_shape_id_mappings(self, tr_skeleton: Skeleton, bl_armature_obj: bpy.types.Object) -> None:
         for bl_mesh_obj in Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):

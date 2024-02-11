@@ -72,6 +72,8 @@ class ClothImporter(SlotsBase):
             BoneProperties.get_instance(bl_bone).cloth.bounceback_factor = tr_cloth_mass.bounceback_factor
             if tr_cloth_mass.mass == 0:
                 BlenderHelper.move_bone_to_group(bl_armature_obj, bl_bone, BlenderNaming.pinned_cloth_bone_group_name, BlenderNaming.pinned_cloth_bone_palette_name)
+            else:
+                BlenderHelper.move_bone_to_group(bl_armature_obj, bl_bone, BlenderNaming.unpinned_cloth_bone_group_name, BlenderNaming.unpinned_cloth_bone_palette_name)
         
         for i, tr_cloth_spring in enumerate(tr_cloth_strip.springs):
             BlenderHelper.set_edge_bevel_weight(bl_mesh, i, tr_cloth_spring.stretchiness)

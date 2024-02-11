@@ -31,7 +31,7 @@ class ImportObjectOperator(ImportOperatorBase[_Properties]):
         with OperatorContext.begin(self):
             tr_collection = Collection(self.properties.filepath)
 
-            skeleton_importer = SkeletonImporter(OperatorCommon.scale_factor)
+            skeleton_importer = SkeletonImporter(OperatorCommon.scale_factor, not self.properties.import_cloth)
             bl_armature_obj = skeleton_importer.import_from_collection(tr_collection)
             
             model_importer = ModelImporter(

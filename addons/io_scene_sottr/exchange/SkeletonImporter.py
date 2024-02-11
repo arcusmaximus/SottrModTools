@@ -1,3 +1,4 @@
+from io import StringIO
 import bpy
 from typing import cast
 from mathutils import Vector
@@ -11,9 +12,11 @@ from io_scene_sottr.util.SlotsBase import SlotsBase
 
 class SkeletonImporter(SlotsBase):
     scale_factor: float
+    create_cloth_bone_group: bool
 
-    def __init__(self, scale_factor: float) -> None:
+    def __init__(self, scale_factor: float, create_cloth_bone_group: bool) -> None:
         self.scale_factor = scale_factor
+        self.create_cloth_bone_group = create_cloth_bone_group
     
     def import_from_collection(self, tr_collection: Collection) -> bpy.types.Object | None:
         if bpy.context.object:
@@ -28,15 +31,19 @@ class SkeletonImporter(SlotsBase):
         bl_armature = bpy.data.armatures.new(armature_name)
         bl_armature.display_type = "STICK"
 
-        bl_obj = BlenderHelper.create_object(bl_armature)
-        bl_obj.show_in_front = True
+        bl_armature_obj = BlenderHelper.create_object(bl_armature)
+        bl_armature_obj.show_in_front = True
 
         with BlenderHelper.enter_edit_mode():
             self.create_bones(bl_armature, tr_skeleton)
         
-        self.assign_symmetrical_counterparts(bl_armature, tr_skeleton)
+        if self.create_cloth_bone_group:
+            self.assign_cloth_bones_to_group(bl_armature_obj, tr_skeleton)
+
+        self.assign_counterparts(bl_armature_obj, tr_skeleton)
+        self.assign_constraints(bl_armature_obj, tr_skeleton)
         
-        return bl_obj
+        return bl_armature_obj
 
     def create_bones(self, bl_armature: bpy.types.Armature, tr_skeleton: Skeleton) -> None:
         bone_child_indices: list[list[int]] = []
@@ -79,7 +86,17 @@ class SkeletonImporter(SlotsBase):
                 else:
                     bl_bone.tail = tail2
 
-    def assign_symmetrical_counterparts(self, bl_armature: bpy.types.Armature, tr_skeleton: Skeleton) -> None:
+    def assign_cloth_bones_to_group(self, bl_armature_obj: bpy.types.Object, tr_skeleton: Skeleton) -> None:
+        bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
+        for i, tr_bone in enumerate(tr_skeleton.bones):
+            if tr_bone.global_id is not None:
+                continue
+
+            bl_bone = bl_armature.bones[BlenderNaming.make_bone_name(None, None, i)]
+            BlenderHelper.move_bone_to_group(bl_armature_obj, bl_bone, BlenderNaming.cloth_bone_group_name, BlenderNaming.cloth_bone_palette_name)
+    
+    def assign_counterparts(self, bl_armature_obj: bpy.types.Object, tr_skeleton: Skeleton) -> None:
+        bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
         for i, tr_bone in enumerate(tr_skeleton.bones):
             if tr_bone.counterpart_local_id is None:
                 continue
@@ -87,3 +104,21 @@ class SkeletonImporter(SlotsBase):
             bone_name = BlenderNaming.make_bone_name(None, tr_bone.global_id, i)
             counterpart_bone_name = BlenderNaming.make_bone_name(None, tr_skeleton.bones[tr_bone.counterpart_local_id].global_id, tr_bone.counterpart_local_id)
             BoneProperties.get_instance(bl_armature.bones[bone_name]).counterpart_bone_name = counterpart_bone_name
+
+    def assign_constraints(self, bl_armature_obj: bpy.types.Object, tr_skeleton: Skeleton) -> None:
+        bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
+        for i, tr_bone in enumerate(tr_skeleton.bones):
+            if len(tr_bone.constraints) == 0:
+                continue
+            
+            bl_bone = bl_armature.bones[BlenderNaming.make_bone_name(None, tr_bone.global_id, i)]
+            prop_constraints = BoneProperties.get_instance(bl_bone).constraints
+
+            for tr_constraint in tr_bone.constraints:
+                serialized_constraint = StringIO()
+                tr_constraint.serialize(serialized_constraint)
+                
+                prop_constraint = prop_constraints.add()
+                prop_constraint.data = serialized_constraint.getvalue()
+
+            BlenderHelper.move_bone_to_group(bl_armature_obj, bl_bone, BlenderNaming.constrained_bone_group_name, BlenderNaming.constrained_bone_palette_name)

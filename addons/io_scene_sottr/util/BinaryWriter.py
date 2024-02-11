@@ -81,11 +81,19 @@ class BinaryWriter(SlotsBase):
         self.write_float(value.y)
         self.write_float(value.z)
     
+    def write_vec3d_list(self, values: Sequence[Vector]) -> None:
+        for value in values:
+            self.write_vec3d(value)
+    
     def write_vec4d(self, value: Vector) -> None:
         self.write_float(value.x)
         self.write_float(value.y)
         self.write_float(value.z)
-        self.write_float(value.w)
+        self.write_float(0)
+    
+    def write_vec4d_list(self, values: Sequence[Vector]) -> None:
+        for value in values:
+            self.write_vec4d(value)
     
     def write_mat4x4(self, value: Matrix) -> None:
         for col in range(4):

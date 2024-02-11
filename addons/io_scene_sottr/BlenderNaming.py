@@ -33,8 +33,17 @@ class BlenderNaming:
     
     hidden_bone_group_name: ClassVar[str] = "Non-deforming bones"
 
+    cloth_bone_group_name: ClassVar[str] = "Cloth bones"
+    cloth_bone_palette_name: ClassVar[str] = "THEME08"
+
     pinned_cloth_bone_group_name: ClassVar[str] = "Pinned cloth bones"
     pinned_cloth_bone_palette_name: ClassVar[str] = "THEME01"
+
+    unpinned_cloth_bone_group_name: ClassVar[str] = "Unpinned cloth bones"
+    unpinned_cloth_bone_palette_name: ClassVar[str] = "THEME08"
+
+    constrained_bone_group_name: ClassVar[str] = "Twist bones"
+    constrained_bone_palette_name: ClassVar[str] = "THEME03"
 
     @staticmethod
     def make_mesh_name(collection_name: str, model_id: int, model_data_id: int, mesh_idx: int) -> str:

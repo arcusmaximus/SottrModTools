@@ -1,0 +1,42 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11interactablecomponent.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse .tr11dtp files storing INTERACTABLE components
+//  Category: SOTTR
+//------------------------------------------------
+
+#include "tr11common.bt"
+
+typedef struct
+{
+    FSkip(8);
+    InternalRef nameRef;
+    if (IsValidRef(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    FSkip(0x95 - 0x10);
+    ubyte disableInteraction;
+    FSkip(0x2F0 - 0x96);
+} Profile <read=name, optimize=false>;
+
+typedef struct
+{
+    FSkip(0x60);
+    InternalRef profilesRef;
+    int numProfiles;
+    if (IsValidRef(profilesRef))
+    {
+        SeekToRef(profilesRef);
+        Profile profiles[numProfiles];
+        ReturnFromRef();
+    }
+} Interactable;
+
+RefDefinitions refDefinitions;
+Interactable interactable;

@@ -788,7 +788,7 @@ typedef struct
     short toNodeIdx;
     short fromSlotIdx;
     short toSlotIdx;
-} Connection;
+} Connection <read=Str("%d.%d -> %d.%d", fromNodeIdx, fromSlotIdx, toNodeIdx, toSlotIdx)>;
 
 typedef struct
 {

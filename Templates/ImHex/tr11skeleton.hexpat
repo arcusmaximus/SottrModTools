@@ -42,32 +42,95 @@ struct CounterpartRange
         break;
 };
 
-struct ExtraBoneInfo
+struct BoneConstraint0
+{
+    Quaternion quat1;
+    Quaternion quat2;
+    Vector3 vec1;
+    padding[4];
+    Vector3 vec2;
+    padding[4];
+    Vector3 referencePos;
+    padding[4];
+    Quaternion referenceRot;
+    u16 referenceLocalBoneId;
+    u8 referenceType;
+};
+
+struct BoneConstraint1
+{
+    Vector4 offset;
+};
+
+struct BoneConstraint2
+{
+    Quaternion offset;
+};
+
+struct BoneConstraint3
+{
+    InternalRef sourceVectors1Ref;
+    if (sourceVectors1Ref.targetPos >= 0)
+        Vector4 sourceVectors1[parent.numSourceBones] @ sourceVectors1Ref.targetPos;
+    
+    InternalRef sourceVectors2Ref;
+    if (sourceVectors2Ref.targetPos >= 0)
+        Vector4 sourceVectors2[parent.numSourceBones] @ sourceVectors2Ref.targetPos;
+    
+    InternalRef sourceLocalBoneIdsRef;
+    if (sourceLocalBoneIdsRef.targetPos >= 0)
+        u16 sourceLocalBoneIds[parent.numSourceBones] @ sourceLocalBoneIdsRef.targetPos;
+    
+    u8 useSourceVectors1;
+    u8 useSourceVectors2;
+};
+
+struct BoneConstraint
 {
     u8 type;
     padding[1];
-    u16 localBoneId;
-    u16 numAssociatedLocalBoneIds;
+    u16 targetLocalBoneId;
+    u16 numSourceBones;
     padding[2];
     
-    InternalRef associatedLocalBoneIdsRef;
-    if (associatedLocalBoneIdsRef.targetPos >= 0)
-        u16 associatedLocalBoneIds[numAssociatedLocalBoneIds] @ associatedLocalBoneIdsRef.targetPos;
+    InternalRef sourceLocalBoneIdsRef;
+    if (sourceLocalBoneIdsRef.targetPos >= 0)
+        u16 sourceLocalBoneIds[numSourceBones] @ sourceLocalBoneIdsRef.targetPos;
     
-    InternalRef floatsRef;
-    if (floatsRef.targetPos >= 0)
-        float floats[numAssociatedLocalBoneIds] @ floatsRef.targetPos;
+    InternalRef sourceBoneWeightsRef;
+    if (sourceBoneWeightsRef.targetPos >= 0)
+        float sourceBoneWeights[numSourceBones] @ sourceBoneWeightsRef.targetPos;
     
-    InternalRef quaternionRef;
-    if (quaternionRef.targetPos >= 0)
-        Quaternion quaternion @ quaternionRef.targetPos;
+    InternalRef extraDataRef;
+    if (extraDataRef.targetPos > 0)
+    {
+        match (type)
+        {
+            (0):
+            {
+                BoneConstraint0 extraData @ extraDataRef.targetPos;
+            }
+            (1):
+            {
+                BoneConstraint1 extraData @ extraDataRef.targetPos;
+            }
+            (2):
+            {
+                BoneConstraint2 extraData @ extraDataRef.targetPos;
+            }
+            (3):
+            {
+                BoneConstraint3 extraData @ extraDataRef.targetPos;
+            }
+        }
+    }
 };
 
-struct ExtraBoneInfoRef
+struct BoneConstraintRef
 {
-    InternalRef extraBoneInfoRef;
-    if (extraBoneInfoRef.targetPos >= 0)
-        ExtraBoneInfo extraBoneInfo @ extraBoneInfoRef.targetPos;
+    InternalRef boneConstraintRef;
+    if (boneConstraintRef.targetPos >= 0)
+        BoneConstraint boneConstraint @ boneConstraintRef.targetPos;
 };
 
 struct Skeleton
@@ -98,11 +161,11 @@ struct Skeleton
     if (blendShapeIdMappingsRef.targetPos >= 0)
         IdMapping blendShapeIdMappings[numBlendShapeIdMappings] @ blendShapeIdMappingsRef.targetPos [[single_color]];
     
-    u8 numExtraBoneInfos;
+    u8 numBoneConstraints;
     padding[7];
-    InternalRef extraBoneInfoRefsRef;
-    if (extraBoneInfoRefsRef.targetPos >= 0)
-        ExtraBoneInfoRef extraBoneInfoRefs[numExtraBoneInfos] @ extraBoneInfoRefsRef.targetPos;
+    InternalRef boneConstraintRefsRef;
+    if (boneConstraintRefsRef.targetPos >= 0)
+        BoneConstraintRef boneConstraintRefs[numBoneConstraints] @ boneConstraintRefsRef.targetPos;
     
     u8 numWords2;
     padding[7];

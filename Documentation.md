@@ -167,30 +167,38 @@ and clicking "Clear Custom Split Normals Data."
 SOTTR skeletons contain quite a few bones that aren't used for deforming the model. To reduce clutter, the addon hides
 these bones by either moving them to the second bone layer (Blender 3.6) or into a hidden bone collection (Blender 4.0).
 
-When working on outfits, you'll notice something else, too: each outfit is split into multiple pieces — head, hair, torso,
-and legs — where each piece has its own .drm file, its own model, and its own skeleton. But the same spine bone
-gets a different ID in the torso skeleton than it does in the legs skeleton, and a different ID than the same spine bone
-in the torso of another outfit. What's more, the torso and legs of the same outfit can contain bones that have the
-same ID despite being different.
+Many of the remaining bones are not animated directly, but are so-called twist bones that have their position and rotation
+calculated based on other bones. They are displayed in green in Pose Mode, and can be hidden in Blender 4.0 by toggling the
+"Twist bones" bone collection. While the twisting information is not applied as Blender bone constraints or drivers,
+it's still stored in the Blender file, and will be written out again when exporting the skeleton (meaning that,
+if you mod a skeleton, the twisting information won't be lost).
 
-The addon comes with a builtin solution for this problem: when you import multiple pieces of an outfit into the same
-Blender scene, it'll automatically merge their skeletons into a new skeleton that doesn't have these ID conflicts,
-and is compatible across outfits.
+Skeletons in SOTTR have a few properties that make them annoying to work with. First of all, the bones don't have names
+like in some other engines, but only IDs. What's more, each outfit is split into multiple pieces — head, hair, torso,
+and legs — where each piece has its own .drm file, its own model, and its own partial skeleton. This applies to
+all outfits, even the ones where you can't mix and match top and bottom ingame. And it doesn't stop there:
+the same bone can have a different ID in every single skeleton, even in skeletons of the same outfit.
+Needless to say, this complicates rigging.
+
+The addon comes with a builtin solution for this last problem: when you import multiple pieces of an outfit into the same
+Blender scene, it'll automatically merge their skeletons into a new skeleton where each bone has only one ID,
+which is the same across outfits.
 
 The way it works is as follows:
 
-- When you import the first model, you'll notice that each bone in the armature has two IDs in its name.
-  The first is the *global ID*, which is referenced by animations and is the same for this bone across
-  all pieces of all outfits. The second is the *local ID*, which is referenced by the weights of the model
-  but is different in every outfit piece.
+- When you import the first model, you'll notice that each bone in the armature has two IDs in its name
+  (like `bone_123_456`). The first is the *global ID*, which is referenced by animations and is the same
+  for this bone across all pieces of all outfits. The second is the *local ID*, which is referenced by the
+  vertex weights of the model but is different in every outfit piece.
 
 - When you import a second model with the "Merge with existing armature(s)" option enabled,
   the addon will create a new armature containing the bones of both the first and second skeleton
-  (duplicates removed), and all the bones renamed to use *just* the global ID. It also parents the
-  meshes of both the first and second model to this new armature and renames their vertex groups to match.
+  (duplicates removed), and all the bones renamed to use *just* the global ID (`bone_123`).
+  It also parents the meshes of both the first and second model to this new armature and renames
+  their vertex groups to match the new bone names.
 
-  The original armatures are moved to a hidden collection named "Split meshes for export" and should
-  not be deleted.
+  The original, partial armatures are moved to a hidden collection named "Split meshes for export"
+  and should not be deleted.
 
 - If needed, import the third and fourth pieces of the outfit as well. (Note that exporting heads with
   blend shapes is slow, so it's generally recommended to import those without merging so you can
@@ -198,15 +206,17 @@ The way it works is as follows:
 
 - You can now edit the meshes — or delete them and start from scratch — and weight them for the single, merged skeleton.
 - When you do an export, the addon will automatically create copies of the meshes (inside the hidden collection),
-  rename their vertex groups to match the original piece-specific skeletons, and export those copies.
+  rename their vertex groups to match the bones of the original partial skeletons, and export those copies.
+  These meshes will then work with the original skeletons; you don't need to check "Export skeleton."
+  (This is only needed if you added custom cloth physics.)
 
   If a mesh spans multiple skeletons, the addon will automatically split it up. This tends to result in
   visible seams ingame, however, so it's better to split the meshes yourself in a place where the seams are
   minimized or hidden.
 
-Certain bones are not driven by animations but by a physics simulation — typically used to make strips of cloth
-flutter around. These bones do not have a global ID. Instead, they have only a local ID in the original skeleton,
-and a skeleton ID + a local ID in the merged skeleton.
+You may notice that certain bones have an `x` instead of a global ID in their name. This is a third category
+of bone which is neither animated nor driven by other bones — instead, it's driven by a cloth physics simulation.
+Such bones are unique to the partial skeleton and won't reoccur anywhere else.
 
 ### Mesh editing
 
@@ -214,7 +224,7 @@ Previous modding tools have resorted to patching/amending the original file, whi
 This toolset, however, exports model files from scratch, which gives you a lot more freedom. Specifically, you can:
 
 - Add, change, and remove meshes as you please. (There's no need to keep the mesh index at the end of the
-  object name sequential.)
+  object name contiguous.)
 - Add, change, and remove blend shapes as you please.
 - Add, change, and remove material slots as you please, and freely assign different materials to faces.
   You can also reference materials that weren't originally referenced by the model — *including* materials from
@@ -269,6 +279,7 @@ Once you've found an animation you'd like to edit or replace, you'll want to do 
 
 - Import tr11_lara.tr11objectref from tr11_lara.drm and delete the dummy mesh, keeping just the skeleton.
 - Import the head, torso, and leg models of some outfit.
+- (In Blender 4.0) Hide the bone collections "Cloth bones" and "Twist bones" to reduce clutter.
 - Import the .tr11anim file (File → Import → SOTTR animation).
 - Edit the animation. While imported animations have a keyframe on every frame, this is not required for
   custom animations.
@@ -286,15 +297,16 @@ animation thus being slower overall, not faster.
 
 ## Cloth physics modding
 
-Not all bones in an outfit are driven by an animation: some are instead driven by a cloth physics simulation.
-You can add these physics to your own models.
+Not all bones in an outfit are driven by an animation or other bones: some are instead driven by a
+cloth physics simulation. You can add these physics to your own models.
 
 The cloth system involves the following concepts:
 * Strip: a patch of fabric (or hair, or rope...) consisting of masses and springs.
-* Mass: a point on a cloth strip that can move around. Each mass has a corresponding bone in the skeleton,
-  which is in turn linked to vertices in the model. (Indeed, one mass typically manages multiple vertices.)
-* Spring: a virtual spring that connects two masses and can stretch, compress, and wiggle around.
-* Collision: a simple, invisible shape (box, sphere, capsule...) which cloth masses are not allowed to move into.
+* Mass: an invisible point that can freely move around, influenced by gravity, wind, and springs.
+  Each mass pulls one or more model vertices along with it through its associated bone.
+* Spring: an invisible spring that connects two masses and can stretch, compress, and wiggle around.
+  This is what keeps the masses from just flying away.
+* Collision: a simple, invisible shape (box, sphere, capsule...) which cloth masses are not allowed to enter.
 
 To get started, click File → Import → SOTTR Object as usual and check "Import cloth and collisions" in the
 file chooser before clicking Import. If the outfit has physics, you'll notice that in addition to the model
@@ -312,8 +324,9 @@ whatever way you want.
 
 > [!TIP]
 > If there's only an empty cloth strip with ID 1111, that means the outfit doesn't have any physics.
-> You can still add physics in this case, but may have to include the object .tr11dtp file
-> (the one referenced by the .tr11objectref — use the binary templates) in your mod to get things working.
+> You can still add physics in this case, but may have to include the object .tr11dtp file in your mod
+> to get things working. You can identify the object file by opening the .tr11objectref file
+> with the corresponding binary template.
 
 The addon adds a custom "SOTTR Cloth" tab to Blender's sidebar (which you can open by pressing `N`).
 This tab lets you perform various cloth-related operations:
@@ -327,24 +340,25 @@ This tab lets you perform various cloth-related operations:
   
   * **Pin** (Pose mode)
     
-    Pins the selected bones, marking them in red. Pinned bones are stuck to the body and don't
+    Pins the selected bones, marking them in red. Pinned bones (masses) are stuck in place and don't
     flutter around. You should pin the bones at the edge of the strip where it attaches to the rest
     of the outfit.
   
   * **Unpin** (Pose mode)
 
-    Unpins the selected bones, marking them in grey. Unpinned bones are free to flutter around.
+    Unpins the selected bones, marking them in grey. Unpinned bones (masses) are free to flutter around.
   
   * **Bounceback strength** (Pose mode)
     
-    Shows, and lets you change, the bounceback strength of the selected bones.
-    This determines how much the mass wants to return to its original location.
+    Shows, and lets you change, the bounceback strength of the selected bones (masses).
+    This determines how much the masses want to return to their original location.
   
 * **Strip**
   * **Parent**
     
     The outfit bone which the selected strip is attached to. This should be a bone that's
-    close to the strip while not being part of it.
+    close to the strip while not being part of it. After changing this, click *Regenerate*
+    to parent the physics bones to this bone.
   
   * **Gravity factor**
     

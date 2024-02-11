@@ -1,4 +1,6 @@
 from ctypes import sizeof
+from io_scene_sottr.tr.BoneConstraint import BoneConstraint
+
 from io_scene_sottr.tr.ResourceBuilder import ResourceBuilder
 from io_scene_sottr.tr.ResourceReader import ResourceReader
 from io_scene_sottr.tr.Bone import Bone
@@ -27,11 +29,11 @@ class _SkeletonHeader(CStruct):
     field_3C: CInt
     blend_shape_id_mappings_ref: ResourceReference | None
 
-    num_extra_bone_infos: CByte
+    num_bone_constraints: CByte
     field_49: CByte
     field_4A: CShort
     field_4C: CInt
-    extra_bone_infos_ref: ResourceReference | None
+    bone_constraint_refs_ref: ResourceReference | None
 
     num_unused_words_2_ref: CByte
     field_59: CByte
@@ -83,8 +85,14 @@ class Skeleton(SlotsBase):
             tr_bone = reader.read_struct(Bone)
             tr_bone.global_id = None
             tr_bone.counterpart_local_id = None
+            tr_bone.constraints = []
             self.bones.append(tr_bone)
 
+        self.read_id_mappings(header, reader)
+        self.read_bone_counterparts(header, reader)
+        self.read_bone_constraints(header, reader)
+
+    def read_id_mappings(self, header: _SkeletonHeader, reader: ResourceReader) -> None:
         if header.bone_id_mappings_ref is not None:
             reader.seek(header.bone_id_mappings_ref)
             for _ in range(header.num_bone_id_mappings):
@@ -98,7 +106,8 @@ class Skeleton(SlotsBase):
                 global_blend_shape_id = reader.read_uint16()
                 local_blend_shape_id = reader.read_uint16()
                 self.global_blend_shape_ids[local_blend_shape_id] = global_blend_shape_id
-        
+    
+    def read_bone_counterparts(self, header: _SkeletonHeader, reader: ResourceReader) -> None:
         if header.counterpart_ranges_ref is None:
             return
         
@@ -110,7 +119,20 @@ class Skeleton(SlotsBase):
 
             for i in range(counterpart_range.count):
                 self.bones[counterpart_range.local_id_range_1_start + i].counterpart_local_id = counterpart_range.local_id_range_2_start + i
+    
+    def read_bone_constraints(self, header: _SkeletonHeader, reader: ResourceReader) -> None:
+        if header.bone_constraint_refs_ref is None:
+            return
+        
+        reader.seek(header.bone_constraint_refs_ref)
+        for bone_constraint_ref in reader.read_ref_list(header.num_bone_constraints):
+            if bone_constraint_ref is None:
+                continue
 
+            reader.seek(bone_constraint_ref)
+            constraint = BoneConstraint.read(reader)
+            self.bones[constraint.target_bone_local_id].constraints.append(constraint)
+    
     def write(self, writer: ResourceBuilder) -> None:
         header = _SkeletonHeader()
         header.bone_array_ref = writer.make_internal_ref()
@@ -121,7 +143,8 @@ class Skeleton(SlotsBase):
         header.bone_id_mappings_ref = writer.make_internal_ref()
         header.num_blend_shape_id_mappings = len(self.global_blend_shape_ids)
         header.blend_shape_id_mappings_ref = writer.make_internal_ref()
-        header.extra_bone_infos_ref = None
+        header.num_bone_constraints = Enumerable(self.bones).sum(lambda b: len(b.constraints))
+        header.bone_constraint_refs_ref = writer.make_internal_ref()
         header.unused_words_2_ref = None
         header.unused_bytes_ref = None
         header.local_bone_ids_by_anim_id_ref = writer.make_internal_ref()
@@ -140,6 +163,19 @@ class Skeleton(SlotsBase):
         for bone in self.bones:
             writer.write_struct(bone)
         
+        self.write_id_mappings(header, writer)
+        self.write_bone_counterparts(header, writer)
+        self.write_bone_constraints(header, writer)
+            
+        writer.write_struct(_CounterpartRange())
+
+    def write_id_mappings(self, header: _SkeletonHeader, writer: ResourceBuilder) -> None:
+        if header.bone_id_mappings_ref is None or \
+           header.blend_shape_id_mappings_ref is None or \
+           header.local_bone_ids_by_anim_id_ref is None or \
+           header.anim_bone_ids_by_local_id_ref is None:
+            raise Exception()
+        
         header.bone_id_mappings_ref.offset = writer.position
         for local_bone_id, bone in enumerate(self.bones):
             if bone.global_id is not None:
@@ -155,6 +191,10 @@ class Skeleton(SlotsBase):
         header.anim_bone_ids_by_local_id_ref.offset = writer.position
         for i in range(header.num_anim_id_mappings):
             writer.write_uint16(i)
+    
+    def write_bone_counterparts(self, header: _SkeletonHeader, writer: ResourceBuilder) -> None:
+        if header.counterpart_ranges_ref is None:
+            raise Exception()
         
         header.counterpart_ranges_ref.offset = writer.position
         for local_bone_id, bone in enumerate(self.bones):
@@ -164,5 +204,18 @@ class Skeleton(SlotsBase):
                 counterpart_range.local_id_range_2_start = bone.counterpart_local_id
                 counterpart_range.count = 1
                 writer.write_struct(counterpart_range)
-            
-        writer.write_struct(_CounterpartRange())
+    
+    def write_bone_constraints(self, header: _SkeletonHeader, writer: ResourceBuilder) -> None:
+        if header.bone_constraint_refs_ref is None:
+            raise Exception()
+        
+        header.bone_constraint_refs_ref.offset = writer.position
+        constraint_refs: dict[BoneConstraint, ResourceReference] = {}
+        for local_bone_id, bone in enumerate(self.bones):
+            for constraint in bone.constraints:
+                constraint.target_bone_local_id = local_bone_id
+                constraint_refs[constraint] = writer.write_internal_ref()
+
+        for constraint, constraint_ref in constraint_refs.items():
+            constraint_ref.offset = writer.position
+            constraint.write(writer)
