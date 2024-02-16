@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Text.Json.Nodes;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SottrModManager.Shared.Cdc;
 using SottrModManager.Shared.Util;
 
@@ -72,8 +73,8 @@ namespace SottrModManager.Mod
 
         private static void AddFilesAndResourcesFromFolder(string baseFolderPath, string folderPath, Dictionary<ArchiveFileKey, string> files, Dictionary<ResourceKey, string> resources, bool recursive)
         {
-            if (!baseFolderPath.EndsWith('\\'))
-                baseFolderPath += '\\';
+            if (!baseFolderPath.EndsWith("\\"))
+                baseFolderPath += "\\";
 
             foreach (string filePath in Directory.EnumerateFiles(folderPath, "*", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
             {
@@ -86,10 +87,10 @@ namespace SottrModManager.Mod
 
                 string filePathToHash = filePath.Substring(baseFolderPath.Length);
                 ulong locale = 0xFFFFFFFFFFFFFFFF;
-                if (Enum.TryParse(typeof(LocaleLanguage), Path.GetFileNameWithoutExtension(filePath), true, out object localeLang))
+                if (Enum.TryParse(Path.GetFileNameWithoutExtension(filePath), true, out LocaleLanguage localeLang))
                 {
                     filePathToHash = Path.GetDirectoryName(filePathToHash);
-                    locale = 0xFFFFFFFFFFFF0400 | (ulong)(LocaleLanguage)localeLang;
+                    locale = 0xFFFFFFFFFFFF0400 | (ulong)localeLang;
                 }
 
                 string extension = Path.GetExtension(filePath);
@@ -133,17 +134,19 @@ namespace SottrModManager.Mod
                 locals = new LocalsBin(origStream);
             }
 
-            JsonObject json;
+            JObject json;
             try
             {
-                json = (JsonObject)JsonNode.Parse(jsonStream);
+                using StreamReader streamReader = new StreamReader(jsonStream);
+                using JsonReader jsonReader = new JsonTextReader(streamReader);
+                json = JObject.Load(jsonReader);
             }
             catch (Exception ex)
             {
                 throw new Exception("Failed to parse JSON file for locals.bin:\r\n" + ex.Message);
             }
 
-            foreach ((string key, JsonNode value) in json)
+            foreach ((string key, JToken value) in json)
             {
                 locals.Strings[key] = (string)value;
             }

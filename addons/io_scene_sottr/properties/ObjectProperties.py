@@ -21,12 +21,13 @@ def search_bones(self: BlenderPropertyGroup, context: bpy.types.Context, edit_te
 
 class ObjectClothProperties(BlenderPropertyGroup):
     parent_bone_name: Annotated[str, Prop("Parent", search = search_bones)]
-    gravity_factor: Annotated[float, Prop("Gravity factor", min = -2, max = 2, default = 1)]
-    wind_factor: Annotated[float, Prop("Wind factor", min = 0, max = 1, subtype = PropSubType.FACTOR)]
+    gravity_factor: Annotated[float, Prop("Gravity Factor", min = -2, max = 2, default = 1)]
+    wind_factor: Annotated[float, Prop("Wind Factor", min = 0, max = 1, subtype = PropSubType.FACTOR)]
     stiffness: Annotated[float, Prop("Stiffness", min = 0, max = 1, subtype = PropSubType.FACTOR)]
     dampening: Annotated[float, Prop("Dampening", min = 0, max = 1, default = 0.2, subtype = PropSubType.FACTOR)]
 
 class ObjectProperties(BlenderAttachedPropertyGroup[bpy.types.Object]):
     property_name = "tr11_properties"
 
+    blend_shape_normals_source_file_path: Annotated[str, Prop("Shape Key Normals Source", description = ".tr11modeldata file to copy shape key normals from")]
     cloth: Annotated[ObjectClothProperties, Prop("Cloth properties")]

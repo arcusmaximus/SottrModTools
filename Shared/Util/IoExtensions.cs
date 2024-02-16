@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace SottrModManager.Shared.Util
 {
     public static class IoExtensions
     {
-        private static readonly byte[] TextBuffer = new byte[0x400];
+        private static readonly byte[] TempBuffer = new byte[0x400];
 
         public static string ReadZeroTerminatedString(this BinaryReader reader)
         {
@@ -18,16 +18,16 @@ namespace SottrModManager.Shared.Util
                 if (b == 0)
                     break;
 
-                TextBuffer[length++] = b;
+                TempBuffer[length++] = b;
             }
-            return Encoding.UTF8.GetString(TextBuffer, 0, length);
+            return Encoding.UTF8.GetString(TempBuffer, 0, length);
         }
 
         public static void WriteZeroTerminatedString(this BinaryWriter writer, string text)
         {
-            int length = Encoding.UTF8.GetBytes(text, TextBuffer);
-            TextBuffer[length++] = 0;
-            writer.Write(TextBuffer, 0, length);
+            int length = Encoding.UTF8.GetBytes(text, 0, text.Length, TempBuffer, 0);
+            TempBuffer[length++] = 0;
+            writer.Write(TempBuffer, 0, length);
         }
 
         public static void Align16(this BinaryReader reader)
@@ -46,17 +46,24 @@ namespace SottrModManager.Shared.Util
             }
         }
 
-        public static T ReadStruct<T>(this BinaryReader reader)
+        public static unsafe T ReadStruct<T>(this BinaryReader reader)
             where T : unmanaged
         {
-            byte[] data = reader.ReadBytes(Marshal.SizeOf<T>());
-            return MemoryMarshal.Read<T>(data);
+            reader.BaseStream.Read(TempBuffer, 0, Unsafe.SizeOf<T>());
+            fixed (byte* pBuffer = TempBuffer)
+            {
+                return Unsafe.Read<T>(pBuffer);
+            }
         }
 
-        public static void WriteStruct<T>(this BinaryWriter writer, ref T data)
+        public static unsafe void WriteStruct<T>(this BinaryWriter writer, ref T data)
             where T : unmanaged
         {
-            writer.Write(MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref data, 1)));
+            fixed (byte* pBuffer = TempBuffer)
+            {
+                Unsafe.Write(pBuffer, data);
+            }
+            writer.BaseStream.Write(TempBuffer, 0, Unsafe.SizeOf<T>());
         }
 
         public static void CopySegmentTo(this Stream from, long offset, long length, Stream to)

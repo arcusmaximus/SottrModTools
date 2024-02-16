@@ -232,10 +232,8 @@ namespace SottrExtractor.Controls
                 if (comparison != 0)
                     return comparison;
 
-                ReadOnlySpan<char> xName = x.Name;
-                ReadOnlySpan<char> yName = y.Name;
-                if (int.TryParse(Path.GetFileNameWithoutExtension(xName), out int xId) &&
-                    int.TryParse(Path.GetFileNameWithoutExtension(yName), out int yId))
+                if (int.TryParse(Path.GetFileNameWithoutExtension(x.Name), out int xId) &&
+                    int.TryParse(Path.GetFileNameWithoutExtension(y.Name), out int yId))
                 {
                     return xId - yId;
                 }

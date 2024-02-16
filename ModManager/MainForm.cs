@@ -10,6 +10,7 @@ using SottrModManager.Shared;
 using SottrModManager.Shared.Cdc;
 using SottrModManager.Shared.Util;
 using SottrModManager.Mod;
+using System.Drawing;
 
 namespace SottrModManager
 {
@@ -24,6 +25,7 @@ namespace SottrModManager
         public MainForm()
         {
             InitializeComponent();
+            Font = SystemFonts.MessageBoxFont;
         }
 
         public MainForm(string gameFolderPath)

@@ -1,4 +1,3 @@
-from io import StringIO
 import bpy
 from typing import cast
 from mathutils import Vector
@@ -115,10 +114,7 @@ class SkeletonImporter(SlotsBase):
             prop_constraints = BoneProperties.get_instance(bl_bone).constraints
 
             for tr_constraint in tr_bone.constraints:
-                serialized_constraint = StringIO()
-                tr_constraint.serialize(serialized_constraint)
-                
                 prop_constraint = prop_constraints.add()
-                prop_constraint.data = serialized_constraint.getvalue()
+                prop_constraint.data = tr_constraint.serialize()
 
             BlenderHelper.move_bone_to_group(bl_armature_obj, bl_bone, BlenderNaming.constrained_bone_group_name, BlenderNaming.constrained_bone_palette_name)

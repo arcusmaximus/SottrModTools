@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -20,6 +21,7 @@ namespace SottrExtractor
         public MainForm()
         {
             InitializeComponent();
+            Font = SystemFonts.MessageBoxFont;
         }
 
         public MainForm(string gameFolderPath)
@@ -77,7 +79,7 @@ namespace SottrExtractor
             if ((fileRef.Locale & 0xFFFFFFF) != 0xFFFFFFF)
             {
                 string locales = string.Join(
-                    '.',
+                    ".",
                     Enum.GetValues(typeof(LocaleLanguage))
                         .Cast<LocaleLanguage>()
                         .Where(l => (fileRef.Locale & (uint)l) != 0)

@@ -142,13 +142,13 @@ typedef struct
     int isPiece;
     FSkip(0x108-0xF4);
     
-    InternalRef modifiersRef;
-    int numModifiers;
+    InternalRef traitsRef;
+    int numTraits;
     FSkip(4);
-    if (IsValidRef(modifiersRef) && numModifiers > 0)
+    if (IsValidRef(traitsRef) && numTraits > 0)
     {
-        SeekToRef(modifiersRef);
-        ushort modifiers[numModifiers];
+        SeekToRef(traitsRef);
+        ushort traits[numTraits];
         ReturnFromRef();
     }
     

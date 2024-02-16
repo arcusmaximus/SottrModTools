@@ -47,7 +47,6 @@ namespace SottrExtractor.Controls
             _tvFiles.ButtonStyle = SottrModManager.Shared.Controls.VirtualTreeView.ButtonStyle.bsRectangle;
             _tvFiles.Dock = System.Windows.Forms.DockStyle.Fill;
             _tvFiles.Header.BackColor = System.Drawing.SystemColors.Window;
-            _tvFiles.Header.Columns = (System.Collections.Generic.List<SottrModManager.Shared.Controls.VirtualTreeView.VirtualTreeColumn>)resources.GetObject("resource.Columns");
             _tvFiles.Header.Font = new System.Drawing.Font("Tahoma", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             _tvFiles.Header.ForeColor = System.Drawing.Color.Black;
             _tvFiles.Header.Height = 1;

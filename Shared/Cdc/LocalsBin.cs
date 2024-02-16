@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using SottrModManager.Shared.Util;
 
 namespace SottrModManager.Shared.Cdc
 {
@@ -14,7 +15,7 @@ namespace SottrModManager.Shared.Cdc
         public LocalsBin(Stream stream)
         {
             byte[] data = new byte[stream.Length];
-            stream.Read(data);
+            stream.Read(data, 0, data.Length);
             int numStrings = BitConverter.ToInt32(data, 4);
             for (int i = 0; i < numStrings; i++)
             {
@@ -64,11 +65,11 @@ namespace SottrModManager.Shared.Cdc
                 writer.Write(stream.Length);
                 stream.Position = stream.Length;
 
-                int keyLength = Encoding.UTF8.GetBytes(key, encodeBuffer);
+                int keyLength = Encoding.UTF8.GetBytes(key, 0, key.Length, encodeBuffer, 0);
                 writer.Write(encodeBuffer, 0, keyLength);
                 writer.Write((byte)' ');
 
-                int valueLength = Encoding.UTF8.GetBytes(value, encodeBuffer);
+                int valueLength = Encoding.UTF8.GetBytes(value, 0, value.Length, encodeBuffer, 0);
                 writer.Write(encodeBuffer, 0, valueLength);
                 writer.Write((byte)0);
 

@@ -1,4 +1,4 @@
-from typing import Any, NamedTuple, cast
+from typing import cast
 import bpy
 from mathutils import Vector
 from io_scene_sottr.BlenderHelper import BlenderBoneGroup, BlenderHelper
@@ -6,17 +6,8 @@ from io_scene_sottr.BlenderNaming import BlenderNaming
 from io_scene_sottr.operator.BlenderOperatorBase import BlenderOperatorBase
 from io_scene_sottr.operator.OperatorContext import OperatorContext
 from io_scene_sottr.properties.BlenderPropertyGroup import BlenderPropertyGroup
-from io_scene_sottr.properties.BoneProperties import BoneProperties
 from io_scene_sottr.properties.ObjectProperties import ObjectProperties
-from io_scene_sottr.util.DictionaryExtensions import DictionaryExtensions
 from io_scene_sottr.util.Enumerable import Enumerable
-
-class _BoneInfo(NamedTuple):
-    local_id: int
-    parent_global_id: int | None
-    head: Vector
-    pinned: bool
-    properties: dict[str, Any]
 
 class RegenerateClothBonesOperator(BlenderOperatorBase[BlenderPropertyGroup]):
     bl_idname = "tr11.regen_cloth_bones"
@@ -65,8 +56,19 @@ class RegenerateClothBonesOperator(BlenderOperatorBase[BlenderPropertyGroup]):
         if bl_empty is None:
             return {}
         
-        return Enumerable(bl_empty.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)) \
-                                            .group_by(lambda o: BlenderNaming.parse_cloth_strip_name(o.name).skeleton_id)
+        bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
+        bl_cloth_strip_objs = Enumerable(bl_empty.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)) \
+                                                           .group_by(lambda o: BlenderNaming.parse_cloth_strip_name(o.name).skeleton_id)
+        for bl_cloth_strip_obj in Enumerable(bl_cloth_strip_objs.values()).select_many(lambda l: l):
+            cloth_strip_properties = ObjectProperties.get_instance(bl_cloth_strip_obj).cloth
+            if not cloth_strip_properties.parent_bone_name:
+                raise Exception(f"Cloth strip {bl_cloth_strip_obj.name} has no parent bone. Please select a valid bone in the sidebar or delete the cloth strip.")
+
+            bl_parent_bone = cast(bpy.types.Bone | None, bl_armature.bones.get(cloth_strip_properties.parent_bone_name))
+            if bl_parent_bone is None:
+                raise Exception(f"Cloth strip {bl_cloth_strip_obj.name} has parent bone [{cloth_strip_properties.parent_bone_name}] which does not exist. Please select a valid bone in the sidebar.")
+            
+        return bl_cloth_strip_objs
     
     def regenerate(self, bl_armature_obj: bpy.types.Object, bl_cloth_strip_objs_by_skeleton_id: dict[int, list[bpy.types.Object]]) -> None:
         bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
@@ -83,9 +85,6 @@ class RegenerateClothBonesOperator(BlenderOperatorBase[BlenderPropertyGroup]):
         
         for bone_name, bone_group in bone_groups.items():
             BlenderHelper.move_bone_to_group(bl_armature_obj, bl_armature.bones[bone_name], bone_group.name, bone_group.palette)
-        
-        if BlenderNaming.is_global_armature_name(bl_armature_obj.name):
-            self.sync_to_local_armatures(bl_armature_obj, bl_local_armature_objs)
 
     def unassign_duplicate_vertex_groups(self, bl_cloth_strip_objs_by_skeleton_id: dict[int, list[bpy.types.Object]]) -> None:
         used_vertex_groups_names: set[str] = set()
@@ -171,9 +170,7 @@ class RegenerateClothBonesOperator(BlenderOperatorBase[BlenderPropertyGroup]):
             
             for bl_cloth_strip_obj in bl_cloth_strip_objs:
                 cloth_strip_properties = ObjectProperties.get_instance(bl_cloth_strip_obj).cloth
-                bl_parent_bone = cast(bpy.types.EditBone | None, bl_armature.edit_bones.get(cloth_strip_properties.parent_bone_name))
-                if bl_parent_bone is None:
-                    raise Exception(f"Cloth strip {bl_cloth_strip_obj.name} has parent bone {cloth_strip_properties.parent_bone_name} which does not exist. Please select a valid bone in the sidebar.")
+                bl_parent_bone = bl_armature.edit_bones[cloth_strip_properties.parent_bone_name]
 
                 for bl_vertex in cast(bpy.types.Mesh, bl_cloth_strip_obj.data).vertices:
                     bl_edit_bone: bpy.types.EditBone
@@ -196,88 +193,3 @@ class RegenerateClothBonesOperator(BlenderOperatorBase[BlenderPropertyGroup]):
                     bl_edit_bone.tail = bl_edit_bone.head + Vector((0, 0, 0.01))
         
         return bone_groups
-
-    def sync_to_local_armatures(self, bl_global_armature_obj: bpy.types.Object, bl_local_armature_objs: dict[int, bpy.types.Object]) -> None:
-        bl_local_collection = cast(bpy.types.LayerCollection | None, bpy.context.view_layer.layer_collection.children.get(BlenderNaming.local_collection_name))
-        if bl_local_collection is None:
-            return
-        
-        local_collection_was_hidden = bl_local_collection.exclude
-        bl_local_collection.exclude = False
-
-        try:
-            local_bone_infos_by_skeleton_id = self.get_local_bone_infos_by_skeleton_id(bl_global_armature_obj)
-            
-            for skeleton_id, local_bone_infos in local_bone_infos_by_skeleton_id.items():
-                bl_local_armature_obj = bl_local_armature_objs.get(skeleton_id)
-                if bl_local_armature_obj is None:
-                    raise Exception(f"No armature found in collection {BlenderNaming.local_collection_name} for skeleton {skeleton_id}")
-
-                with BlenderHelper.enter_edit_mode(bl_local_armature_obj):
-                    bl_local_armature = cast(bpy.types.Armature, bl_local_armature_obj.data)
-                    old_local_bone_names: list[str] = []
-                    local_bone_names_by_global_id: dict[int, str] = {}
-
-                    for bl_local_bone in bl_local_armature.edit_bones:
-                        bone_id_set = BlenderNaming.parse_bone_name(bl_local_bone.name)
-                        if bone_id_set.global_id is None:
-                            old_local_bone_names.append(bl_local_bone.name)
-                        else:
-                            local_bone_names_by_global_id[bone_id_set.global_id] = bl_local_bone.name
-
-                    for bone_name in old_local_bone_names:
-                        bl_local_armature.edit_bones.remove(bl_local_armature.edit_bones[bone_name])
-                    
-                    for bone_info in local_bone_infos:
-                        bl_local_bone = bl_local_armature.edit_bones.new(BlenderNaming.make_bone_name(None, None, bone_info.local_id))
-                        bl_local_bone.head = bone_info.head
-                        bl_local_bone.tail = bone_info.head + Vector((0, 0, 0.01))
-                        if bone_info.parent_global_id is not None:
-                            parent_bone_name = local_bone_names_by_global_id.get(bone_info.parent_global_id)
-                            if parent_bone_name is None:
-                                raise Exception(f"Armature {bl_local_armature_obj.name} is missing bone with global ID {bone_info.parent_global_id}")
-
-                            bl_local_bone.parent = bl_local_armature.edit_bones[parent_bone_name]
-                
-                for bone_info in local_bone_infos:
-                    bl_local_bone = bl_local_armature.bones[BlenderNaming.make_bone_name(None, None, bone_info.local_id)]
-                    if bone_info.pinned:
-                        BlenderHelper.move_bone_to_group(bl_local_armature_obj, bl_local_bone, BlenderNaming.pinned_cloth_bone_group_name, BlenderNaming.pinned_cloth_bone_palette_name)
-                    else:
-                        BlenderHelper.move_bone_to_group(bl_local_armature_obj, bl_local_bone, None, None)
-                    
-                    self.set_cloth_properties(bl_local_bone, bone_info.properties)
-        finally:
-            bl_local_collection.exclude = local_collection_was_hidden
-
-    def get_local_bone_infos_by_skeleton_id(self, bl_global_armature_obj: bpy.types.Object) -> dict[int, list[_BoneInfo]]:
-        local_bone_infos_by_skeleton_id: dict[int, list[_BoneInfo]] = {}
-        
-        with BlenderHelper.enter_edit_mode(bl_global_armature_obj):
-            bl_global_armature = cast(bpy.types.Armature, bl_global_armature_obj.data)
-            for bl_global_bone in bl_global_armature.bones:
-                bone_id_set = BlenderNaming.parse_bone_name(bl_global_bone.name)
-                if bone_id_set.skeleton_id is None or bone_id_set.local_id is None:
-                    continue
-                
-                parent_global_id: int | None = None
-                if bl_global_bone.parent:
-                    parent_global_id = BlenderNaming.parse_bone_name(bl_global_bone.parent.name).global_id
-                
-                position = Vector(bl_global_armature.edit_bones[bl_global_bone.name].head)
-                pinned = BlenderHelper.is_bone_in_group(bl_global_armature_obj, bl_global_armature.bones[bl_global_bone.name], BlenderNaming.pinned_cloth_bone_group_name)
-                properties = self.get_cloth_properties(bl_global_bone)
-                
-                DictionaryExtensions.get_or_add(local_bone_infos_by_skeleton_id, bone_id_set.skeleton_id, lambda: []) \
-                                    .append(_BoneInfo(bone_id_set.local_id, parent_global_id, position, pinned, properties))
-        
-        return local_bone_infos_by_skeleton_id
-
-    def get_cloth_properties(self, bl_bone: bpy.types.Bone) -> dict[str, Any]:
-        properties = BoneProperties.get_instance(bl_bone).cloth
-        return Enumerable(properties.__annotations__.keys()).to_dict(lambda k: k, lambda k: getattr(properties, k))
-    
-    def set_cloth_properties(self, bl_bone: bpy.types.Bone, property_values: dict[str, Any]) -> None:
-        properties = BoneProperties.get_instance(bl_bone).cloth
-        for key, value in property_values.items():
-            setattr(properties, key, value)

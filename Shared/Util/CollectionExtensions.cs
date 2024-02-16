@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows.Forms;
 
 namespace SottrModManager.Shared.Util
 {
@@ -35,6 +36,12 @@ namespace SottrModManager.Shared.Util
                 dict.Add(key, value);
             }
             return value;
+        }
+
+        public static void TryAdd<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
+        {
+            if (!dict.ContainsKey(key))
+                dict.Add(key, value);
         }
 
         public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> pair, out TKey key, out TValue value)

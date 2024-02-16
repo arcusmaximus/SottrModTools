@@ -225,6 +225,11 @@ struct TransformedComponent
     u64 hash;
     ExternalRef dtpRef;
     u64;
+} [[format("formatTransformedComponent")]];
+
+fn formatTransformedComponent(ref TransformedComponent component)
+{
+    return std::format("{:016X}", component.hash);
 };
 
 struct TransformedComponentsOfType

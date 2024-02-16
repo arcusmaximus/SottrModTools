@@ -26,7 +26,7 @@ enum ResourceType : u8
 };
 
 u32 gResourceBodyPos;
-s16 gRefIndexByFilePos[std::mem::size() / 4];
+s16 gRefIndexByFilePos[std::mem::size() / 4] [[static]];
 
 fn getRefIndex(u32 filePos)
 {

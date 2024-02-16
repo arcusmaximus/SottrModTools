@@ -12,6 +12,11 @@ struct CollectibleItem1
         char name[] @ nameRef.targetPos;
     
     padding[0x1F0 - 0x10];
+} [[format("formatCollectibleItem1")]];
+
+fn formatCollectibleItem1(ref CollectibleItem1 item)
+{
+    return item.name;
 };
 
 struct CollectibleSet1
@@ -39,6 +44,11 @@ struct CollectibleSet1
     padding[4];
     if (itemsRef.targetPos >= 0)
         CollectibleItem1 items[numItems] @ itemsRef.targetPos;
+} [[format("formatCollectibleSet1")]];
+
+fn formatCollectibleSet1(ref CollectibleSet1 set)
+{
+    return set.name;
 };
 
 struct CollectibleItem2
@@ -51,6 +61,11 @@ struct CollectibleItem2
         char name[] @ nameRef.targetPos;
     
     padding[0xF0 - 0x10];
+} [[format("formatCollectibleItem2")]];
+
+fn formatCollectibleItem2(ref CollectibleItem2 item)
+{
+    return item.name;
 };
 
 struct CollectibleSet2
@@ -122,6 +137,11 @@ struct Outfit
     u8 photoModeFaceChooserDisabled;
     u8 photoModeMuscleSliderDisabled;
     padding[0x1E0 - 0x1DA];
+} [[format("formatOutfit")]];
+
+fn formatOutfit(ref Outfit outfit)
+{
+    return outfit.name;
 };
 
 struct OutfitSet

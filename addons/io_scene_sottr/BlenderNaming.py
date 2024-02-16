@@ -1,5 +1,5 @@
 import re
-from typing import ClassVar, Iterable, NamedTuple
+from typing import ClassVar, Iterable, NamedTuple, overload
 from io_scene_sottr.tr.Cloth import CollisionKey, CollisionType
 from io_scene_sottr.util.Conditional import coalesce
 from io_scene_sottr.util.Enumerable import Enumerable
@@ -153,8 +153,25 @@ class BlenderNaming:
         
         return local_skeleton_id
     
+    @overload
     @staticmethod
-    def make_bone_name(skeleton_id: int | None, global_id: int | None, local_id: int | None) -> str:
+    def make_bone_name(skeleton_id: int | None, global_id: int | None, local_id: int | None, /) -> str: ...
+
+    @overload
+    @staticmethod
+    def make_bone_name(id_set: BlenderBoneIdSet, /) -> str: ...
+
+    @staticmethod
+    def make_bone_name(skeleton_id_or_id_set: int | BlenderBoneIdSet | None, global_id: int | None = None, local_id: int | None = None, /) -> str:
+        skeleton_id: int | None
+        if isinstance(skeleton_id_or_id_set, BlenderBoneIdSet):
+            id_set = skeleton_id_or_id_set
+            skeleton_id = id_set.skeleton_id
+            global_id = id_set.global_id
+            local_id = id_set.local_id
+        else:
+            skeleton_id = skeleton_id_or_id_set
+        
         if skeleton_id is not None:
             if local_id is None:
                 raise Exception("Must provide local bone ID when providing skeleton ID")

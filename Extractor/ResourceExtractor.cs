@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using SottrModManager.Shared;
 using SottrModManager.Shared.Cdc;
+using SottrModManager.Shared.Util;
 
 namespace SottrExtractor
 {

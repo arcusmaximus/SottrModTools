@@ -201,12 +201,22 @@ namespace SottrModManager.Shared.Cdc
             return new ResourceReadStream(stream, resourceRef, true);
         }
 
-        public ArchiveFileReference AddFile(ArchiveFileKey identifier, ReadOnlySpan<byte> data)
+        public ArchiveFileReference AddFile(ArchiveFileKey identifier, byte[] data)
         {
             return AddFile(identifier.NameHash, identifier.Locale, data);
         }
 
-        public ArchiveFileReference AddFile(ulong nameHash, ulong locale, ReadOnlySpan<byte> data)
+        public ArchiveFileReference AddFile(ArchiveFileKey identifier, ArraySegment<byte> data)
+        {
+            return AddFile(identifier.NameHash, identifier.Locale, data);
+        }
+
+        public ArchiveFileReference AddFile(ulong nameHash, ulong locale, byte[] data)
+        {
+            return AddFile(nameHash, locale, new ArraySegment<byte>(data));
+        }
+
+        public ArchiveFileReference AddFile(ulong nameHash, ulong locale, ArraySegment<byte> data)
         {
             if (_fileRefs.Count == _maxFiles)
                 throw new InvalidOperationException("Can't add any further files");
@@ -215,7 +225,7 @@ namespace SottrModManager.Shared.Cdc
             BinaryWriter contentWriter = new BinaryWriter(contentStream);
             int offset = (int)contentStream.Length;
             contentStream.Position = offset;
-            contentWriter.Write(data);
+            contentWriter.Write(data.Array, data.Offset, data.Count);
 
             Stream indexStream = PartStreams[0];
             BinaryWriter indexWriter = new BinaryWriter(indexStream);
@@ -230,11 +240,11 @@ namespace SottrModManager.Shared.Cdc
                     ArchiveSubId = (byte)SubId,
                     ArchivePart = 0,
                     Offset = offset,
-                    UncompressedSize = data.Length
+                    UncompressedSize = data.Count
                 };
             indexWriter.WriteStruct(ref entry);
 
-            ArchiveFileReference fileRef = new ArchiveFileReference(nameHash, locale, Id, SubId, 0, offset, data.Length);
+            ArchiveFileReference fileRef = new ArchiveFileReference(nameHash, locale, Id, SubId, 0, offset, data.Count);
             _fileRefs.Add(fileRef);
             indexStream.Position = 0xC;
             indexWriter.Write(_fileRefs.Count);

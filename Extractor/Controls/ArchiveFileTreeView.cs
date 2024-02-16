@@ -18,8 +18,7 @@ namespace SottrExtractor.Controls
             new Dictionary<string, Image>
             {
                 { ".bin", Properties.Resources.Localization },
-                { ".drm", Properties.Resources.List },
-                { ".mul", Properties.Resources.Sound }
+                { ".drm", Properties.Resources.List }
             };
 
         public void Populate(ArchiveSet archiveSet)
@@ -85,7 +84,7 @@ namespace SottrExtractor.Controls
         private static string GetLocaleFileName(ulong locale)
         {
             return string.Join(
-                '.',
+                ".",
                 Enum.GetValues(typeof(LocaleLanguage))
                     .Cast<LocaleLanguage>()
                     .Where(l => (locale & (uint)l) != 0)

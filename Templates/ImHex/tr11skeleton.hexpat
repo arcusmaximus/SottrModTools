@@ -77,9 +77,9 @@ struct BoneConstraint3
     if (sourceVectors2Ref.targetPos >= 0)
         Vector4 sourceVectors2[parent.numSourceBones] @ sourceVectors2Ref.targetPos;
     
-    InternalRef sourceLocalBoneIdsRef;
-    if (sourceLocalBoneIdsRef.targetPos >= 0)
-        u16 sourceLocalBoneIds[parent.numSourceBones] @ sourceLocalBoneIdsRef.targetPos;
+    InternalRef sourceBlendShapeIdsRef;
+    if (sourceBlendShapeIdsRef.targetPos >= 0)
+        u16 sourceBlendShapeIds[parent.numSourceBones] @ sourceBlendShapeIdsRef.targetPos;
     
     u8 useSourceVectors1;
     u8 useSourceVectors2;

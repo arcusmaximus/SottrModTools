@@ -403,14 +403,14 @@ namespace SottrModManager.Shared.Cdc
             return chars[0] | (uint)chars[1] << 8 | (uint)chars[2] << 16 | (uint)chars[3] << 24;
         }
 
-        private static string ParseFourCC(uint fourCC)
+        private static unsafe string ParseFourCC(uint fourCC)
         {
-            Span<char> chars = stackalloc char[4];
-            chars[0] = (char)(fourCC & 0xFF);
-            chars[1] = (char)((fourCC >> 8) & 0xFF);
-            chars[2] = (char)((fourCC >> 16) & 0xFF);
-            chars[3] = (char)(fourCC >> 24);
-            return new string(chars);
+            char* pChars = stackalloc char[4];
+            pChars[0] = (char)(fourCC & 0xFF);
+            pChars[1] = (char)((fourCC >> 8) & 0xFF);
+            pChars[2] = (char)((fourCC >> 16) & 0xFF);
+            pChars[3] = (char)(fourCC >> 24);
+            return new string(pChars, 0, 4);
         }
     }
 }

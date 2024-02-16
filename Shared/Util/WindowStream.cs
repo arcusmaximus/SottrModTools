@@ -60,15 +60,6 @@ namespace SottrModManager.Shared.Util
             return _inner.Read(buffer, offset, count);
         }
 
-        public override int Read(Span<byte> buffer)
-        {
-            int count = Math.Min(buffer.Length, (int)Math.Min(Length - Position, int.MaxValue));
-            if (count < buffer.Length)
-                buffer = buffer[..count];
-
-            return _inner.Read(buffer);
-        }
-
         public override void SetLength(long value)
         {
             throw new NotSupportedException();
@@ -80,14 +71,6 @@ namespace SottrModManager.Shared.Util
                 throw new ArgumentOutOfRangeException();
 
             _inner.Write(buffer, offset, count);
-        }
-
-        public override void Write(ReadOnlySpan<byte> buffer)
-        {
-            if (buffer.Length > Length - Position)
-                throw new ArgumentOutOfRangeException();
-
-            _inner.Write(buffer);
         }
 
         public override void Flush()

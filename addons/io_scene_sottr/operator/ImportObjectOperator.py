@@ -2,10 +2,12 @@ from typing import Annotated, Protocol
 import bpy
 from bpy.types import Context
 from io_scene_sottr.BlenderNaming import BlenderNaming
+from io_scene_sottr.PermanentSkeletonMerger import PermanentModelMerger
+from io_scene_sottr.SkeletonMerger import SkeletonMerger
+from io_scene_sottr.TemporarySkeletonMerger import TemporaryModelMerger
 from io_scene_sottr.exchange.ClothImporter import ClothImporter
 from io_scene_sottr.exchange.CollisionImporter import CollisionImporter
 from io_scene_sottr.exchange.ModelImporter import ModelImporter
-from io_scene_sottr.ModelMerger import ModelMerger
 from io_scene_sottr.exchange.SkeletonImporter import SkeletonImporter
 from io_scene_sottr.operator.BlenderOperatorBase import ImportOperatorBase, ImportOperatorProperties
 from io_scene_sottr.operator.OperatorCommon import OperatorCommon
@@ -19,7 +21,8 @@ class _Properties(ImportOperatorProperties, Protocol):
     import_lods:                    Annotated[bool, Prop("Import LODs")]
     import_cloth:                   Annotated[bool, Prop("Import cloth and collisions")]
     split_into_parts:               Annotated[bool, Prop("Split meshes into parts")]
-    merge_with_existing_armatures:  Annotated[bool, Prop("Merge with existing armature(s)", default = True)]
+    merge_with_existing_skeletons:  Annotated[bool, Prop("Merge with existing skeleton(s)", default = True)]
+    keep_original_skeletons:        Annotated[bool, Prop("Keep original skeletons", default = True)]
 
 class ImportObjectOperator(ImportOperatorBase[_Properties]):
     bl_idname = "import_scene.tr11objectref"
@@ -49,7 +52,7 @@ class ImportObjectOperator(ImportOperatorBase[_Properties]):
                 cloth_importer = ClothImporter(OperatorCommon.scale_factor)
                 cloth_importer.import_from_collection(tr_collection, bl_armature_obj)
 
-            if self.properties.merge_with_existing_armatures and bl_armature_obj is not None:
+            if self.properties.merge_with_existing_skeletons and bl_armature_obj is not None:
                 self.merge()
 
             return { "FINISHED" }
@@ -60,7 +63,7 @@ class ImportObjectOperator(ImportOperatorBase[_Properties]):
         if bl_global_armature_obj is None and len(bl_armature_objs) == 1:
             return
 
-        merger = ModelMerger()
+        merger: SkeletonMerger = self.properties.keep_original_skeletons and TemporaryModelMerger() or PermanentModelMerger()
         for bl_armature_obj in bl_armature_objs:
             if bl_armature_obj == bl_global_armature_obj:
                 continue

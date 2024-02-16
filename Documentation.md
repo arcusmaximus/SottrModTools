@@ -103,7 +103,28 @@ The import filechooser has the following options on the right hand side:
   By default, the addon only imports the models referenced by the object metadata. Use this checkbox to instead import all models
   in the "Model" folder.
 
-- **Merge with existing armature(s)**
+- **Import LODs**
+
+  By default, the addon doesn't import any of the model's LOD meshes to reduce clutter. In certain cases, though,
+  you may want to see them: if you're looking to replace Lara's head (explained further below), or if an original outfit
+  simply doesn't have a full-detail mesh for one of its parts.
+        
+  Note, however, that the addon doesn't support *exporting* LODs. All meshes will be exported as full-detail
+  meshes, regardless of whether they were LOD meshes when you imported them. This means you should delete any LOD meshes
+  before exporting.
+
+- **Import cloth and collisions**
+  
+  Import cloth strips and collision shapes. See the section on cloth physics for details.
+
+- **Split meshes into parts**
+
+  By default, the addon creates a Blender mesh per SOTTR mesh in the model, where each mesh consists of one or more parts
+  (set of faces sharing the same material). If this isn't granular enough for you, you can enable this option to create
+  a Blender mesh per SOTTR mesh part. Alternatively, you can of course use Blender's "Separate By Material" operator
+  after importing.
+
+- **Merge with existing skeleton(s)**
 
   In SOTTR, each of Lara's outfits is split into as many as four pieces (head/hair/torso/legs), with each piece having its
   own partial skeleton. What's more, different skeletons typically have different IDs for the same bone.
@@ -113,22 +134,18 @@ The import filechooser has the following options on the right hand side:
   Simply import one outfit piece, then import another (and another...) into the same Blender scene with this option
   enabled. The merging feature is explained in more detail later on.
 
-- **Import LODs**
+- **Keep original skeletons**
+  
+  Lets you choose between two different ways of merging skeletons:
+  
+  * When this option is enabled, the original (partial) skeletons will be kept in a hidden Blender collection.
+    When you export the model, it's automatically split into pieces and distributed over the partial skeletons.
+    Use this option if you don't intend to export the merged skeleton.
+  
+  * When this option is disabled, the original skeletons are not kept. You can — and need to — export the
+    merged skeleton as a new SOTTR skeleton together with your models.
 
-  By default, the addon doesn't import any of the model's LOD meshes to reduce clutter. In certain cases, though,
-  you may want to see them: if an original outfit doesn't have a full-detail mesh for one of its parts, or if you're looking
-  to replace Lara's head (explained further below).
-        
-  Note, however, that the addon doesn't support *exporting* LODs. All meshes will be exported as full-detail
-  meshes, regardless of whether they were LOD meshes when you imported them. This means you should delete any LOD meshes
-  before exporting.
-
-- **Split meshes into parts**
-
-  By default, the addon creates a Blender mesh per SOTTR mesh in the model, where each mesh consists of one or more parts
-  (set of polygons sharing the same material). If this isn't granular enough for you, you can enable this option to create
-  a Blender mesh per SOTTR mesh part. Alternatively, you can of course use Blender's "Separate By Material" operator
-  after importing.
+  This option only applies if *Merge with existing skeleton(s)* is enabled.
 
 The Blender meshes are named using the following convention:
 `<DRM name>_model_<model ID>_<model data ID>_<mesh index>`. Skeletons, bones, materials
@@ -152,7 +169,7 @@ you need to use the binary template instead (or use a different material).
 ### Normals
 
 The addon imports mesh normals, with an important exception: if a mesh has blend shapes, it lets Blender calculate the normals instead.
-The reason is that Blender doesn't support custom vertex normals in blend shapes, only positions.
+The reason is that Blender's shape keys don't support custom vertex normals, only positions.
 
 After importing, it's recommended to use Blender's "Face Orientation" overlay to verify that no faces ended up pointing inside out.
 This tends to be the case for the teeth in head meshes for example. Incorrectly oriented faces will appear blackened ingame.
@@ -161,62 +178,118 @@ If you want to remove the custom normals for other meshes (e.g. because they get
 selecting the mesh, switching to the Data tab (green triangle) in Blender's Properties panel, expanding the "Geometry Data" header,
 and clicking "Clear Custom Split Normals Data."
 
+Because SOTTR blend shapes use custom vertex normals but Blender's shape keys don't support these, exported heads tend to
+have artifacts even if you didn't change anything. (The most noticeable effect is dark patches on the eyelids.)
+To work around this, the addon lets you transfer the shape key normals from the original model to your modified one.
+Find the "SOTTR Mesh Properties" panel in Blender's Data Properties tab, select the original file
+as the "Shape Key Normals Source", and export your model as usual.
 
 ### Skeletons
 
+Each outfit is split into up to four pieces — head, hair, torso, and legs — where each piece has its own skeleton
+that only contains the necessary bones.
+
+#### Bone hiding
+
 SOTTR skeletons contain quite a few bones that aren't used for deforming the model. To reduce clutter, the addon hides
 these bones by either moving them to the second bone layer (Blender 3.6) or into a hidden bone collection (Blender 4.0).
+So, if you import a file that seems to have way too few bones (like tr11_lara.drm), check this layer/bone collection.
 
-Many of the remaining bones are not animated directly, but are so-called twist bones that have their position and rotation
-calculated based on other bones. They are displayed in green in Pose Mode, and can be hidden in Blender 4.0 by toggling the
-"Twist bones" bone collection. While the twisting information is not applied as Blender bone constraints or drivers,
+#### Twist bones
+
+Many bones are not animated directly, but are so-called twist bones that have their position and rotation calculated based
+on other bones. They are displayed in green in Pose Mode, and can be hidden in Blender 4.0 by toggling the "Twist bones"
+bone collection. While the twisting information is not applied as Blender bone constraints or drivers,
 it's still stored in the Blender file, and will be written out again when exporting the skeleton (meaning that,
 if you mod a skeleton, the twisting information won't be lost).
 
-Skeletons in SOTTR have a few properties that make them annoying to work with. First of all, the bones don't have names
-like in some other engines, but only IDs. What's more, each outfit is split into multiple pieces — head, hair, torso,
-and legs — where each piece has its own .drm file, its own model, and its own partial skeleton. This applies to
-all outfits, even the ones where you can't mix and match top and bottom ingame. And it doesn't stop there:
-the same bone can have a different ID in every single skeleton, even in skeletons of the same outfit.
-Needless to say, this complicates rigging.
+#### Bone IDs
 
-The addon comes with a builtin solution for this last problem: when you import multiple pieces of an outfit into the same
-Blender scene, it'll automatically merge their skeletons into a new skeleton where each bone has only one ID,
-which is the same across outfits.
+Bones in SOTTR don't have human-readable names like in some other engines. Instead, each bone has one or two IDs that are
+reflected in its name in Blender, e.g. `bone_x_141` or `bone_7893_140`.
+
+- The first ID, if present, is the *global ID* and is used by animations (e.g. "Rotate bone 7893 by 5°"). By necessity,
+  any given bone (e.g. left hip) has the same global ID in every skeleton, no matter which outfit or outfit piece it belongs to.
+  If a bone does not have a global ID (name contains `x` instead of a number), it can't be driven by animations;
+  instead, it's driven by cloth physics (see further below).
+
+- The second ID is the *local ID* and is used by the model's vertex weights (e.g. "This vertex is influenced for 80% by bone 140").
+  The same bone typically has a different local ID in every single skeleton, even skeletons of the same outfit.
+
+Because one bone can have several different local IDs, rigging gets complicated. The torso skeleton might says that
+the hip bone is called `bone_7893_140`, but the legs skeleton might say that it's called `bone_7893_21` instead.
+Worse, the torso skeleton of another outfit might give it yet another name.
+
+Summarized, these local IDs cause two problems:
+- Rigging is difficult if you're faced with two or three partial skeletons with overlapping bones and conflicting names.
+- You can't reuse a mesh that's rigged for one outfit in another outfit.
+
+The addon has features for helping with both of these.
+
+#### Merging with Keep Originals
+
+If you enable the options "Merge with existing skeleton(s)" and "Keep original skeletons" in the Import filechooser,
+you can solve both of the above problems at once.
 
 The way it works is as follows:
 
-- When you import the first model, you'll notice that each bone in the armature has two IDs in its name
-  (like `bone_123_456`). The first is the *global ID*, which is referenced by animations and is the same
-  for this bone across all pieces of all outfits. The second is the *local ID*, which is referenced by the
-  vertex weights of the model but is different in every outfit piece.
+- When you import the first model, the bones will have both their global and local IDs (e.g. `bone_7893_140`).
 
-- When you import a second model with the "Merge with existing armature(s)" option enabled,
-  the addon will create a new armature containing the bones of both the first and second skeleton
-  (duplicates removed), and all the bones renamed to use *just* the global ID (`bone_123`).
+- When you import a second model, the addon will create a new armature containing the bones of both the
+  first and second skeleton (duplicates removed), and all the bones renamed to use *just* the global ID (`bone_7893`).
   It also parents the meshes of both the first and second model to this new armature and renames
   their vertex groups to match the new bone names.
 
-  The original, partial armatures are moved to a hidden collection named "Split meshes for export"
+  The original, partial skeletons are moved to a hidden collection named "Split meshes for export"
   and should not be deleted.
+
+  (Physics bones, which have no global ID, are instead renamed to something like `bone_322371_x_141` where
+  the first number is the ID of the partial skeleton they originate from.)
 
 - If needed, import the third and fourth pieces of the outfit as well. (Note that exporting heads with
   blend shapes is slow, so it's generally recommended to import those without merging so you can
   export them separately later on.)
 
 - You can now edit the meshes — or delete them and start from scratch — and weight them for the single, merged skeleton.
+  Also, because the bone names now only contain global IDs, you can reuse these meshes in another outfit
+  without needing to rename the vertex groups.
+
 - When you do an export, the addon will automatically create copies of the meshes (inside the hidden collection),
   rename their vertex groups to match the bones of the original partial skeletons, and export those copies.
   These meshes will then work with the original skeletons; you don't need to check "Export skeleton."
-  (This is only needed if you added custom cloth physics.)
 
-  If a mesh spans multiple skeletons, the addon will automatically split it up. This tends to result in
+  If a mesh spans multiple partial skeletons, the addon will automatically split it up. This tends to result in
   visible seams ingame, however, so it's better to split the meshes yourself in a place where the seams are
   minimized or hidden.
 
-You may notice that certain bones have an `x` instead of a global ID in their name. This is a third category
-of bone which is neither animated nor driven by other bones — instead, it's driven by a cloth physics simulation.
-Such bones are unique to the partial skeleton and won't reoccur anywhere else.
+Note that, because the merged skeleton uses incomplete bone names (with the local IDs removed), it can't be exported
+as a new SOTTR skeleton. If you export the models with "Export skeleton" enabled, the addon will first synchronize
+the physics bones from the merged skeleton to the partial skeletons, and then export the partial skeletons instead.
+
+#### Merging without Keep Originals
+
+If you want to export the merged skeleton for use in the game, you can uncheck "Keep original skeletons."
+If you do this, you'll again get a single merged skeleton without duplicate bones, meaning rigging again becomes
+easier. The original partial skeletons will *not* be kept around and (importantly) all bones will have
+complete names with local IDs, meaning the skeleton is exportable.
+
+On the flipside, the presence of local IDs again means you can't immediately reuse meshes in another
+outfit, because the bone names will be different there.
+
+When you export the models, they'll be linked to all-new local bone IDs, which means you have to export
+the merged skeleton as well. If you don't, the game will likely crash.
+
+#### Vertex group name fixing
+
+If you rigged a mesh for one skeleton and bring it to another, the rigging typically won't work anymore,
+reason being that the local IDs in the vertex group names no longer match those of the bones. (The one
+exception is when both skeletons were merged with "Keep originals.")
+
+However, if you select the mesh and go to Blender's Data Properties tab (green triangle), you'll
+find a panel labeled "SOTTR Mesh Properties" with a button named "Fix Vertex Group Names."
+If you click this, the addon will match the vertex groups with the parent armature's bones based on
+global ID, and rename the vertex groups so they have the correct local ID. This way, you can
+reuse the mesh after all.
 
 ### Mesh editing
 

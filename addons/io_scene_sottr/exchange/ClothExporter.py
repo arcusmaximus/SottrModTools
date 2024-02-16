@@ -43,28 +43,22 @@ class ClothExporter:
     def export_cloths(self, folder_path: str, bl_armature_obj: bpy.types.Object, bl_local_armature_objs: dict[int, bpy.types.Object]) -> None:
         collision_bounding_boxes = self.get_collision_bounding_boxes(bl_armature_obj)
 
-        bl_cloth_empty = Enumerable(bl_armature_obj.children).first_or_none(lambda o: not o.data and BlenderNaming.is_cloth_empty_name(o.name))
-        if bl_cloth_empty is None:
-            return
-        
-        for cloth_id_set, bl_cloth_strip_objs in Enumerable(bl_cloth_empty.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)) \
-                                                                                    .group_by(self.get_cloth_id_set) \
-                                                                                    .items():
-            bl_local_armature_obj = bl_local_armature_objs.get(cloth_id_set.skeleton_id) or bl_armature_obj
-            bone_infos_by_local_id = self.get_bone_infos_by_local_id(bl_local_armature_obj)
-            self.export_cloth(folder_path, cloth_id_set, bl_cloth_strip_objs, bl_armature_obj, bone_infos_by_local_id, collision_bounding_boxes)
+        for bl_empty in Enumerable(bl_armature_obj.children).where(lambda o: not o.data and BlenderNaming.is_cloth_empty_name(o.name)):
+            for cloth_id_set, bl_cloth_strip_objs in Enumerable(bl_empty.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)) \
+                                                                                  .group_by(self.get_cloth_id_set) \
+                                                                                  .items():
+                bl_local_armature_obj = bl_local_armature_objs.get(cloth_id_set.skeleton_id) or bl_armature_obj
+                bone_infos_by_local_id = self.get_bone_infos_by_local_id(bl_local_armature_obj)
+                self.export_cloth(folder_path, cloth_id_set, bl_cloth_strip_objs, bl_armature_obj, bone_infos_by_local_id, collision_bounding_boxes)
     
     def get_collision_bounding_boxes(self, bl_armature_obj: bpy.types.Object) -> dict[CollisionKey, _BoundingBox]:
         result: dict[CollisionKey, _BoundingBox] = {}
         
-        bl_empty = Enumerable(bl_armature_obj.children).first_or_none(lambda o: not o.data and BlenderNaming.is_collision_empty_name(o.name))
-        if bl_empty is None:
-            return result
-        
-        for bl_obj in Enumerable(bl_empty.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
-            collision_key = BlenderNaming.parse_collision_name(bl_obj.name)
-            bounding_box = self.get_world_bounding_box(bl_obj)
-            result[collision_key] = bounding_box
+        for bl_empty in Enumerable(bl_armature_obj.children).where(lambda o: not o.data and BlenderNaming.is_collision_empty_name(o.name)):
+            for bl_obj in Enumerable(bl_empty.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
+                collision_key = BlenderNaming.parse_collision_name(bl_obj.name)
+                bounding_box = self.get_world_bounding_box(bl_obj)
+                result[collision_key] = bounding_box
         
         return result
     
@@ -93,6 +87,9 @@ class ClothExporter:
     ) -> None:
         tr_cloth = Cloth(cloth_id_set.definition_id, cloth_id_set.component_id)
         for bl_cloth_strip_obj in bl_cloth_strip_objs:
+            if len(cast(bpy.types.Mesh, bl_cloth_strip_obj.data).vertices) == 0:
+                continue
+
             self.add_cloth_strip(tr_cloth, bl_cloth_strip_obj, bl_armature_obj, bone_infos_by_local_id, collision_bounding_boxes)
         
         definition_writer = ResourceBuilder(ResourceKey(ResourceType.DTP, cloth_id_set.definition_id))
@@ -126,21 +123,24 @@ class ClothExporter:
     
     def get_cloth_strip_parent_bone_local_id(self, bl_cloth_strip_obj: bpy.types.Object, bone_infos_by_local_id: dict[int, _BoneInfo]) -> int:
         cloth_strip_properties = ObjectProperties.get_instance(bl_cloth_strip_obj).cloth
+        if not cloth_strip_properties:
+            raise Exception(f"Cloth strip {bl_cloth_strip_obj.name} has no parent bone. Please select a valid bone in the sidebar or delete the cloth strip.")
+
         parent_bone_id_set = BlenderNaming.try_parse_bone_name(cloth_strip_properties.parent_bone_name)
         if parent_bone_id_set is None:
-            raise Exception(f"Invalid parent bone name [{cloth_strip_properties.parent_bone_name}] in cloth strip object {bl_cloth_strip_obj.name}")
+            raise Exception(f"Invalid parent bone name [{cloth_strip_properties.parent_bone_name}] in cloth strip object {bl_cloth_strip_obj.name}.")
         
         if parent_bone_id_set.local_id is not None:
             return parent_bone_id_set.local_id
         
         if parent_bone_id_set.global_id is None:
-            raise Exception(f"Cloth strip object {bl_cloth_strip_obj.name} has parent bone {cloth_strip_properties.parent_bone_name} which has no global ID")
+            raise Exception(f"Cloth strip object {bl_cloth_strip_obj.name} has parent bone {cloth_strip_properties.parent_bone_name} which has no global ID.")
 
         for local_bone_id, bone_info in bone_infos_by_local_id.items():
             if bone_info.global_id == parent_bone_id_set.global_id:
                 return local_bone_id
         
-        raise Exception(f"Cloth strip object {bl_cloth_strip_obj.name} has parent bone {cloth_strip_properties.parent_bone_name} which wasn't found in the local skeleton")
+        raise Exception(f"Cloth strip object {bl_cloth_strip_obj.name} has parent bone {cloth_strip_properties.parent_bone_name} which wasn't found in the local skeleton.")
     
     def apply_cloth_strip_properties(self, tr_cloth_strip: ClothStrip, bl_cloth_strip_obj: bpy.types.Object) -> None:
         cloth_strip_properties = ObjectProperties.get_instance(bl_cloth_strip_obj).cloth

@@ -1,9 +1,9 @@
-﻿using SottrModManager.Shared;
+﻿using Newtonsoft.Json;
+using SottrModManager.Shared;
 using SottrModManager.Shared.Cdc;
+using SottrModManager.Shared.Util;
 using System.IO;
 using System.Linq;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Threading;
 
 namespace SottrExtractor
@@ -50,13 +50,15 @@ namespace SottrExtractor
         {
             LocalsBin locals = new LocalsBin(archiveFileStream);
 
-            using Utf8JsonWriter writer = new Utf8JsonWriter(extractedFileStream, new JsonWriterOptions { Indented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
-            writer.WriteStartObject();
+            using StreamWriter streamWriter = new StreamWriter(extractedFileStream);
+            using JsonWriter jsonWriter = new JsonTextWriter(streamWriter) { Formatting = Formatting.Indented };
+            jsonWriter.WriteStartObject();
             foreach ((string key, string value) in locals.Strings.OrderBy(s => s.Key))
             {
-                writer.WriteString(key, value);
+                jsonWriter.WritePropertyName(key);
+                jsonWriter.WriteValue(value);
             }
-            writer.WriteEndObject();
+            jsonWriter.WriteEndObject();
         }
     }
 }

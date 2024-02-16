@@ -3,7 +3,7 @@ bl_info = {
     "description": "Import/export files for Shadow of the Tomb Raider",
     "author": "arc_",
     "blender": (3, 6, 5),
-    "version": (1, 2, 3),
+    "version": (1, 2, 5),
     "location": "File > Import-Export",
     "support": "COMMUNITY",
     "category": "Import-Export"
@@ -17,10 +17,12 @@ from io_scene_sottr.tr.Tr11CStructTypeMappings import Tr11CStructTypeMappings
 CStructTypeMappings.register()
 Tr11CStructTypeMappings.register()
 
+from io_scene_sottr.operator.BrowseBlendShapeNormalsSourceFileOperator import BrowseBlendShapeNormalsSourceFileOperator
 from io_scene_sottr.operator.ImportAnimationOperator import ImportAnimationOperator
 from io_scene_sottr.operator.ImportObjectOperator import ImportObjectOperator
 from io_scene_sottr.operator.ExportAnimationOperator import ExportAnimationOperator
 from io_scene_sottr.operator.ExportModelOperator import ExportModelOperator
+from io_scene_sottr.operator.FixVertexGroupNamesOperator import FixVertexGroupNamesOperator
 from io_scene_sottr.operator.RegenerateClothBonesOperator import RegenerateClothBonesOperator
 from io_scene_sottr.operator.PinClothBonesOperator import PinClothBonesOperator
 from io_scene_sottr.operator.UnpinClothBonesOperator import UnpinClothBonesOperator
@@ -28,10 +30,11 @@ from io_scene_sottr.properties.BlenderPropertyGroup import BlenderPropertyGroup
 from io_scene_sottr.properties.BoneProperties import BoneClothProperties, BoneConstraintProperties, BoneProperties
 from io_scene_sottr.properties.ObjectProperties import ObjectClothProperties, ObjectProperties
 from io_scene_sottr.properties.ToolSettingProperties import ToolSettingProperties
+from io_scene_sottr.ui.BonePanel import BonePanel
 from io_scene_sottr.ui.ClothStripPanel import ClothStripPanel
 from io_scene_sottr.ui.ClothSpringPanel import ClothSpringPanel
 from io_scene_sottr.ui.ClothBonesPanel import ClothBonesPanel
-from io_scene_sottr.ui.BonePanel import BonePanel
+from io_scene_sottr.ui.MeshPanel import MeshPanel
 
 class SottrMenuOperator(Protocol):
     bl_idname: str
@@ -46,15 +49,17 @@ menu_operators: list[SottrMenuOperator] = [
 ]
 
 other_classes: list[type] = [
-    RegenerateClothBonesOperator,
+    BrowseBlendShapeNormalsSourceFileOperator,
+    FixVertexGroupNamesOperator,
     PinClothBonesOperator,
     UnpinClothBonesOperator,
+    RegenerateClothBonesOperator,
 
+    BonePanel,
     ClothBonesPanel,
     ClothStripPanel,
     ClothSpringPanel,
-
-    BonePanel
+    MeshPanel
 ]
 
 custom_property_groups: list[type[BlenderPropertyGroup]] = [

@@ -250,7 +250,7 @@ typedef struct
     quad hash <format=hex>;
     ExternalRef dtpRef;
     quad _;
-} TransformedComponent <optimize=false>;
+} TransformedComponent <read=Str("%016LX", hash), optimize=false>;
 
 typedef struct
 {

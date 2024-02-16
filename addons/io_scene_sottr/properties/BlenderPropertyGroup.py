@@ -29,6 +29,7 @@ class PropOption(Enum):
 
 class Prop(NamedTuple):
     name: str
+    description: str | None = None
     default: Any = None
     min: float | None = None
     max: float | None = None
@@ -60,6 +61,7 @@ class BlenderPropertyGroupCollection(Generic[TPropertyGroup], Protocol):
     def remove(self, index: int) -> None: ...
     def clear(self) -> None: ...
     def __iter__(self) -> Iterator[TPropertyGroup]: ...
+    def __len__(self) -> int: ...
 
 class BlenderPropertyGroup(Protocol):
     property_factory_funcs: ClassVar[dict[type, FactoryFunction]] = {

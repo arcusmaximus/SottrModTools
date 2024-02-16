@@ -1,24 +1,100 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{20068CA2-EED2-4C9E-99BE-1EDF9569777D}</ProjectGuid>
     <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SottrModManager.Shared</RootNamespace>
     <AssemblyName>SottrModManager.Shared</AssemblyName>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\Build\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\Build\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\dummykey.snk</AssemblyOriginatorKeyFile>
-    <BaseOutputPath>..\Build\</BaseOutputPath>
-    <Nullable>disable</Nullable>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <AssemblyVersion>1.2.3</AssemblyVersion>
-    <FileVersion>1.2.3</FileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Update="Controls\VirtualTreeView\VirtualTreeView.cs">
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Cdc\Archive.cs" />
+    <Compile Include="Cdc\ArchiveBlobReference.cs" />
+    <Compile Include="Cdc\ArchiveFileKey.cs" />
+    <Compile Include="Cdc\ArchiveFileReference.cs" />
+    <Compile Include="Cdc\ArchiveMetaData.cs" />
+    <Compile Include="Cdc\ArchiveSet.cs" />
+    <Compile Include="Cdc\CdcHash.cs" />
+    <Compile Include="Cdc\CdcTexture.cs" />
+    <Compile Include="Cdc\Enumerations.cs" />
+    <Compile Include="Cdc\LocalsBin.cs" />
+    <Compile Include="Cdc\ResourceCollection.cs" />
+    <Compile Include="Cdc\ResourceCollectionDependency.cs" />
+    <Compile Include="Cdc\ResourceCollectionItemReference.cs" />
+    <Compile Include="Cdc\ResourceKey.cs" />
+    <Compile Include="Cdc\ResourceNaming.cs" />
+    <Compile Include="Cdc\ResourceReadStream.cs" />
+    <Compile Include="Cdc\ResourceRefDefinitions.cs" />
+    <Compile Include="Cdc\ResourceReference.cs" />
+    <Compile Include="Cdc\ResourceUsageCache.cs" />
+    <Compile Include="Cdc\SpecMasksToc.cs" />
+    <Compile Include="Controls\VirtualTreeView\Editors.cs" />
+    <Compile Include="Controls\VirtualTreeView\Helpers.cs" />
+    <Compile Include="Controls\VirtualTreeView\VirtualTreeColumn.cs" />
+    <Compile Include="Controls\VirtualTreeView\VirtualTreeHeader.cs" />
+    <Compile Include="Controls\VirtualTreeView\VirtualTreeNode.cs" />
+    <Compile Include="Controls\VirtualTreeView\VirtualTreeView.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="GameFolderFinder.cs" />
+    <Compile Include="ITaskProgress.cs" />
+    <Compile Include="MultiStepTaskProgress.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Util\CollectionExtensions.cs" />
+    <Compile Include="Util\IoExtensions.cs" />
+    <Compile Include="Util\IsExternalInit.cs" />
+    <Compile Include="Util\PositionTrackingStream.cs" />
+    <Compile Include="Util\WindowStream.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe">
+      <Version>6.0.0</Version>
+    </PackageReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

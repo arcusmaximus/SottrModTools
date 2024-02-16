@@ -7,6 +7,11 @@ struct Animation
     InternalRef nameRef;
     if (nameRef.targetPos >= 0)
         char name[] @ nameRef.targetPos;
+} [[format("formatAnimation")]];
+
+fn formatAnimation(ref Animation anim)
+{
+    return std::format("{}: {}", anim.name, anim.id);
 };
 
 struct AnimLib

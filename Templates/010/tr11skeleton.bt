@@ -103,11 +103,11 @@ typedef struct
         ReturnFromRef();
     }
     
-    InternalRef sourceLocalBoneIdsRef;
-    if (IsValidRef(sourceLocalBoneIdsRef))
+    InternalRef sourceBlendShapeIdsRef;
+    if (IsValidRef(sourceBlendShapeIdsRef))
     {
-        SeekToRef(sourceLocalBoneIdsRef);
-        ushort sourceLocalBoneIds[parentof(this).numSourceBones];
+        SeekToRef(sourceBlendShapeIdsRef);
+        ushort sourceBlendShapeIds[parentof(this).numSourceBones];
         ReturnFromRef();
     }
     

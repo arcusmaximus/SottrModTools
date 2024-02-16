@@ -17,178 +17,177 @@ namespace SottrModManager
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            _pnlToolbar = new System.Windows.Forms.TableLayoutPanel();
-            _btnReinstall = new System.Windows.Forms.Button();
-            _btnRemove = new System.Windows.Forms.Button();
-            _btnAddFromZip = new System.Windows.Forms.Button();
-            _btnAddFromFolder = new System.Windows.Forms.Button();
-            _toolTip = new System.Windows.Forms.ToolTip(components);
-            _statusBar = new System.Windows.Forms.StatusStrip();
-            _lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
-            _progressBar = new System.Windows.Forms.ToolStripProgressBar();
-            _lvMods = new BindableListView();
-            _colModName = new System.Windows.Forms.ColumnHeader();
-            _folderBrowser = new Ookii.Dialogs.WinForms.VistaFolderBrowserDialog();
-            _fileBrowser = new System.Windows.Forms.OpenFileDialog();
-            _pnlToolbar.SuspendLayout();
-            _statusBar.SuspendLayout();
-            SuspendLayout();
+            this._pnlToolbar = new System.Windows.Forms.TableLayoutPanel();
+            this._btnReinstall = new System.Windows.Forms.Button();
+            this._btnRemove = new System.Windows.Forms.Button();
+            this._btnAddFromZip = new System.Windows.Forms.Button();
+            this._btnAddFromFolder = new System.Windows.Forms.Button();
+            this._toolTip = new System.Windows.Forms.ToolTip(this.components);
+            this._statusBar = new System.Windows.Forms.StatusStrip();
+            this._lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
+            this._progressBar = new System.Windows.Forms.ToolStripProgressBar();
+            this._lvMods = new SottrModManager.Controls.BindableListView();
+            this._colModName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this._folderBrowser = new Ookii.Dialogs.WinForms.VistaFolderBrowserDialog();
+            this._fileBrowser = new System.Windows.Forms.OpenFileDialog();
+            this._pnlToolbar.SuspendLayout();
+            this._statusBar.SuspendLayout();
+            this.SuspendLayout();
             // 
             // _pnlToolbar
             // 
-            _pnlToolbar.ColumnCount = 4;
-            _pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 93F));
-            _pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 93F));
-            _pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 93F));
-            _pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
-            _pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 23F));
-            _pnlToolbar.Controls.Add(_btnReinstall, 3, 0);
-            _pnlToolbar.Controls.Add(_btnRemove, 2, 0);
-            _pnlToolbar.Controls.Add(_btnAddFromZip, 0, 0);
-            _pnlToolbar.Controls.Add(_btnAddFromFolder, 1, 0);
-            _pnlToolbar.Dock = System.Windows.Forms.DockStyle.Top;
-            _pnlToolbar.Location = new System.Drawing.Point(0, 0);
-            _pnlToolbar.Margin = new System.Windows.Forms.Padding(4);
-            _pnlToolbar.Name = "_pnlToolbar";
-            _pnlToolbar.RowCount = 1;
-            _pnlToolbar.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            _pnlToolbar.Size = new System.Drawing.Size(748, 100);
-            _pnlToolbar.TabIndex = 1;
+            this._pnlToolbar.ColumnCount = 4;
+            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
+            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
+            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
+            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this._pnlToolbar.Controls.Add(this._btnReinstall, 3, 0);
+            this._pnlToolbar.Controls.Add(this._btnRemove, 2, 0);
+            this._pnlToolbar.Controls.Add(this._btnAddFromZip, 0, 0);
+            this._pnlToolbar.Controls.Add(this._btnAddFromFolder, 1, 0);
+            this._pnlToolbar.Dock = System.Windows.Forms.DockStyle.Top;
+            this._pnlToolbar.Location = new System.Drawing.Point(0, 0);
+            this._pnlToolbar.Name = "_pnlToolbar";
+            this._pnlToolbar.RowCount = 1;
+            this._pnlToolbar.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this._pnlToolbar.Size = new System.Drawing.Size(641, 80);
+            this._pnlToolbar.TabIndex = 1;
             // 
             // _btnReinstall
             // 
-            _btnReinstall.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
-            _btnReinstall.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            _btnReinstall.Image = Properties.Resources.Reinstall;
-            _btnReinstall.Location = new System.Drawing.Point(658, 4);
-            _btnReinstall.Margin = new System.Windows.Forms.Padding(4);
-            _btnReinstall.Name = "_btnReinstall";
-            _btnReinstall.Size = new System.Drawing.Size(86, 92);
-            _btnReinstall.TabIndex = 3;
-            _toolTip.SetToolTip(_btnReinstall, "Reinstall all mods (may fix game crashes if things worked before)");
-            _btnReinstall.UseVisualStyleBackColor = true;
-            _btnReinstall.Click += _btnReinstall_Click;
+            this._btnReinstall.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this._btnReinstall.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this._btnReinstall.Image = global::SottrModManager.Properties.Resources.Reinstall;
+            this._btnReinstall.Location = new System.Drawing.Point(564, 3);
+            this._btnReinstall.Name = "_btnReinstall";
+            this._btnReinstall.Size = new System.Drawing.Size(74, 74);
+            this._btnReinstall.TabIndex = 3;
+            this._toolTip.SetToolTip(this._btnReinstall, "Reinstall all mods (may fix game crashes if things worked before)");
+            this._btnReinstall.UseVisualStyleBackColor = true;
+            this._btnReinstall.Click += new System.EventHandler(this._btnReinstall_Click);
             // 
             // _btnRemove
             // 
-            _btnRemove.Dock = System.Windows.Forms.DockStyle.Fill;
-            _btnRemove.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            _btnRemove.Image = (System.Drawing.Image)resources.GetObject("_btnRemove.Image");
-            _btnRemove.Location = new System.Drawing.Point(190, 4);
-            _btnRemove.Margin = new System.Windows.Forms.Padding(4);
-            _btnRemove.Name = "_btnRemove";
-            _btnRemove.Size = new System.Drawing.Size(85, 92);
-            _btnRemove.TabIndex = 2;
-            _toolTip.SetToolTip(_btnRemove, "Uninstall selected mods");
-            _btnRemove.UseVisualStyleBackColor = true;
-            _btnRemove.Click += _btnRemove_Click;
+            this._btnRemove.Dock = System.Windows.Forms.DockStyle.Fill;
+            this._btnRemove.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this._btnRemove.Image = ((System.Drawing.Image)(resources.GetObject("_btnRemove.Image")));
+            this._btnRemove.Location = new System.Drawing.Point(163, 3);
+            this._btnRemove.Name = "_btnRemove";
+            this._btnRemove.Size = new System.Drawing.Size(74, 74);
+            this._btnRemove.TabIndex = 2;
+            this._toolTip.SetToolTip(this._btnRemove, "Uninstall selected mods");
+            this._btnRemove.UseVisualStyleBackColor = true;
+            this._btnRemove.Click += new System.EventHandler(this._btnRemove_Click);
             // 
             // _btnAddFromZip
             // 
-            _btnAddFromZip.Dock = System.Windows.Forms.DockStyle.Fill;
-            _btnAddFromZip.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            _btnAddFromZip.Image = Properties.Resources.AddZip;
-            _btnAddFromZip.Location = new System.Drawing.Point(4, 4);
-            _btnAddFromZip.Margin = new System.Windows.Forms.Padding(4);
-            _btnAddFromZip.Name = "_btnAddFromZip";
-            _btnAddFromZip.Size = new System.Drawing.Size(85, 92);
-            _btnAddFromZip.TabIndex = 0;
-            _toolTip.SetToolTip(_btnAddFromZip, "Install mod from archive file (.7z/.zip/.rar)...");
-            _btnAddFromZip.UseVisualStyleBackColor = true;
-            _btnAddFromZip.Click += _btnAddFromZip_Click;
+            this._btnAddFromZip.Dock = System.Windows.Forms.DockStyle.Fill;
+            this._btnAddFromZip.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this._btnAddFromZip.Image = global::SottrModManager.Properties.Resources.AddZip;
+            this._btnAddFromZip.Location = new System.Drawing.Point(3, 3);
+            this._btnAddFromZip.Name = "_btnAddFromZip";
+            this._btnAddFromZip.Size = new System.Drawing.Size(74, 74);
+            this._btnAddFromZip.TabIndex = 0;
+            this._toolTip.SetToolTip(this._btnAddFromZip, "Install mod from archive file (.7z/.zip/.rar)...");
+            this._btnAddFromZip.UseVisualStyleBackColor = true;
+            this._btnAddFromZip.Click += new System.EventHandler(this._btnAddFromZip_Click);
             // 
             // _btnAddFromFolder
             // 
-            _btnAddFromFolder.Dock = System.Windows.Forms.DockStyle.Fill;
-            _btnAddFromFolder.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            _btnAddFromFolder.Image = (System.Drawing.Image)resources.GetObject("_btnAddFromFolder.Image");
-            _btnAddFromFolder.Location = new System.Drawing.Point(97, 4);
-            _btnAddFromFolder.Margin = new System.Windows.Forms.Padding(4);
-            _btnAddFromFolder.Name = "_btnAddFromFolder";
-            _btnAddFromFolder.Size = new System.Drawing.Size(85, 92);
-            _btnAddFromFolder.TabIndex = 1;
-            _toolTip.SetToolTip(_btnAddFromFolder, "Install mod from folder...");
-            _btnAddFromFolder.UseVisualStyleBackColor = true;
-            _btnAddFromFolder.Click += _btnAddFromFolder_Click;
+            this._btnAddFromFolder.Dock = System.Windows.Forms.DockStyle.Fill;
+            this._btnAddFromFolder.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this._btnAddFromFolder.Image = ((System.Drawing.Image)(resources.GetObject("_btnAddFromFolder.Image")));
+            this._btnAddFromFolder.Location = new System.Drawing.Point(83, 3);
+            this._btnAddFromFolder.Name = "_btnAddFromFolder";
+            this._btnAddFromFolder.Size = new System.Drawing.Size(74, 74);
+            this._btnAddFromFolder.TabIndex = 1;
+            this._toolTip.SetToolTip(this._btnAddFromFolder, "Install mod from folder...");
+            this._btnAddFromFolder.UseVisualStyleBackColor = true;
+            this._btnAddFromFolder.Click += new System.EventHandler(this._btnAddFromFolder_Click);
             // 
             // _statusBar
             // 
-            _statusBar.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { _lblStatus, _progressBar });
-            _statusBar.Location = new System.Drawing.Point(0, 516);
-            _statusBar.Name = "_statusBar";
-            _statusBar.Padding = new System.Windows.Forms.Padding(1, 0, 16, 0);
-            _statusBar.Size = new System.Drawing.Size(748, 22);
-            _statusBar.TabIndex = 2;
-            _statusBar.Text = "statusStrip1";
+            this._statusBar.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this._lblStatus,
+            this._progressBar});
+            this._statusBar.Location = new System.Drawing.Point(0, 408);
+            this._statusBar.Name = "_statusBar";
+            this._statusBar.Size = new System.Drawing.Size(641, 22);
+            this._statusBar.TabIndex = 2;
+            this._statusBar.Text = "statusStrip1";
             // 
             // _lblStatus
             // 
-            _lblStatus.Name = "_lblStatus";
-            _lblStatus.Size = new System.Drawing.Size(731, 17);
-            _lblStatus.Spring = true;
-            _lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this._lblStatus.Name = "_lblStatus";
+            this._lblStatus.Size = new System.Drawing.Size(626, 17);
+            this._lblStatus.Spring = true;
+            this._lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // _progressBar
             // 
-            _progressBar.Maximum = 1000;
-            _progressBar.Name = "_progressBar";
-            _progressBar.Size = new System.Drawing.Size(117, 20);
-            _progressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
-            _progressBar.Visible = false;
+            this._progressBar.Maximum = 1000;
+            this._progressBar.Name = "_progressBar";
+            this._progressBar.Size = new System.Drawing.Size(100, 16);
+            this._progressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+            this._progressBar.Visible = false;
             // 
             // _lvMods
             // 
-            _lvMods.AllowDrop = true;
-            _lvMods.CheckBoxes = true;
-            _lvMods.CheckedMember = null;
-            _lvMods.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { _colModName });
-            _lvMods.DataSource = null;
-            _lvMods.DisplayMember = null;
-            _lvMods.Dock = System.Windows.Forms.DockStyle.Fill;
-            _lvMods.ForeColorMember = null;
-            _lvMods.FullRowSelect = true;
-            _lvMods.Location = new System.Drawing.Point(0, 100);
-            _lvMods.Name = "_lvMods";
-            _lvMods.Size = new System.Drawing.Size(748, 416);
-            _lvMods.TabIndex = 3;
-            _lvMods.UseCompatibleStateImageBehavior = false;
-            _lvMods.View = System.Windows.Forms.View.Details;
-            _lvMods.DragDrop += _lvMods_DragDrop;
-            _lvMods.DragEnter += _lvMods_DragEnter;
-            _lvMods.KeyDown += _lvMods_KeyDown;
+            this._lvMods.AllowDrop = true;
+            this._lvMods.CheckBoxes = true;
+            this._lvMods.CheckedMember = null;
+            this._lvMods.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this._colModName});
+            this._lvMods.DataSource = null;
+            this._lvMods.DisplayMember = null;
+            this._lvMods.Dock = System.Windows.Forms.DockStyle.Fill;
+            this._lvMods.ForeColorMember = null;
+            this._lvMods.FullRowSelect = true;
+            this._lvMods.HideSelection = false;
+            this._lvMods.Location = new System.Drawing.Point(0, 80);
+            this._lvMods.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this._lvMods.Name = "_lvMods";
+            this._lvMods.Size = new System.Drawing.Size(641, 328);
+            this._lvMods.TabIndex = 3;
+            this._lvMods.UseCompatibleStateImageBehavior = false;
+            this._lvMods.View = System.Windows.Forms.View.Details;
+            this._lvMods.DragDrop += new System.Windows.Forms.DragEventHandler(this._lvMods_DragDrop);
+            this._lvMods.DragEnter += new System.Windows.Forms.DragEventHandler(this._lvMods_DragEnter);
+            this._lvMods.KeyDown += new System.Windows.Forms.KeyEventHandler(this._lvMods_KeyDown);
             // 
             // _colModName
             // 
-            _colModName.Text = "Mod";
+            this._colModName.Text = "Mod";
             // 
             // _fileBrowser
             // 
-            _fileBrowser.Filter = "Archives|*.7z;*.zip;*.rar";
-            _fileBrowser.Title = "Select the mod file to install";
+            this._fileBrowser.Filter = "Archives|*.7z;*.zip;*.rar";
+            this._fileBrowser.Title = "Select the mod file to install";
             // 
             // MainForm
             // 
-            AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(748, 538);
-            Controls.Add(_lvMods);
-            Controls.Add(_statusBar);
-            Controls.Add(_pnlToolbar);
-            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
-            Margin = new System.Windows.Forms.Padding(4);
-            MinimumSize = new System.Drawing.Size(417, 390);
-            Name = "MainForm";
-            Text = "SOTTR Mod Manager";
-            FormClosing += MainForm_FormClosing;
-            Load += MainForm_Load;
-            Resize += MainForm_Resize;
-            _pnlToolbar.ResumeLayout(false);
-            _statusBar.ResumeLayout(false);
-            _statusBar.PerformLayout();
-            ResumeLayout(false);
-            PerformLayout();
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(641, 430);
+            this.Controls.Add(this._lvMods);
+            this.Controls.Add(this._statusBar);
+            this.Controls.Add(this._pnlToolbar);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MinimumSize = new System.Drawing.Size(360, 320);
+            this.Name = "MainForm";
+            this.Text = "SOTTR Mod Manager";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
+            this.Load += new System.EventHandler(this.MainForm_Load);
+            this.Resize += new System.EventHandler(this.MainForm_Resize);
+            this._pnlToolbar.ResumeLayout(false);
+            this._statusBar.ResumeLayout(false);
+            this._statusBar.PerformLayout();
+            this.ResumeLayout(false);
+            this.PerformLayout();
+
         }
 
         #endregion

@@ -6,6 +6,8 @@ import os
 from mathutils import Vector
 from io_scene_sottr.BlenderHelper import BlenderHelper
 from io_scene_sottr.BlenderNaming import BlenderNaming
+from io_scene_sottr.operator.OperatorContext import OperatorContext
+from io_scene_sottr.properties.ObjectProperties import ObjectProperties
 from io_scene_sottr.tr.BlendShape import BlendShape
 from io_scene_sottr.tr.Enumerations import ResourceType
 from io_scene_sottr.tr.Hashes import Hashes
@@ -18,6 +20,7 @@ from io_scene_sottr.tr.ResourceKey import ResourceKey
 from io_scene_sottr.tr.Vertex import Vertex
 from io_scene_sottr.tr.VertexFormat import VertexFormat
 from io_scene_sottr.tr.VertexOffsets import VertexOffsets
+from io_scene_sottr.util.BinaryReader import BinaryReader
 from io_scene_sottr.util.BinaryWriter import BinaryWriter
 from io_scene_sottr.util.Enumerable import Enumerable
 from io_scene_sottr.util.SlotsBase import SlotsBase
@@ -83,8 +86,15 @@ class ModelExporter(SlotsBase):
             tr_model_data.header.has_blend_shapes = True
             tr_model_data.header.num_blend_shapes = bl_shape_keys.max(lambda bl_shape_key: BlenderNaming.parse_shape_key_name(bl_shape_key.name).local_id) + 1
         
+        blend_shape_normals_source_file_path: str | None = None
         for bl_obj in bl_objs:
             tr_model_data.meshes.append(self.create_mesh(tr_model, tr_model_data, bl_obj))
+            properties = ObjectProperties.get_instance(bl_obj)
+            if properties.blend_shape_normals_source_file_path:
+                blend_shape_normals_source_file_path = properties.blend_shape_normals_source_file_path
+        
+        if blend_shape_normals_source_file_path:
+            self.transfer_blend_shape_normals(tr_model_data, blend_shape_normals_source_file_path)
         
         self.unsign_normals(tr_model_data)
         self.calc_bounding_box(tr_model_data)
@@ -418,3 +428,62 @@ class ModelExporter(SlotsBase):
         bl_obj_eval = cast(bpy.types.Object, bl_obj.evaluated_get(bpy.context.evaluated_depsgraph_get()))
         bl_mesh_eval = cast(bpy.types.Mesh, bl_obj_eval.data)
         return bl_mesh_eval
+
+    def transfer_blend_shape_normals(self, tr_target_model_data: ModelData, source_file_path: str) -> None:
+        if not os.path.isfile(source_file_path):
+            OperatorContext.log_warning(f"Shape key source file {source_file_path} does not exist - skipping transfer.")
+            return
+        
+        tr_source_model_data = ModelData(0)
+        with open(source_file_path, "rb") as source_file:
+            tr_source_model_data.read(BinaryReader(source_file.read()))
+
+        tr_source_meshes: list[Mesh] = Enumerable(tr_source_model_data.meshes).where(lambda m: any(m.blend_shapes)).order_by(lambda m: len(m.vertices)).to_list()
+        tr_target_meshes: list[Mesh] = Enumerable(tr_target_model_data.meshes).where(lambda m: any(m.blend_shapes)).order_by(lambda m: len(m.vertices)).to_list()
+        if len(tr_source_meshes) != len(tr_target_meshes):
+            OperatorContext.log_warning(f"Mesh count mismatch between source file {source_file_path} and target model - skipping transfer of shape key normals.")
+            return
+
+        for mesh_idx in range(len(tr_source_meshes)):
+            tr_source_mesh = tr_source_meshes[mesh_idx]
+            tr_target_mesh = tr_target_meshes[mesh_idx]
+
+            target_vertex_idx_by_position: dict[tuple[int, int, int], int] = {}
+            for target_vertex_idx, target_vertex in enumerate(tr_target_mesh.vertices):
+                target_vertex_pos = target_vertex.attributes[Hashes.position]
+                target_vertex_idx_by_position[(
+                    int(round(target_vertex_pos[0] * 1000)),
+                    int(round(target_vertex_pos[1] * 1000)),
+                    int(round(target_vertex_pos[2] * 1000))
+                )] = target_vertex_idx
+            
+            source_vertex_idx_by_target_vertex_idx: list[int | None] = [None] * len(tr_target_mesh.vertices)
+            for source_vertex_idx, source_vertex in enumerate(tr_source_mesh.vertices):
+                source_vertex_pos = source_vertex.attributes[Hashes.position]
+                target_vertex_idx = target_vertex_idx_by_position.get((
+                    int(round(source_vertex_pos[0] * 1000)),
+                    int(round(source_vertex_pos[1] * 1000)),
+                    int(round(source_vertex_pos[2] * 1000))
+                ))
+                if target_vertex_idx is not None:
+                    source_vertex_idx_by_target_vertex_idx[target_vertex_idx] = source_vertex_idx
+                    tr_target_mesh.vertices[target_vertex_idx].attributes[Hashes.normal] = source_vertex.attributes[Hashes.normal]
+            
+            for blend_shape_idx, tr_target_blend_shape in enumerate(tr_target_mesh.blend_shapes):
+                if blend_shape_idx >= len(tr_source_mesh.blend_shapes) or tr_target_blend_shape is None:
+                    continue
+                
+                tr_source_blend_shape = tr_source_mesh.blend_shapes[blend_shape_idx]
+                if tr_source_blend_shape is None:
+                    continue
+                    
+                for target_vertex_idx in tr_target_blend_shape.vertices.keys():
+                    source_vertex_idx = source_vertex_idx_by_target_vertex_idx[target_vertex_idx]
+                    if source_vertex_idx is None:
+                        continue
+
+                    source_vertex_offsets = tr_source_blend_shape.vertices.get(source_vertex_idx)
+                    if source_vertex_offsets is None:
+                        continue
+
+                    tr_target_blend_shape.vertices[target_vertex_idx] = source_vertex_offsets

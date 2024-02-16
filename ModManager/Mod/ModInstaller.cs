@@ -430,7 +430,7 @@ namespace SottrModManager.Mod
                 return;
 
             byte[] data = new byte[stream.Length];
-            stream.Read(data);
+            stream.Read(data, 0, data.Length);
             stream.Close();
             archives[fileKey.Locale].AddFile(fileKey, data);
         }

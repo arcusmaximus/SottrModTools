@@ -1,4 +1,3 @@
-from io import StringIO
 from typing import cast
 import bpy
 import os
@@ -7,7 +6,7 @@ from io_scene_sottr.BlenderHelper import BlenderHelper
 from io_scene_sottr.BlenderNaming import BlenderBoneIdSet, BlenderNaming
 from io_scene_sottr.properties.BoneProperties import BoneProperties
 from io_scene_sottr.tr.Bone import Bone
-from io_scene_sottr.tr.BoneConstraint import BoneConstraint
+from io_scene_sottr.tr.BoneConstraint import BoneConstraint, BoneConstraint3
 from io_scene_sottr.tr.Collection import Collection
 from io_scene_sottr.tr.Enumerations import ResourceType
 from io_scene_sottr.tr.ResourceBuilder import ResourceBuilder
@@ -30,8 +29,8 @@ class SkeletonExporter(SlotsBase):
         tr_skeleton = Skeleton(skeleton_id)
 
         with BlenderHelper.enter_edit_mode(bl_armature_obj):
-            self.add_bones(tr_skeleton, bl_armature_obj)
             self.add_blend_shape_id_mappings(tr_skeleton, bl_armature_obj)
+            self.add_bones(tr_skeleton, bl_armature_obj)
 
         writer = ResourceBuilder(ResourceKey(ResourceType.DTP, skeleton_id))
         tr_skeleton.write(writer)
@@ -39,6 +38,17 @@ class SkeletonExporter(SlotsBase):
         file_path = os.path.join(folder_path, Collection.make_resource_file_name(writer.resource))
         with open(file_path, "wb") as file:
             file.write(writer.build())
+    
+    def add_blend_shape_id_mappings(self, tr_skeleton: Skeleton, bl_armature_obj: bpy.types.Object) -> None:
+        for bl_mesh_obj in Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
+            bl_mesh = cast(bpy.types.Mesh, bl_mesh_obj.data)
+            if not bl_mesh.shape_keys:
+                continue
+
+            for bl_shape_key in Enumerable(bl_mesh.shape_keys.key_blocks).skip(1):
+                shape_key_ids = BlenderNaming.parse_shape_key_name(bl_shape_key.name)
+                if shape_key_ids.global_id is not None:
+                    tr_skeleton.global_blend_shape_ids[shape_key_ids.local_id] = shape_key_ids.global_id
     
     def add_bones(self, tr_skeleton: Skeleton, bl_armature_obj: bpy.types.Object) -> None:
         bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
@@ -69,7 +79,7 @@ class SkeletonExporter(SlotsBase):
             bl_bone = bl_armature.bones[bl_edit_bone.name]
             self.set_bone_common_fields(tr_bone, bl_edit_bone, bone_id_set, bone_ids)
             self.add_bone_counterpart(tr_bone, bl_bone)
-            self.add_bone_constraints(tr_bone, bl_bone)
+            self.add_bone_constraints(tr_skeleton, tr_bone, bl_bone)
 
             tr_skeleton.bones.append(tr_bone)
             prev_local_id = bone_id_set.local_id
@@ -115,19 +125,11 @@ class SkeletonExporter(SlotsBase):
         else:
             tr_bone.counterpart_local_id = None
     
-    def add_bone_constraints(self, tr_bone: Bone, bl_bone: bpy.types.Bone) -> None:
+    def add_bone_constraints(self, tr_skeleton: Skeleton, tr_bone: Bone, bl_bone: bpy.types.Bone) -> None:
         tr_bone.constraints = []
         for prop_constraint in BoneProperties.get_instance(bl_bone).constraints:
-            tr_constraint = BoneConstraint.deserialize(StringIO(prop_constraint.data))
-            tr_bone.constraints.append(tr_constraint)
-
-    def add_blend_shape_id_mappings(self, tr_skeleton: Skeleton, bl_armature_obj: bpy.types.Object) -> None:
-        for bl_mesh_obj in Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
-            bl_mesh = cast(bpy.types.Mesh, bl_mesh_obj.data)
-            if not bl_mesh.shape_keys:
+            tr_constraint = BoneConstraint.deserialize(prop_constraint.data)
+            if isinstance(tr_constraint, BoneConstraint3) and Enumerable(tr_constraint.source_blend_shape_ids).any(lambda id: id not in tr_skeleton.global_blend_shape_ids):
                 continue
 
-            for bl_shape_key in Enumerable(bl_mesh.shape_keys.key_blocks).skip(1):
-                shape_key_ids = BlenderNaming.parse_shape_key_name(bl_shape_key.name)
-                if shape_key_ids.global_id is not None:
-                    tr_skeleton.global_blend_shape_ids[shape_key_ids.local_id] = shape_key_ids.global_id
+            tr_bone.constraints.append(tr_constraint)
