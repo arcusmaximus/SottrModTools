@@ -276,8 +276,10 @@ complete names with local IDs, meaning the skeleton is exportable.
 On the flipside, the presence of local IDs again means you can't immediately reuse meshes in another
 outfit, because the bone names will be different there.
 
-When you export the models, they'll be linked to all-new local bone IDs, which means you have to export
-the merged skeleton as well. If you don't, the game will likely crash.
+Because merging skeletons this way changes their local bone IDs, you have to check both "Export skeleton" and
+"Export cloth" when exporting models so that the IDs stay synchronized between all three. Also, in order
+to be able to export the cloth physics, you need to check "Import cloth and collisions" when importing
+the models at the start.
 
 #### Vertex group name fixing
 
