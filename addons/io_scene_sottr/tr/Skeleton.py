@@ -6,6 +6,7 @@ from io_scene_sottr.tr.ResourceReader import ResourceReader
 from io_scene_sottr.tr.Bone import Bone
 from io_scene_sottr.tr.ResourceReference import ResourceReference
 from io_scene_sottr.util.CStruct import CByte, CInt, CLong, CShort, CStruct
+from io_scene_sottr.util.Conditional import coalesce
 from io_scene_sottr.util.Enumerable import Enumerable
 from io_scene_sottr.util.SlotsBase import SlotsBase
 
@@ -141,7 +142,7 @@ class Skeleton(SlotsBase):
         header.unused_words_1_ref = None
         header.num_bone_id_mappings = header.num_anim_id_mappings
         header.bone_id_mappings_ref = writer.make_internal_ref()
-        header.num_blend_shape_id_mappings = len(self.global_blend_shape_ids)
+        header.num_blend_shape_id_mappings = Enumerable(self.global_blend_shape_ids.keys()).max() + 1 if len(self.global_blend_shape_ids) > 0 else 0
         header.blend_shape_id_mappings_ref = writer.make_internal_ref()
         header.num_bone_constraints = Enumerable(self.bones).sum(lambda b: len(b.constraints))
         header.bone_constraint_refs_ref = writer.make_internal_ref()
@@ -183,9 +184,11 @@ class Skeleton(SlotsBase):
                 writer.write_uint16(local_bone_id)
         
         header.blend_shape_id_mappings_ref.offset = writer.position
-        for local_id, global_id in self.global_blend_shape_ids.items():
-            writer.write_uint16(global_id)
-            writer.write_uint16(local_id)
+        if len(self.global_blend_shape_ids) > 0:
+            for local_id in range(Enumerable(self.global_blend_shape_ids.keys()).max() + 1):
+                global_id = coalesce(self.global_blend_shape_ids.get(local_id), 0xFFFF)
+                writer.write_uint16(global_id)
+                writer.write_uint16(local_id)
         
         header.local_bone_ids_by_anim_id_ref.offset = writer.position
         header.anim_bone_ids_by_local_id_ref.offset = writer.position

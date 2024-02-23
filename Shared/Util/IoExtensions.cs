@@ -56,7 +56,7 @@ namespace SottrModManager.Shared.Util
             }
         }
 
-        public static unsafe void WriteStruct<T>(this BinaryWriter writer, ref T data)
+        public static unsafe void WriteStruct<T>(this BinaryWriter writer, T data)
             where T : unmanaged
         {
             fixed (byte* pBuffer = TempBuffer)

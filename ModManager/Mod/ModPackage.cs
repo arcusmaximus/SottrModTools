@@ -12,14 +12,14 @@ namespace SottrModManager.Mod
             get;
         }
 
-        public abstract ICollection<ArchiveFileKey> Files
+        public abstract IEnumerable<ArchiveFileKey> Files
         {
             get;
         }
 
         public abstract Stream OpenFile(ArchiveFileKey fileKey);
 
-        public abstract ICollection<ResourceKey> Resources
+        public abstract IEnumerable<ResourceKey> Resources
         {
             get;
         }
@@ -38,6 +38,13 @@ namespace SottrModManager.Mod
 
         public virtual void Dispose()
         {
+            if (Variations != null)
+            {
+                foreach (ModVariation variation in Variations)
+                {
+                    variation.Dispose();
+                }
+            }
         }
     }
 }

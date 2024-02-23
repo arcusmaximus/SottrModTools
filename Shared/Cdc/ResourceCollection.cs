@@ -173,12 +173,11 @@ namespace SottrModManager.Shared.Cdc
             _header.NumResources = _resourceIdentifications.Count;
             _header.NameLength = _name.Length;
             _header.DependenciesLength = _dependencies.Sum(d => 8 + d.FilePath.Length + 1);
-            writer.WriteStruct(ref _header);
+            writer.WriteStruct(_header);
 
             for (int i = 0; i < _header.NumResources; i++)
             {
-                ResourceIdentification identification = _resourceIdentifications[i];
-                writer.WriteStruct(ref identification);
+                writer.WriteStruct(_resourceIdentifications[i]);
             }
 
             writer.Write(_name);
@@ -191,8 +190,7 @@ namespace SottrModManager.Shared.Cdc
 
             for (int i = 0; i < _header.NumResources; i++)
             {
-                ResourceLocation location = _resourceLocations[i];
-                writer.WriteStruct(ref location);
+                writer.WriteStruct(_resourceLocations[i]);
             }
         }
 

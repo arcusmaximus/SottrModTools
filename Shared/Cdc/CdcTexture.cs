@@ -184,7 +184,7 @@ namespace SottrModManager.Shared.Cdc
         public void Write(Stream stream)
         {
             BinaryWriter writer = new BinaryWriter(stream);
-            writer.WriteStruct(ref Header);
+            writer.WriteStruct(Header);
             writer.Write(Data);
         }
 
@@ -210,7 +210,7 @@ namespace SottrModManager.Shared.Cdc
                     caps2 = isCubeMap ? DDS_CUBEMAP_ALLFACES : 0,
                     ddspf = GetDdsPixelFormat(Header.Format)
                 };
-            writer.WriteStruct(ref header);
+            writer.WriteStruct(header);
 
             if ((header.ddspf.flags & DDS_FOURCC) != 0 && header.ddspf.fourCC == MakeFourCC("DX10"))
             {
@@ -222,7 +222,7 @@ namespace SottrModManager.Shared.Cdc
                         miscFlag = isCubeMap ? DDS_RESOURCE_MISC_TEXTURECUBE : 0,
                         arraySize = 1
                     };
-                writer.WriteStruct(ref dx10);
+                writer.WriteStruct(dx10);
             }
 
             writer.Write(Data);

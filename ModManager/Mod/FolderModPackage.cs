@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SottrModManager.Shared.Cdc;
@@ -18,7 +19,8 @@ namespace SottrModManager.Mod
         private readonly ArchiveSet _archiveSet;
         private readonly ResourceUsageCache _resourceUsageCache;
         private readonly Dictionary<ArchiveFileKey, string> _files = new();
-        private readonly Dictionary<ResourceKey, string> _resources = new();
+        private readonly Dictionary<ResourceKey, string> _physicalResources = new();
+        private readonly Dictionary<ResourceKey, MemoryStream> _virtualResources = new();
 
         public FolderModPackage(string folderPath, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache)
             : this(Path.GetFileName(folderPath), folderPath, archiveSet, resourceUsageCache)
@@ -32,6 +34,7 @@ namespace SottrModManager.Mod
             _archiveSet = archiveSet;
             _resourceUsageCache = resourceUsageCache;
             ScanFolder(_folderPath, _folderPath);
+            AddVirtualResources(_virtualResources, _physicalResources, _files, _archiveSet, _resourceUsageCache);
         }
 
         public override string Name
@@ -39,23 +42,23 @@ namespace SottrModManager.Mod
             get;
         }
 
-        public override ICollection<ArchiveFileKey> Files => _files.Keys;
+        public override IEnumerable<ArchiveFileKey> Files => _files.Keys;
 
         public override Stream OpenFile(ArchiveFileKey fileKey)
         {
             return OpenFile(_files, fileKey, _archiveSet);
         }
 
-        public override ICollection<ResourceKey> Resources => _resources.Keys;
+        public override IEnumerable<ResourceKey> Resources => _physicalResources.Keys.Concat(_virtualResources.Keys);
 
         public override Stream OpenResource(ResourceKey resourceKey)
         {
-            return OpenResource(_resources, resourceKey, _archiveSet, _resourceUsageCache);
+            return OpenResource(_physicalResources, _virtualResources, resourceKey, _archiveSet, _resourceUsageCache);
         }
 
         private void ScanFolder(string baseFolderPath, string folderPath)
         {
-            AddFilesAndResourcesFromFolder(baseFolderPath, folderPath, _files, _resources, false);
+            AddFilesAndResourcesFromFolder(baseFolderPath, folderPath, _files, _physicalResources, false);
 
             foreach (string subFolderPath in Directory.EnumerateDirectories(folderPath))
             {
@@ -87,7 +90,7 @@ namespace SottrModManager.Mod
 
                 string filePathToHash = filePath.Substring(baseFolderPath.Length);
                 ulong locale = 0xFFFFFFFFFFFFFFFF;
-                if (Enum.TryParse(Path.GetFileNameWithoutExtension(filePath), true, out LocaleLanguage localeLang))
+                if (Enum.TryParse(Path.GetFileNameWithoutExtension(filePath), true, out LocaleLanguage localeLang) && Enum.IsDefined(typeof(LocaleLanguage), localeLang))
                 {
                     filePathToHash = Path.GetDirectoryName(filePathToHash);
                     locale = 0xFFFFFFFFFFFF0400 | (ulong)localeLang;
@@ -96,6 +99,58 @@ namespace SottrModManager.Mod
                 string extension = Path.GetExtension(filePath);
                 if (extension != ".txt" && extension != ".png")
                     files[new ArchiveFileKey(CdcHash.Calculate(filePathToHash), locale)] = filePath;
+            }
+        }
+
+        private static void AddVirtualResources(
+            Dictionary<ResourceKey, MemoryStream> virtualResources,
+            Dictionary<ResourceKey, string> physicalResources,
+            Dictionary<ArchiveFileKey, string> files,
+            ArchiveSet archiveSet,
+            ResourceUsageCache resourceUsageCache)
+        {
+            Dictionary<ResourceKey, WwiseSoundBank> virtualSoundBanks = new();
+            foreach (string wemFilePath in files.Values.Where(p => Path.GetExtension(p) == ".wem"))
+            {
+                if (!int.TryParse(Path.GetFileNameWithoutExtension(wemFilePath), out int soundId))
+                    continue;
+
+                foreach (WwiseSoundBankItemReference soundUsage in resourceUsageCache.GetSoundUsages(soundId))
+                {
+                    ResourceKey bankResourceKey = new ResourceKey(ResourceType.SoundBank, soundUsage.BankResourceId);
+                    if (physicalResources.ContainsKey(bankResourceKey))
+                        continue;
+
+                    WwiseSoundBank bank = virtualSoundBanks.GetOrDefault(bankResourceKey);
+                    if (bank == null)
+                    {
+                        ResourceReference bankResourceRef = resourceUsageCache.GetResourceReference(archiveSet, bankResourceKey);
+                        if (bankResourceRef == null)
+                            continue;
+
+                        using (Stream stream = archiveSet.OpenResource(bankResourceRef))
+                        {
+                            bank = new WwiseSoundBank(stream);
+                        }
+                        virtualSoundBanks.Add(bankResourceKey, bank);
+                    }
+
+                    var indexSection = bank.GetSection<WwiseSoundBank.DataIndexSection>();
+                    if (indexSection == null)
+                        continue;
+
+                    var indexEntry = indexSection.Entries[soundUsage.Index];
+                    indexEntry.Length = 0;
+                    indexSection.Entries[soundUsage.Index] = indexEntry;
+                }
+            }
+
+            foreach ((ResourceKey bankResourceKey, WwiseSoundBank bank) in virtualSoundBanks)
+            {
+                MemoryStream stream = new MemoryStream();
+                bank.Write(stream);
+                stream.Position = 0;
+                virtualResources.Add(bankResourceKey, stream);
             }
         }
 
@@ -157,20 +212,37 @@ namespace SottrModManager.Mod
             return patchedStream;
         }
 
-        private static Stream OpenResource(Dictionary<ResourceKey, string> resources, ResourceKey resourceKey, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache)
+        private static Stream OpenResource(
+            Dictionary<ResourceKey, string> physicalResources,
+            Dictionary<ResourceKey, MemoryStream> virtualResources,
+            ResourceKey resourceKey,
+            ArchiveSet archiveSet,
+            ResourceUsageCache resourceUsageCache)
         {
-            string filePath = resources.GetOrDefault(resourceKey);
+            Stream virtualStream = virtualResources.GetOrDefault(resourceKey);
+            if (virtualStream != null)
+                return virtualStream;
+
+            string filePath = physicalResources.GetOrDefault(resourceKey);
             if (filePath == null)
                 return null;
 
             Stream stream = File.OpenRead(filePath);
-            if (resourceKey.Type == ResourceType.Texture)
+            switch (resourceKey.Type)
             {
-                Stream textureStream = ConvertTexture(stream, resourceKey, archiveSet, resourceUsageCache);
-                stream.Close();
-                stream = textureStream;
+                case ResourceType.Texture:
+                    Stream textureStream = ConvertTexture(stream, resourceKey, archiveSet, resourceUsageCache);
+                    stream.Close();
+                    return textureStream;
+
+                case ResourceType.SoundBank:
+                    Stream dtpStream = ConvertSoundBank(stream);
+                    stream.Close();
+                    return dtpStream;
+
+                default:
+                    return stream;
             }
-            return stream;
         }
 
         private static Stream ConvertTexture(Stream ddsStream, ResourceKey resourceKey, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache)
@@ -185,6 +257,25 @@ namespace SottrModManager.Mod
             texture.Write(textureStream);
             textureStream.Position = 0;
             return textureStream;
+        }
+
+        private static Stream ConvertSoundBank(Stream bnkStream)
+        {
+            MemoryStream dtpStream = new MemoryStream(8 + (int)bnkStream.Length);
+            
+            BinaryWriter writer = new BinaryWriter(dtpStream);
+            writer.Write(0);
+            writer.Write((int)bnkStream.Length);
+            bnkStream.CopyTo(dtpStream);
+
+            BinaryReader reader = new BinaryReader(dtpStream);
+            dtpStream.Position = 0x14;
+            uint soundBankId = reader.ReadUInt32();
+            dtpStream.Position = 0;
+            writer.Write(soundBankId);
+
+            dtpStream.Position = 0;
+            return dtpStream;
         }
 
         private static uint GetOriginalTextureFormat(ResourceKey resourceKey, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache)
@@ -204,7 +295,8 @@ namespace SottrModManager.Mod
             private readonly ArchiveSet _archiveSet;
             private readonly ResourceUsageCache _resourceUsageCache;
             private readonly Dictionary<ArchiveFileKey, string> _files = new();
-            private readonly Dictionary<ResourceKey, string> _resources = new();
+            private readonly Dictionary<ResourceKey, string> _physicalResources = new();
+            private readonly Dictionary<ResourceKey, MemoryStream> _virtualResources = new();
 
             public FolderModVariation(string folderPath, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache)
                 : base(Path.GetFileName(folderPath), GetDescription(folderPath), GetImage(folderPath))
@@ -212,7 +304,8 @@ namespace SottrModManager.Mod
                 FolderPath = folderPath;
                 _archiveSet = archiveSet;
                 _resourceUsageCache = resourceUsageCache;
-                AddFilesAndResourcesFromFolder(FolderPath, FolderPath, _files, _resources, true);
+                AddFilesAndResourcesFromFolder(FolderPath, FolderPath, _files, _physicalResources, true);
+                AddVirtualResources(_virtualResources, _physicalResources, _files, _archiveSet, _resourceUsageCache);
             }
 
             public string FolderPath
@@ -229,21 +322,25 @@ namespace SottrModManager.Mod
             private static Image GetImage(string folderPath)
             {
                 string filePath = Path.Combine(folderPath, VariationImageFileName);
-                return File.Exists(filePath) ? Image.FromFile(filePath) : null;
+                if (!File.Exists(filePath))
+                    return null;
+
+                using Image image = Image.FromFile(filePath);
+                return new Bitmap(image);
             }
 
-            public override ICollection<ArchiveFileKey> Files => _files.Keys;
+            public override IEnumerable<ArchiveFileKey> Files => _files.Keys;
 
             public override Stream OpenFile(ArchiveFileKey fileKey)
             {
                 return FolderModPackage.OpenFile(_files, fileKey, _archiveSet);
             }
 
-            public override ICollection<ResourceKey> Resources => _resources.Keys;
+            public override IEnumerable<ResourceKey> Resources => _physicalResources.Keys.Concat(_virtualResources.Keys);
 
             public override Stream OpenResource(ResourceKey resourceKey)
             {
-                return FolderModPackage.OpenResource(_resources, resourceKey, _archiveSet, _resourceUsageCache);
+                return FolderModPackage.OpenResource(_physicalResources, _virtualResources, resourceKey, _archiveSet, _resourceUsageCache);
             }
         }
     }

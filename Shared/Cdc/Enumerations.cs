@@ -6,7 +6,7 @@
         Animation = 2,
         PsdRes = 4,
         Texture = 5,
-        Sound = 6,
+        SoundBank = 6,
         Dtp = 7,
         Script = 8,
         ShaderLib = 9,

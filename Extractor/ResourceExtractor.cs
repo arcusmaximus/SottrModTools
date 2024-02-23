@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using SottrModManager.Shared;
@@ -54,14 +55,25 @@ namespace SottrExtractor
             using (Stream resourceStream = _archiveSet.OpenResource(resourceRef))
             using (Stream fileStream = File.Create(filePath))
             {
-                if (resourceRef.Type == ResourceType.Texture)
+                switch (resourceRef.Type)
                 {
-                    CdcTexture texture = CdcTexture.Read(resourceStream);
-                    texture.WriteAsDds(fileStream);
-                }
-                else
-                {
-                    resourceStream.CopyTo(fileStream);
+                    case ResourceType.Texture:
+                        CdcTexture texture = CdcTexture.Read(resourceStream);
+                        texture.WriteAsDds(fileStream);
+                        break;
+
+                    case ResourceType.SoundBank:
+                        byte[] header = new byte[8];
+                        resourceStream.Read(header, 0, 8);
+                        int length = BitConverter.ToInt32(header, 4);
+                        byte[] data = new byte[length];
+                        resourceStream.Read(data, 0, length);
+                        fileStream.Write(data, 0, length);
+                        break;
+
+                    default:
+                        resourceStream.CopyTo(fileStream);
+                        break;
                 }
             }
 

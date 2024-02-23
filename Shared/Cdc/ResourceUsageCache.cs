@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 using SottrModManager.Shared.Util;
 
 namespace SottrModManager.Shared.Cdc
@@ -10,10 +12,11 @@ namespace SottrModManager.Shared.Cdc
     public class ResourceUsageCache
     {
         private const string FileName = "resourceusage.bin";
-        private const int Version = 4;
+        private const int Version = 5;
 
         private readonly ResourceUsageCache _baseCache;
-        private readonly Dictionary<ResourceKey, Dictionary<ArchiveFileKey, int>> _usages = new();
+        private readonly Dictionary<ResourceKey, Dictionary<ArchiveFileKey, int>> _resourceUsages = new();
+        private readonly Dictionary<int, HashSet<WwiseSoundBankItemReference>> _soundUsages = new();
 
         public ResourceUsageCache()
         {
@@ -29,7 +32,7 @@ namespace SottrModManager.Shared.Cdc
             try
             {
                 progress?.Begin("Creating resource usage cache...");
-                AddFiles(archiveSet.Files, archiveSet.GetResourceCollection, progress, cancellationToken);
+                AddFiles(archiveSet.Files, archiveSet, progress, cancellationToken);
             }
             finally
             {
@@ -37,20 +40,20 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public void AddArchives(IEnumerable<Archive> archives)
+        public void AddArchives(IEnumerable<Archive> archives, ArchiveSet archiveSet)
         {
             foreach (Archive archive in archives)
             {
-                AddArchive(archive);
+                AddArchive(archive, archiveSet);
             }
         }
 
-        public void AddArchive(Archive archive)
+        public void AddArchive(Archive archive, ArchiveSet archiveSet)
         {
-            AddFiles(archive.Files, archive.GetResourceCollection, null, CancellationToken.None);
+            AddFiles(archive.Files, archiveSet, null, CancellationToken.None);
         }
 
-        private void AddFiles(IEnumerable<ArchiveFileReference> files, Func<ArchiveFileReference, ResourceCollection> getResourceCollection, ITaskProgress progress, CancellationToken cancellationToken)
+        private void AddFiles(IEnumerable<ArchiveFileReference> files, ArchiveSet archiveSet, ITaskProgress progress, CancellationToken cancellationToken)
         {
             List<ArchiveFileReference> collectionRefs = files.Where(f => CdcHash.Lookup(f.NameHash) != null).ToList();
             int collectionIdx = 0;
@@ -58,27 +61,31 @@ namespace SottrModManager.Shared.Cdc
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                ResourceCollection collection = getResourceCollection(collectionRef);
+                ResourceCollection collection = archiveSet.GetResourceCollection(collectionRef);
                 if (collection != null)
-                    AddResourceCollection(collection);
+                    AddResourceCollection(collection, archiveSet);
 
                 collectionIdx++;
                 progress?.Report((float)collectionIdx / collectionRefs.Count);
             }
         }
 
-        public void AddResourceCollection(ResourceCollection collection)
+        public void AddResourceCollection(ResourceCollection collection, ArchiveSet archiveSet)
         {
-            for (int resourceIdx = 0; resourceIdx < collection.ResourceReferences.Count; resourceIdx++)
+            for (int i = 0; i < collection.ResourceReferences.Count; i++)
             {
-                AddResourceReference(collection, resourceIdx);
+                AddResourceReference(collection, i);
+
+                ResourceReference resourceRef = collection.ResourceReferences[i];
+                if (resourceRef.Type == ResourceType.SoundBank)
+                    AddSoundBank(resourceRef, archiveSet);
             }
         }
 
         public void AddResourceReference(ResourceCollection collection, int resourceIdx)
         {
             ResourceReference resourceRef = collection.ResourceReferences[resourceIdx];
-            Dictionary<ArchiveFileKey, int> usages = _usages.GetOrAdd(resourceRef, () => new());
+            Dictionary<ArchiveFileKey, int> usages = _resourceUsages.GetOrAdd(resourceRef, () => new());
 
             ArchiveFileKey collectionKey = new ArchiveFileKey(collection.NameHash, collection.Locale);
             if (collection.Locale == 0xFFFFFFFFFFFFFFFF && !usages.ContainsKey(collectionKey))
@@ -92,10 +99,29 @@ namespace SottrModManager.Shared.Cdc
             usages[collectionKey] = resourceIdx;
         }
 
-        public IEnumerable<ResourceCollectionItemReference> GetUsages(ArchiveSet archiveSet, ResourceKey resourceKey)
+        private void AddSoundBank(ResourceReference resourceRef, ArchiveSet archiveSet)
         {
-            IEnumerable<ResourceCollectionItemReference> baseUsages = _baseCache?.GetUsages(archiveSet, resourceKey);
-            Dictionary<ArchiveFileKey, int> usages = _usages.GetOrDefault(resourceKey);
+            WwiseSoundBank bank;
+            using (Stream stream = archiveSet.OpenResource(resourceRef))
+            {
+                bank = new WwiseSoundBank(stream);
+            }
+
+            var indexSection = bank.GetSection<WwiseSoundBank.DataIndexSection>();
+            if (indexSection == null)
+                return;
+
+            for (int i = 0; i < indexSection.Entries.Count; i++)
+            {
+                _soundUsages.GetOrAdd(indexSection.Entries[i].SoundId, () => new())
+                            .Add(new WwiseSoundBankItemReference(resourceRef.Id, i));
+            }
+        }
+
+        public IEnumerable<ResourceCollectionItemReference> GetResourceUsages(ArchiveSet archiveSet, ResourceKey resourceKey)
+        {
+            IEnumerable<ResourceCollectionItemReference> baseUsages = _baseCache?.GetResourceUsages(archiveSet, resourceKey);
+            Dictionary<ArchiveFileKey, int> usages = _resourceUsages.GetOrDefault(resourceKey);
 
             if (baseUsages != null)
             {
@@ -126,12 +152,17 @@ namespace SottrModManager.Shared.Cdc
 
         public ResourceReference GetResourceReference(ArchiveSet archiveSet, ResourceKey resourceKey)
         {
-            ResourceCollectionItemReference collectionItem = GetUsages(archiveSet, resourceKey).FirstOrDefault();
+            ResourceCollectionItemReference collectionItem = GetResourceUsages(archiveSet, resourceKey).FirstOrDefault();
             if (collectionItem == null)
                 return null;
 
             ResourceCollection collection = archiveSet.GetResourceCollection(collectionItem.CollectionReference);
             return collection?.ResourceReferences[collectionItem.ResourceIndex];
+        }
+
+        public IEnumerable<WwiseSoundBankItemReference> GetSoundUsages(int soundId)
+        {
+            return _soundUsages.GetOrDefault(soundId) ?? Enumerable.Empty<WwiseSoundBankItemReference>();
         }
 
         public bool Load(string archiveFolderPath)
@@ -150,6 +181,13 @@ namespace SottrModManager.Shared.Cdc
             if (archiveDateHash != GetArchiveDateHash(archiveFolderPath))
                 return false;
 
+            ReadResourceUsages(reader);
+            ReadSoundUsages(reader);
+            return true;
+        }
+
+        private void ReadResourceUsages(BinaryReader reader)
+        {
             int numResources = reader.ReadInt32();
             for (int i = 0; i < numResources; i++)
             {
@@ -164,9 +202,26 @@ namespace SottrModManager.Shared.Cdc
                     int resourceIdx = reader.ReadInt32();
                     usages.Add(new ArchiveFileKey(collectionNameHash, collectionLocale), resourceIdx);
                 }
-                _usages.Add(new ResourceKey(type, id), usages);
+                _resourceUsages.Add(new ResourceKey(type, id), usages);
             }
-            return true;
+        }
+
+        private void ReadSoundUsages(BinaryReader reader)
+        {
+            int numSounds = reader.ReadInt32();
+            for (int i = 0; i < numSounds; i++)
+            {
+                int id = reader.ReadInt32();
+                int numUsages = reader.ReadInt32();
+                HashSet<WwiseSoundBankItemReference> usages = new();
+                for (int j = 0; j < numUsages; j++)
+                {
+                    int soundBankResourceId = reader.ReadInt32();
+                    int index = reader.ReadInt32();
+                    usages.Add(new WwiseSoundBankItemReference(soundBankResourceId, index));
+                }
+                _soundUsages.Add(id, usages);
+            }
         }
 
         public void Save(string archiveFolderPath)
@@ -177,8 +232,14 @@ namespace SottrModManager.Shared.Cdc
             writer.Write(Version);
             writer.Write(GetArchiveDateHash(archiveFolderPath));
 
-            writer.Write(_usages.Count);
-            foreach ((ResourceKey resource, Dictionary<ArchiveFileKey, int> usages) in _usages)
+            WriteResourceUsages(writer);
+            WriteSoundUsages(writer);
+        }
+
+        private void WriteResourceUsages(BinaryWriter writer)
+        {
+            writer.Write(_resourceUsages.Count);
+            foreach ((ResourceKey resource, Dictionary<ArchiveFileKey, int> usages) in _resourceUsages)
             {
                 writer.Write((byte)resource.Type);
                 writer.Write(resource.Id);
@@ -196,6 +257,21 @@ namespace SottrModManager.Shared.Cdc
                         writer.Write(collectionKey.Locale);
                     }
                     writer.Write(resourceIdx);
+                }
+            }
+        }
+
+        private void WriteSoundUsages(BinaryWriter writer)
+        {
+            writer.Write(_soundUsages.Count);
+            foreach ((int soundId, HashSet<WwiseSoundBankItemReference> usages) in _soundUsages)
+            {
+                writer.Write(soundId);
+                writer.Write(usages.Count);
+                foreach (WwiseSoundBankItemReference usage in usages)
+                {
+                    writer.Write(usage.BankResourceId);
+                    writer.Write(usage.Index);
                 }
             }
         }

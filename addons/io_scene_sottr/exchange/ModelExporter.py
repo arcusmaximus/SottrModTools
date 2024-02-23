@@ -382,9 +382,9 @@ class ModelExporter(SlotsBase):
     def unsign_vector(self, tr_vertex: Vertex, attr_name_hash: int) -> None:
         vector = tr_vertex.attributes[attr_name_hash]
         tr_vertex.attributes[attr_name_hash] = (
-                                                   (vector[0] + 1.0) / 2.0,
-                                                   (vector[1] + 1.0) / 2.0,
-                                                   (vector[2] + 1.0) / 2.0,
+                                                   min(max((vector[0] + 1.0) / 2.0, 0.0), 1.0),
+                                                   min(max((vector[1] + 1.0) / 2.0, 0.0), 1.0),
+                                                   min(max((vector[2] + 1.0) / 2.0, 0.0), 1.0),
                                                    0.0
                                                )
     

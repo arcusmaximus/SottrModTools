@@ -34,7 +34,8 @@ namespace SottrModManager.Mod
             using ZipTempExtractor extractor = new ZipTempExtractor(filePath);
             extractor.Extract(progress, cancellationToken);
 
-            return Install(new FolderModPackage(modName, extractor.FolderPath, _archiveSet, _gameResourceUsageCache), progress, cancellationToken);
+            using ModPackage modPackage = new FolderModPackage(modName, extractor.FolderPath, _archiveSet, _gameResourceUsageCache);
+            return Install(modPackage, progress, cancellationToken);
         }
 
         public InstalledMod InstallFromFolder(string folderPath, ITaskProgress progress, CancellationToken cancellationToken)
@@ -44,7 +45,8 @@ namespace SottrModManager.Mod
             if (existingArchive != null)
                 _archiveSet.Delete(existingArchive.Id, _gameResourceUsageCache, progress, cancellationToken);
 
-            return Install(new FolderModPackage(folderPath, _archiveSet, _gameResourceUsageCache), progress, cancellationToken);
+            using ModPackage modPackage = new FolderModPackage(folderPath, _archiveSet, _gameResourceUsageCache);
+            return Install(modPackage, progress, cancellationToken);
         }
 
         public void ReinstallAll(ITaskProgress progress, CancellationToken cancellationToken)
@@ -155,7 +157,7 @@ namespace SottrModManager.Mod
                     modResourceKeys.AddRange(modVariation.Resources);
 
                 Dictionary<ResourceKey, List<ResourceCollectionItemReference>> modResourceUsages =
-                    modResourceKeys.ToDictionary(r => r, r => fullResourceUsageCache.GetUsages(_archiveSet, r).ToList());
+                    modResourceKeys.ToDictionary(r => r, r => fullResourceUsageCache.GetResourceUsages(_archiveSet, r).ToList());
                 modResourceUsages.RemoveAll(p => p.Value.Count == 0);
 
                 Dictionary<ArchiveFileKey, ResourceCollection> modResourceCollections = modResourceUsages.Values
@@ -223,7 +225,7 @@ namespace SottrModManager.Mod
                 if (externalResourceKeys.Count == 0)
                     continue;
 
-                foreach (ResourceCollectionItemReference modResourceUsage in fullResourceUsageCache.GetUsages(_archiveSet, modResourceKey))
+                foreach (ResourceCollectionItemReference modResourceUsage in fullResourceUsageCache.GetResourceUsages(_archiveSet, modResourceKey))
                 {
                     resourceRefsToAdd.GetOrAdd(modResourceUsage.CollectionReference, () => new()).UnionWith(externalResourceKeys);
                 }
@@ -298,7 +300,7 @@ namespace SottrModManager.Mod
                         continue;
 
                     int modCollectionResourceIdx = -1;
-                    ResourceCollectionItemReference existingUsage = _gameResourceUsageCache.GetUsages(_archiveSet, resource).FirstOrDefault();
+                    ResourceCollectionItemReference existingUsage = _gameResourceUsageCache.GetResourceUsages(_archiveSet, resource).FirstOrDefault();
                     if (existingUsage != null)
                     {
                         ResourceCollection sourceCollection = _archiveSet.GetResourceCollection(existingUsage.CollectionReference);
@@ -437,7 +439,10 @@ namespace SottrModManager.Mod
 
         private static bool MightHaveRefDefinitions(ResourceKey resourceKey)
         {
-            if (resourceKey.Type == ResourceType.Texture || resourceKey.Type == ResourceType.ShaderLib || resourceKey.SubType == ResourceSubType.ModelData)
+            if (resourceKey.Type == ResourceType.Texture ||
+                resourceKey.Type == ResourceType.ShaderLib ||
+                resourceKey.SubType == ResourceSubType.ModelData ||
+                resourceKey.Type == ResourceType.SoundBank)
                 return false;
 
             return true;

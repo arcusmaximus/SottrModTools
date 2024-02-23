@@ -1,11 +1,12 @@
 ﻿using SottrModManager.Shared.Cdc;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 
 namespace SottrModManager.Mod
 {
-    internal abstract class ModVariation
+    internal abstract class ModVariation : IDisposable
     {
         public ModVariation(string name, string description, Image image)
         {
@@ -29,14 +30,14 @@ namespace SottrModManager.Mod
             get;
         }
 
-        public abstract ICollection<ArchiveFileKey> Files
+        public abstract IEnumerable<ArchiveFileKey> Files
         {
             get;
         }
 
         public abstract Stream OpenFile(ArchiveFileKey key);
 
-        public abstract ICollection<ResourceKey> Resources
+        public abstract IEnumerable<ResourceKey> Resources
         {
             get;
         }
@@ -46,6 +47,11 @@ namespace SottrModManager.Mod
         public override string ToString()
         {
             return Name;
+        }
+
+        public virtual void Dispose()
+        {
+            Image?.Dispose();
         }
     }
 }

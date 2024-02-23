@@ -66,13 +66,13 @@ namespace SottrModManager.Shared.Cdc
                     Id = archive.Id,
                     SubId = archive.SubId
                 };
-            writer.WriteStruct(ref header);
+            writer.WriteStruct(header);
             writer.Write(Platform);
 
             ArchiveFileEntry fileEntry = new ArchiveFileEntry();
             for (int i = 0; i < maxFiles; i++)
             {
-                writer.WriteStruct(ref fileEntry);
+                writer.WriteStruct(fileEntry);
             }
 
             return archive;
@@ -242,7 +242,7 @@ namespace SottrModManager.Shared.Cdc
                     Offset = offset,
                     UncompressedSize = data.Count
                 };
-            indexWriter.WriteStruct(ref entry);
+            indexWriter.WriteStruct(entry);
 
             ArchiveFileReference fileRef = new ArchiveFileReference(nameHash, locale, Id, SubId, 0, offset, data.Count);
             _fileRefs.Add(fileRef);

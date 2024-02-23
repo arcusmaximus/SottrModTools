@@ -254,7 +254,7 @@ namespace SottrModManager.Shared.Cdc
                     _files[file] = file;
                 }
                 if (archive.ModName != null && startIndex < sortedArchives.Count)
-                    resourceUsageCache.AddArchive(archive);
+                    resourceUsageCache.AddArchive(archive, this);
             }
 
             int numTotalFiles = 0;

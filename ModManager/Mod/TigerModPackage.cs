@@ -44,7 +44,7 @@ namespace SottrModManager.Mod
             get;
         }
 
-        public override ICollection<ArchiveFileKey> Files => _files.Keys;
+        public override IEnumerable<ArchiveFileKey> Files => _files.Keys;
 
         public override Stream OpenFile(ArchiveFileKey fileKey)
         {
@@ -52,7 +52,7 @@ namespace SottrModManager.Mod
             return fileRef != null ? _archivesBySubId[fileRef.ArchiveSubId].OpenFile(fileRef) : null;
         }
 
-        public override ICollection<ResourceKey> Resources => _resources.Keys;
+        public override IEnumerable<ResourceKey> Resources => _resources.Keys;
 
         public override Stream OpenResource(ResourceKey resourceKey)
         {

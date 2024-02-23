@@ -20,7 +20,7 @@ namespace SottrModManager.Shared.Cdc
             public const string Script = ".tr11script";
             public const string ShaderLib = ".tr11shaderlib";
             public const string ShResource = ".tr11shresource";
-            public const string Sound = ".tr11sound";
+            public const string SoundBank = ".bnk";
             public const string Texture = ".dds";
         }
 
@@ -42,7 +42,7 @@ namespace SottrModManager.Shared.Cdc
                 Extensions.Script =>                    (ResourceType.Script, 0),
                 Extensions.ShaderLib =>                 (ResourceType.ShaderLib, 0),
                 Extensions.ShResource =>                (ResourceType.Model, ResourceSubType.ShResource),
-                Extensions.Sound =>                     (ResourceType.Sound, 0),
+                Extensions.SoundBank =>                 (ResourceType.SoundBank, 0),
                 Extensions.Texture =>                   (ResourceType.Texture, ResourceSubType.Texture),
                 _ => (ResourceType.Unknown, 0)
             };
@@ -72,7 +72,7 @@ namespace SottrModManager.Shared.Cdc
                 ResourceType.PsdRes =>                  Extensions.PsdRes,
                 ResourceType.Script =>                  Extensions.Script,
                 ResourceType.ShaderLib =>               Extensions.ShaderLib,
-                ResourceType.Sound =>                   Extensions.Sound,
+                ResourceType.SoundBank =>               Extensions.SoundBank,
                 ResourceType.Texture =>                 Extensions.Texture,
                 _ => ".type" + (int)type
             };
