@@ -93,11 +93,12 @@ class ModelExporter(SlotsBase):
             if properties.blend_shape_normals_source_file_path:
                 blend_shape_normals_source_file_path = properties.blend_shape_normals_source_file_path
         
-        if blend_shape_normals_source_file_path:
-            self.transfer_blend_shape_normals(tr_model_data, blend_shape_normals_source_file_path)
-        
         self.unsign_normals(tr_model_data)
         self.calc_bounding_box(tr_model_data)
+
+        if blend_shape_normals_source_file_path:
+            self.transfer_blend_shape_normals(tr_model_data, blend_shape_normals_source_file_path)
+
         return tr_model_data
     
     def create_mesh(self, tr_model: Model, tr_model_data: ModelData, bl_obj: bpy.types.Object) -> Mesh:
