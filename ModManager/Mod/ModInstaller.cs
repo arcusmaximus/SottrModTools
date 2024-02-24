@@ -340,7 +340,7 @@ namespace SottrModManager.Mod
                     {
                         ResourceReference existingResourceRef = collectionItems[0].ResourceIndex >= 0 ? collectionItems[0].Collection.ResourceReferences[collectionItems[0].ResourceIndex] : null;
                         if (existingResourceRef == null || existingResourceRef.RefDefinitionsSize > 0)
-                            refDefinitionsSize = GetResourceRefDefinitionsSize(modPackage, modResourceKey);
+                            refDefinitionsSize = GetResourceRefDefinitionsSize(modPackage, modVariation, modResourceKey);
                     }
 
                     ArchiveBlobReference newResource = archive.AddResource(modResourceStream);
@@ -376,9 +376,9 @@ namespace SottrModManager.Mod
             }
         }
         
-        private static int GetResourceRefDefinitionsSize(ModPackage modPackage, ResourceKey resourceKey)
+        private static int GetResourceRefDefinitionsSize(ModPackage modPackage, ModVariation modVariation, ResourceKey resourceKey)
         {
-            using Stream stream = modPackage.OpenResource(resourceKey);
+            using Stream stream = modVariation?.OpenResource(resourceKey) ?? modPackage.OpenResource(resourceKey);
             return ResourceRefDefinitions.ReadHeaderAndGetSize(stream);
         }
 
