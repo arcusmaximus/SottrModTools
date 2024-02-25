@@ -20,4 +20,5 @@ class ClothStripPanel(bpy.types.Panel):
         self.layout.prop(props.cloth, "gravity_factor")
         self.layout.prop(props.cloth, "wind_factor")
         self.layout.prop(props.cloth, "stiffness")
+        self.layout.prop(props.cloth, "rigidity")
         self.layout.prop(props.cloth, "dampening")

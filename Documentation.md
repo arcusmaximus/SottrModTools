@@ -346,9 +346,10 @@ all other modifiers so they don't affect the export result.
 Apart from models, the Blender addon also supports importing and exporting animations (.tr11anim files).
 You can animate bone positions/rotations/scales and blendshape values.
 
-To find an animation to modify, you can use a binary template to browse the .tr11animlib files in e.g. tr11_lara.drm.
-These files map animation names to IDs, where the IDs correspond to the names of the .tr11anim files.
-You can also check the appendix at the end of this page to find the IDs of the photo mode poses.
+To find an animation to modify, you can click the Play button in the Extractor to launch the game and log animations
+as they're played. You can also use a binary template to browse the .tr11animlib files in e.g. tr11_lara.drm —
+these files map animation names to IDs, where the IDs correspond to the names of the .tr11anim files.
+Finally, you can check the appendix at the end of this page to find the IDs of the photo mode poses.
 
 Once you've found an animation you'd like to edit or replace, you'll want to do the following:
 
@@ -435,23 +436,28 @@ This tab lets you perform various cloth-related operations:
     close to the strip while not being part of it. After changing this, click *Regenerate*
     to parent the physics bones to this bone.
   
-  * **Gravity factor**
+  * **Gravity Factor**
     
     The gravity multiplier of the selected strip. The default is 1, but you can make it higher or
     lower, including setting it to 0 or even making it negative.
   
-  * **Wind factor**
+  * **Wind Factor**
     
     Determines how strongly the strip is affected by wind.
   
-  * **Stiffness**
+  * **Pose Follow Factor**
     
-    The stiffness of the springs in the strip. With a low stiffness, the springs will flop around
-    a lot, while with a high stiffness, they won't react much to outside movement.
+    How much the cloth masses follow Lara's orientation and pose. With a low factor,
+    they're free to move independently of the rest of the outfit, while with a high factor,
+    they stick close to their original relative position.
   
-  * **Dampening**
+  * **Rigidity**
     
-    How much spring movement is dampened (slowed down over time).
+    Overall spring rigidity. Appears to have little effect ingame.
+  
+  * **Drag**
+    
+    How much the mass movement is damped (slowed down over time).
 
 * **Springs** (Cloth strip edit mode)
   
@@ -490,17 +496,38 @@ shader references and the other textures.
 
 ## Text modding
 
-Apart from resources, you can also mod files. The most useful file to mod right now is pcx64-w\local\locals.bin,
-which contains all the text displayed in the game: menu items, subtitles, outfit names/descriptions,
-and so on.
+You can mod the file pcx64-w\local\locals.bin, which contains all the text displayed in the game:
+menu items, subtitles, outfit names/descriptions, and so on.
 
-As indicated by the file extension, locals.bin is a binary file, but the extractor automatically converts
+As indicated by its extension, it's a binary file, but the extractor automatically converts
 it to JSON for convenience. Once extracted, you can change any text you like. To keep an overview,
 you can also remove any entries you don't intend to modify.
 
 Once you're done making changes, you can pack your (complete or partial) JSON file into your mod,
 making sure to use the same folder structure and file name as produced by the extractor. The mod
 manager will then create a new locals.bin that includes your changes.
+
+
+## Sound modding
+
+SOTTR uses the Wwise sound engine, which has a proprietary file format called .wem
+(for Wwise Encoded Media). To make matters worse, all the files have meaningless names like 619254.wem.
+
+The first step is to identify the file holding the audio you want to mod. You can press the Play
+icon in the extractor for this: it'll launch the game and log all the file paths that it accesses.
+Simply let the game play the audio you want to change, extract the most recently logged .wem files,
+and play the automatically converted .wav files to isolate the one you're after.
+
+Once you have the file name, you can move on to create your own .wav file with that same name.
+
+Next, you need to convert this .wav back to .wem, for which you need the Wwise authoring tools.
+These can be installed for free through the [Audiokinetic Launcher](https://www.audiokinetic.com/download/).
+While it's possible to do the conversion using these tools alone, it's a bit cumbersome,
+so you can use the modding toolset's WwiseSoundConverter.exe instead.
+
+Once you have your .wem file, place it in your mod with the same folder structure as the original,
+and you're done.
+
 
 ## Mod packaging
 

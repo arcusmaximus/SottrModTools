@@ -16,7 +16,7 @@ class BoneConstraintProperties(BlenderPropertyGroup):
     data: Annotated[str, Prop("Data")]
 
 class BoneClothProperties(BlenderPropertyGroup):
-    bounceback_factor: Annotated[float, Prop("Bounceback strength", min = 0, max = 1, subtype = PropSubType.FACTOR)]
+    bounceback_factor: Annotated[float, Prop("Bounceback Strength", min = 0, max = 1, subtype = PropSubType.FACTOR)]
 
 class BoneProperties(BlenderAttachedPropertyGroup[bpy.types.Bone]):
     property_name = "tr11_properties"

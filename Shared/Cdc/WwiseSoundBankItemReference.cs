@@ -1,4 +1,10 @@
 ﻿namespace SottrModManager.Shared.Cdc
 {
-    public record struct WwiseSoundBankItemReference(int BankResourceId, int Index);
+    public enum WwiseSoundBankItemReferenceType
+    {
+        DataIndex,
+        Event
+    }
+
+    public record WwiseSoundBankItemReference(int BankResourceId, WwiseSoundBankItemReferenceType Type, int Index);
 }

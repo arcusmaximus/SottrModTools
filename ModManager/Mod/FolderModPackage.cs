@@ -117,6 +117,9 @@ namespace SottrModManager.Mod
 
                 foreach (WwiseSoundBankItemReference soundUsage in resourceUsageCache.GetSoundUsages(soundId))
                 {
+                    if (soundUsage.Type != WwiseSoundBankItemReferenceType.DataIndex)
+                        continue;
+
                     ResourceKey bankResourceKey = new ResourceKey(ResourceType.SoundBank, soundUsage.BankResourceId);
                     if (physicalResources.ContainsKey(bankResourceKey))
                         continue;

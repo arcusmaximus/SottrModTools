@@ -1,4 +1,5 @@
 ﻿using SottrModManager.Shared.Util;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,14 +11,24 @@ namespace SottrModManager.Shared.Cdc
     public class WwiseSoundBank
     {
         private delegate Section SectionFactory(string tag, int length, BinaryReader reader);
+        private delegate HircEntry HircEntryFactory(byte type, byte[] data);
 
         private static readonly Dictionary<string, SectionFactory> SectionFactories =
             new Dictionary<string, SectionFactory>
             {
-                { "DIDX", (tag, length, reader) => new DataIndexSection(tag, length, reader) }
+                { "DIDX", (tag, length, reader) => new DataIndexSection(tag, length, reader) },
+                { "HIRC", (tag, length, reader) => new HircSection(tag, length, reader) }
             };
 
-        private static SectionFactory DefaultSectionFactory = (tag, length, reader) => new UnknownSection(tag, length, reader);
+        private static readonly SectionFactory DefaultSectionFactory = (tag, length, reader) => new UnknownSection(tag, length, reader);
+
+        private static readonly Dictionary<byte, HircEntryFactory> HircEntryFactories =
+            new Dictionary<byte, HircEntryFactory>
+            {
+                { 2, (type, data) => new HircSoundEntry(type, data) }
+            };
+
+        private static readonly HircEntryFactory DefaultHircEntryFactory = (type, data) => new HircEntry(type, data);
 
         public WwiseSoundBank(Stream stream)
         {
@@ -120,6 +131,72 @@ namespace SottrModManager.Shared.Cdc
                 {
                     writer.WriteStruct(entry);
                 }
+            }
+        }
+
+        public class HircSection : Section
+        {
+            public HircSection(string tag, int length, BinaryReader reader)
+                : base(tag)
+            {
+                int count = reader.ReadInt32();
+                for (int i = 0; i < count; i++)
+                {
+                    byte entryType = reader.ReadByte();
+                    int entryLength = reader.ReadInt32();
+                    byte[] entryData = reader.ReadBytes(entryLength);
+                    HircEntryFactory factory = HircEntryFactories.GetOrDefault(entryType) ?? DefaultHircEntryFactory;
+                    Entries.Add(factory(entryType, entryData));
+                }
+            }
+
+            public List<HircEntry> Entries
+            {
+                get;
+            } = new();
+
+            public override void Write(BinaryWriter writer)
+            {
+                writer.Write(Entries.Count);
+                foreach (HircEntry entry in Entries)
+                {
+                    writer.Write(entry.Type);
+                    writer.Write(entry.Data.Length);
+                    writer.Write(entry.Data);
+                }
+            }
+        }
+
+        public class HircEntry
+        {
+            public HircEntry(byte type, byte[] data)
+            {
+                Type = type;
+                Data = data;
+            }
+
+            public byte Type
+            {
+                get;
+            }
+
+            public byte[] Data
+            {
+                get;
+            }
+        }
+
+        public class HircSoundEntry : HircEntry
+        {
+            public HircSoundEntry(byte type, byte[] data)
+                : base(type, data)
+            {
+            }
+
+            public int SoundId
+            {
+                get { return BitConverter.ToInt32(Data, 9); }
+                set { Array.Copy(BitConverter.GetBytes(value), 0, Data, 9, 4); }
             }
         }
 

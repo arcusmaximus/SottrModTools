@@ -256,7 +256,14 @@ namespace SottrModManager.Shared.Controls.VirtualTreeView
         string lastToolTipText = "";
 
 
+        public void ScrollToBottom()
+        {
+            if (!vertScroll.Visible)
+                return;
 
+            vertScroll.Value = vertScroll.Maximum;
+            ReDrawTree();
+        }
 
 
         private void HintTimer_Tick(object sender, EventArgs e)

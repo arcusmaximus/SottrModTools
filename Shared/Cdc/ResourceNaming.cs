@@ -91,9 +91,14 @@ namespace SottrModManager.Shared.Cdc
             return true;
         }
 
+        public static string GetFileName(ResourceKey resourceKey)
+        {
+            return resourceKey.Id + GetExtension(resourceKey.Type, resourceKey.SubType);
+        }
+
         public static string GetFilePath(ResourceKey resourceKey)
         {
-            return $"{resourceKey.Type}\\{resourceKey.Id}{GetExtension(resourceKey.Type, resourceKey.SubType)}";
+            return $"{resourceKey.Type}\\{GetFileName(resourceKey)}";
         }
     }
 }

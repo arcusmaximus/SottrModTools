@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Windows.Forms;
 using SottrModManager.Shared.Util;
 
 namespace SottrModManager.Shared.Cdc
@@ -12,7 +10,7 @@ namespace SottrModManager.Shared.Cdc
     public class ResourceUsageCache
     {
         private const string FileName = "resourceusage.bin";
-        private const int Version = 5;
+        private const int Version = 6;
 
         private readonly ResourceUsageCache _baseCache;
         private readonly Dictionary<ResourceKey, Dictionary<ArchiveFileKey, int>> _resourceUsages = new();
@@ -107,14 +105,27 @@ namespace SottrModManager.Shared.Cdc
                 bank = new WwiseSoundBank(stream);
             }
 
-            var indexSection = bank.GetSection<WwiseSoundBank.DataIndexSection>();
-            if (indexSection == null)
-                return;
-
-            for (int i = 0; i < indexSection.Entries.Count; i++)
+            var dataIndexSection = bank.GetSection<WwiseSoundBank.DataIndexSection>();
+            if (dataIndexSection != null)
             {
-                _soundUsages.GetOrAdd(indexSection.Entries[i].SoundId, () => new())
-                            .Add(new WwiseSoundBankItemReference(resourceRef.Id, i));
+                for (int i = 0; i < dataIndexSection.Entries.Count; i++)
+                {
+                    _soundUsages.GetOrAdd(dataIndexSection.Entries[i].SoundId, () => new())
+                                .Add(new WwiseSoundBankItemReference(resourceRef.Id, WwiseSoundBankItemReferenceType.DataIndex, i));
+                }
+            }
+
+            var eventsSection = bank.GetSection<WwiseSoundBank.HircSection>();
+            if (eventsSection != null)
+            {
+                for (int i = 0; i < eventsSection.Entries.Count; i++)
+                {
+                    if (eventsSection.Entries[i] is not WwiseSoundBank.HircSoundEntry soundEntry)
+                        continue;
+                    
+                    _soundUsages.GetOrAdd(soundEntry.SoundId, () => new())
+                                .Add(new WwiseSoundBankItemReference(resourceRef.Id, WwiseSoundBankItemReferenceType.Event, i));
+                }
             }
         }
 
@@ -217,8 +228,9 @@ namespace SottrModManager.Shared.Cdc
                 for (int j = 0; j < numUsages; j++)
                 {
                     int soundBankResourceId = reader.ReadInt32();
+                    WwiseSoundBankItemReferenceType type = (WwiseSoundBankItemReferenceType)reader.ReadByte();
                     int index = reader.ReadInt32();
-                    usages.Add(new WwiseSoundBankItemReference(soundBankResourceId, index));
+                    usages.Add(new WwiseSoundBankItemReference(soundBankResourceId, type, index));
                 }
                 _soundUsages.Add(id, usages);
             }
@@ -271,6 +283,7 @@ namespace SottrModManager.Shared.Cdc
                 foreach (WwiseSoundBankItemReference usage in usages)
                 {
                     writer.Write(usage.BankResourceId);
+                    writer.Write((byte)usage.Type);
                     writer.Write(usage.Index);
                 }
             }

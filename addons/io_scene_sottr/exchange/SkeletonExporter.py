@@ -129,7 +129,7 @@ class SkeletonExporter(SlotsBase):
         tr_bone.constraints = []
         for prop_constraint in BoneProperties.get_instance(bl_bone).constraints:
             tr_constraint = BoneConstraint.deserialize(prop_constraint.data)
-            if isinstance(tr_constraint, BoneConstraint3) and Enumerable(tr_constraint.source_blend_shape_ids).any(lambda id: id not in tr_skeleton.global_blend_shape_ids):
+            if isinstance(tr_constraint, BoneConstraint3):
                 continue
 
             tr_bone.constraints.append(tr_constraint)

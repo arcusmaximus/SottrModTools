@@ -23,8 +23,9 @@ class ObjectClothProperties(BlenderPropertyGroup):
     parent_bone_name: Annotated[str, Prop("Parent", search = search_bones)]
     gravity_factor: Annotated[float, Prop("Gravity Factor", min = -2, max = 2, default = 1)]
     wind_factor: Annotated[float, Prop("Wind Factor", min = 0, max = 1, subtype = PropSubType.FACTOR)]
-    stiffness: Annotated[float, Prop("Stiffness", min = 0, max = 1, subtype = PropSubType.FACTOR)]
-    dampening: Annotated[float, Prop("Dampening", min = 0, max = 1, default = 0.2, subtype = PropSubType.FACTOR)]
+    stiffness: Annotated[float, Prop("Pose Follow Factor", min = 0, max = 1, subtype = PropSubType.FACTOR)]
+    rigidity: Annotated[float, Prop("Rigidity", min = 0, max = 1, default = 0.6, subtype = PropSubType.FACTOR)]
+    dampening: Annotated[float, Prop("Drag", min = 0, max = 1, default = 0.2, subtype = PropSubType.FACTOR)]
 
 class ObjectProperties(BlenderAttachedPropertyGroup[bpy.types.Object]):
     property_name = "tr11_properties"

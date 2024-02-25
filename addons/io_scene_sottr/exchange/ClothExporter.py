@@ -146,8 +146,9 @@ class ClothExporter:
         cloth_strip_properties = ObjectProperties.get_instance(bl_cloth_strip_obj).cloth
         tr_cloth_strip.gravity_factor = cloth_strip_properties.gravity_factor
         tr_cloth_strip.wind_factor = cloth_strip_properties.wind_factor
-        tr_cloth_strip.stiffness = cloth_strip_properties.stiffness
-        tr_cloth_strip.dampening = cloth_strip_properties.dampening
+        tr_cloth_strip.pose_follow_factor = cloth_strip_properties.stiffness
+        tr_cloth_strip.rigidity = cloth_strip_properties.rigidity
+        tr_cloth_strip.drag = cloth_strip_properties.dampening
     
     def add_cloth_strip_masses(
         self,

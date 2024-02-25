@@ -61,8 +61,9 @@ class ClothImporter(SlotsBase):
                                                                                .first(lambda b: BlenderNaming.parse_bone_name(b).local_id == tr_cloth_strip.parent_bone_local_id)
         cloth_strip_properties.gravity_factor = tr_cloth_strip.gravity_factor
         cloth_strip_properties.wind_factor = tr_cloth_strip.wind_factor
-        cloth_strip_properties.stiffness = tr_cloth_strip.stiffness
-        cloth_strip_properties.dampening = tr_cloth_strip.dampening
+        cloth_strip_properties.stiffness = tr_cloth_strip.pose_follow_factor
+        cloth_strip_properties.rigidity = tr_cloth_strip.rigidity
+        cloth_strip_properties.dampening = tr_cloth_strip.drag
 
         for i, tr_cloth_mass in enumerate(tr_cloth_strip.masses):
             bl_vertex_group = bl_obj.vertex_groups.new(name = BlenderNaming.make_bone_name(None, None, tr_cloth_mass.local_bone_id))

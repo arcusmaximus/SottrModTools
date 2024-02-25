@@ -60,18 +60,18 @@ class _ClothDtpSpring(CStruct):
 assert(sizeof(_ClothDtpSpring) == 0xC)
 
 class _ClothComponentDtp(CStruct):
-    valid: CByte
+    enabled: CByte
     field_1: CByte
     field_2: CShort
     field_4: CInt
-    default_strip_group_index_set_idx: CInt
-    field_C: CInt
-    field_10: CInt
-    field_14: CInt
-    sort_lower_bound: CFloat
-    sort_upper_bound: CFloat
-    strip_group_index_sets_ref: ResourceReference | None
-    num_strip_group_index_sets: CInt
+    default_config_idx: CInt
+    wet_config_idx: CInt
+    low_cover_config_idx: CInt
+    flammable_config_idx: CInt
+    inner_distance: CFloat
+    outer_distance: CFloat
+    configs_ref: ResourceReference | None
+    num_configs: CInt
     field_2C: CInt
     strip_groups_ref: ResourceReference | None
     num_strip_groups: CInt
@@ -84,30 +84,30 @@ class _ClothComponentDtp(CStruct):
 
 assert(sizeof(_ClothComponentDtp) == 0x60)
 
-class _ClothComponentStripGroupIndexSet(CStruct):
-    count: CInt
+class _ClothComponentConfig(CStruct):
+    num_strip_group_indices: CInt
     field_4: CInt
-    items_ref: ResourceReference | None
+    strip_group_indices_ref: ResourceReference | None
 
-assert(sizeof(_ClothComponentStripGroupIndexSet) == 0x10)
+assert(sizeof(_ClothComponentConfig) == 0x10)
 
 class _ClothComponentStripGroup(CStruct):
     gravity_factor: CFloat
     underground_gravity_reduction: CFloat
-    dampening: CFloat
-    spring_strength_update_iterations: CInt
-    collision_iterations: CInt
-    update_iterations: CInt
-    time_delta_divider: CInt
+    drag: CFloat
+    max_velocity_update_iterations: CInt
+    max_position_update_iterations: CInt
+    relaxation_iterations: CInt
+    sub_step_count: CInt
     wind_factor: CFloat
     flags: CInt
     max_mass_bounce_back_strength: CFloat
-    stiffness: CFloat
+    pose_follow_factor: CFloat
     transform_type: CInt
     spring_stretchiness_default_percentage: CInt
     spring_stretchiness_lower_percentage: CInt
     spring_stretchiness_upper_percentage: CInt
-    spring_length_multiplier_percentage: CInt
+    rigidity_percentage: CInt
     acceleration_divider: CFloat
     time_delta_multiplier: CFloat
     reference_time_delta_multiplier: CFloat
@@ -183,8 +183,9 @@ class ClothStrip(SlotsBase):
     
     gravity_factor: float
     wind_factor: float
-    stiffness: float
-    dampening: float
+    pose_follow_factor: float
+    rigidity: float
+    drag: float
 
     def __init__(self, id: int, parent_bone_local_id: int) -> None:
         self.id = id
@@ -195,8 +196,9 @@ class ClothStrip(SlotsBase):
 
         self.gravity_factor = 1
         self.wind_factor = 1
-        self.stiffness = 0
-        self.dampening = 0
+        self.pose_follow_factor = 0
+        self.rigidity = 0
+        self.drag = 0
 
 class Cloth(SlotsBase):
     definition_id: int
@@ -285,8 +287,9 @@ class Cloth(SlotsBase):
                 
                 strip.gravity_factor = dtp_strip_group.gravity_factor
                 strip.wind_factor = dtp_strip_group.wind_factor
-                strip.stiffness = dtp_strip_group.stiffness
-                strip.dampening = dtp_strip_group.dampening
+                strip.pose_follow_factor = dtp_strip_group.pose_follow_factor
+                strip.rigidity = dtp_strip_group.rigidity_percentage / 100
+                strip.drag = dtp_strip_group.drag
 
                 for mass in strip.masses:
                     mass.bounceback_factor *= dtp_strip_group.max_mass_bounce_back_strength
@@ -381,11 +384,11 @@ class Cloth(SlotsBase):
 
     def write_cloth_component(self, writer: ResourceBuilder) -> None:
         dtp = _ClothComponentDtp()
-        dtp.valid = 1
-        dtp.sort_lower_bound = 5000
-        dtp.sort_upper_bound = 20000
-        dtp.strip_group_index_sets_ref = writer.make_internal_ref()
-        dtp.num_strip_group_index_sets = 1
+        dtp.enabled = 1
+        dtp.inner_distance = 5000
+        dtp.outer_distance = 20000
+        dtp.configs_ref = writer.make_internal_ref()
+        dtp.num_configs = 1
         dtp.strip_groups_ref = writer.make_internal_ref()
         dtp.num_strip_groups = len(self.strips)
         dtp.collision_sets_ref = writer.make_internal_ref()
@@ -394,14 +397,14 @@ class Cloth(SlotsBase):
         writer.write_struct(dtp)
         writer.align(0x10)
 
-        dtp.strip_group_index_sets_ref.offset = writer.position
-        dtp_strip_group_index_set = _ClothComponentStripGroupIndexSet()
-        dtp_strip_group_index_set.count = len(self.strips)
-        dtp_strip_group_index_set.items_ref = writer.make_internal_ref()
+        dtp.configs_ref.offset = writer.position
+        dtp_strip_group_index_set = _ClothComponentConfig()
+        dtp_strip_group_index_set.num_strip_group_indices = len(self.strips)
+        dtp_strip_group_index_set.strip_group_indices_ref = writer.make_internal_ref()
         writer.write_struct(dtp_strip_group_index_set)
         writer.align(0x10)
 
-        dtp_strip_group_index_set.items_ref.offset = writer.position
+        dtp_strip_group_index_set.strip_group_indices_ref.offset = writer.position
         for i in range(len(self.strips)):
             writer.write_uint32(i)
         
@@ -413,19 +416,19 @@ class Cloth(SlotsBase):
             dtp_strip_group = _ClothComponentStripGroup()
             dtp_strip_group.gravity_factor = strip.gravity_factor
             dtp_strip_group.underground_gravity_reduction = 0.5
-            dtp_strip_group.dampening = strip.dampening
-            dtp_strip_group.spring_strength_update_iterations = 3
-            dtp_strip_group.collision_iterations = 2
-            dtp_strip_group.update_iterations = 5
-            dtp_strip_group.time_delta_divider = 2
+            dtp_strip_group.drag = strip.drag
+            dtp_strip_group.max_velocity_update_iterations = 3
+            dtp_strip_group.max_position_update_iterations = 2
+            dtp_strip_group.relaxation_iterations = 5
+            dtp_strip_group.sub_step_count = 2
             dtp_strip_group.wind_factor = strip.wind_factor
             dtp_strip_group.max_mass_bounce_back_strength = 1.0
-            dtp_strip_group.stiffness = strip.stiffness
+            dtp_strip_group.pose_follow_factor = strip.pose_follow_factor
             dtp_strip_group.transform_type = 0
             dtp_strip_group.spring_stretchiness_default_percentage = 0
             dtp_strip_group.spring_stretchiness_lower_percentage = 0
             dtp_strip_group.spring_stretchiness_upper_percentage = 100
-            dtp_strip_group.spring_length_multiplier_percentage = 60
+            dtp_strip_group.rigidity_percentage = int(strip.rigidity * 100)
             dtp_strip_group.acceleration_divider = 20
             dtp_strip_group.time_delta_multiplier = 1.0
             dtp_strip_group.reference_time_delta_multiplier = 8.0
