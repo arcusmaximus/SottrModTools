@@ -27,7 +27,7 @@ namespace SoundConverter
         private void MainForm_Load(object sender, EventArgs e)
         {
             _wwiseConsolePath = ConfigurationManager.AppSettings["WwiseConsole"];
-            _txtOutputWemFolder.Text = ConfigurationManager.AppSettings["OutputFolder"];
+            _txtOutputFolder.Text = ConfigurationManager.AppSettings["OutputFolder"];
 
             if (!string.IsNullOrEmpty(_wwiseConsolePath) && File.Exists(_wwiseConsolePath))
                 return;
@@ -55,7 +55,7 @@ namespace SoundConverter
         {
             string[] wavFilePaths = GetDroppedFilesIfAllowed(e);
             if (wavFilePaths != null)
-                _lstWavFiles.Items.AddRange(wavFilePaths);
+                _lstInputFiles.Items.AddRange(wavFilePaths);
         }
 
         private string[] GetDroppedFilesIfAllowed(DragEventArgs e)
@@ -68,7 +68,7 @@ namespace SoundConverter
 
             foreach (string path in paths)
             {
-                if (!File.Exists(path) || Path.GetExtension(path) != ".wav")
+                if (Path.GetExtension(path) != ".wav" || !File.Exists(path))
                     return null;
             }
             return paths;
@@ -79,20 +79,20 @@ namespace SoundConverter
             if (_dlgSelectInputFiles.ShowDialog() != DialogResult.OK)
                 return;
 
-            _lstWavFiles.Items.AddRange(_dlgSelectInputFiles.FileNames);
+            _lstInputFiles.Items.AddRange(_dlgSelectInputFiles.FileNames);
         }
 
         private void _btnRemoveSelectedWavs_Click(object sender, EventArgs e)
         {
-            foreach (int index in _lstWavFiles.SelectedIndices.Cast<int>().OrderByDescending(i => i).ToList())
+            foreach (int index in _lstInputFiles.SelectedIndices.Cast<int>().OrderByDescending(i => i).ToList())
             {
-                _lstWavFiles.Items.RemoveAt(index);
+                _lstInputFiles.Items.RemoveAt(index);
             }
         }
 
         private void _btnClearWavFiles_Click(object sender, EventArgs e)
         {
-            _lstWavFiles.Items.Clear();
+            _lstInputFiles.Items.Clear();
         }
 
         private void _btnBrowseWemFolder_Click(object sender, EventArgs e)
@@ -100,24 +100,24 @@ namespace SoundConverter
             if (_dlgSelectOutputFolder.ShowDialog() != DialogResult.OK)
                 return;
 
-            _txtOutputWemFolder.Text = _dlgSelectOutputFolder.SelectedPath;
+            _txtOutputFolder.Text = _dlgSelectOutputFolder.SelectedPath;
         }
 
         private async void _btnConvert_Click(object sender, EventArgs e)
         {
-            if (_lstWavFiles.Items.Count == 0)
+            if (_lstInputFiles.Items.Count == 0)
             {
                 MessageBox.Show("Please select files to convert.", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(_txtOutputWemFolder.Text))
+            if (string.IsNullOrWhiteSpace(_txtOutputFolder.Text))
             {
                 MessageBox.Show("Please specify an output folder.", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            if (!Directory.Exists(_txtOutputWemFolder.Text))
+            if (!Directory.Exists(_txtOutputFolder.Text))
             {
                 MessageBox.Show("The specified output folder does not exist.", "", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
@@ -127,12 +127,12 @@ namespace SoundConverter
 
             string projectFolderPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "TempWwiseProject");
             string projectFilePath = Path.Combine(projectFolderPath, Path.GetFileName(projectFolderPath) + ".wproj");
-            string outputFolderPath = _txtOutputWemFolder.Text;
+            string outputFolderPath = _txtOutputFolder.Text;
 
             try
             {
                 _progressBar.Value = 0;
-                _progressBar.Maximum = _lstWavFiles.Items.Count;
+                _progressBar.Maximum = _lstInputFiles.Items.Count;
 
                 SetWorking(true);
 
@@ -140,12 +140,12 @@ namespace SoundConverter
                     Directory.Delete(projectFolderPath, true);
 
                 CreateWwiseProject(projectFilePath);
-                foreach (string wavFilePath in _lstWavFiles.Items)
+                foreach (string inputFilePath in _lstInputFiles.Items)
                 {
                     if (_cancellationTokenSource.Token.IsCancellationRequested)
                         break;
 
-                    await Task.Run(() => ConvertFile(projectFilePath, wavFilePath, outputFolderPath));
+                    await Task.Run(() => ConvertWavToWem(inputFilePath, outputFolderPath, projectFilePath));
                     _progressBar.PerformStep();
                 }
 
@@ -179,7 +179,7 @@ namespace SoundConverter
             process.WaitForExit();
         }
 
-        private void ConvertFile(string projectFilePath, string wavFilePath, string outputFolderPath)
+        private void ConvertWavToWem(string wavFilePath, string outputFolderPath, string projectFilePath)
         {
             string projectFolderPath = Path.GetDirectoryName(projectFilePath);
             string sourcesFilePath = Path.Combine(projectFolderPath, "sources.wsources");
@@ -239,7 +239,7 @@ namespace SoundConverter
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-            config.AppSettings.Settings["OutputFolder"].Value = _txtOutputWemFolder.Text;
+            config.AppSettings.Settings["OutputFolder"].Value = _txtOutputFolder.Text;
             config.Save(ConfigurationSaveMode.Modified);
         }
     }

@@ -347,8 +347,8 @@ Apart from models, the Blender addon also supports importing and exporting anima
 You can animate bone positions/rotations/scales and blendshape values.
 
 To find an animation to modify, you can click the Play button in the Extractor to launch the game and log animations
-as they're played. You can also use a binary template to browse the .tr11animlib files in e.g. tr11_lara.drm —
-these files map animation names to IDs, where the IDs correspond to the names of the .tr11anim files.
+as they're played (Steam version only). You can also use a binary template to browse the .tr11animlib files in
+e.g. tr11_lara.drm — these files map animation names to IDs, where the IDs correspond to the names of the .tr11anim files.
 Finally, you can check the appendix at the end of this page to find the IDs of the photo mode poses.
 
 Once you've found an animation you'd like to edit or replace, you'll want to do the following:
@@ -514,9 +514,9 @@ SOTTR uses the Wwise sound engine, which has a proprietary file format called .w
 (for Wwise Encoded Media). To make matters worse, all the files have meaningless names like 619254.wem.
 
 The first step is to identify the file holding the audio you want to mod. You can press the Play
-icon in the extractor for this: it'll launch the game and log all the file paths that it accesses.
-Simply let the game play the audio you want to change, extract the most recently logged .wem files,
-and play the automatically converted .wav files to isolate the one you're after.
+icon in the extractor for this: it'll launch the game and log all the file paths that it accesses
+(Steam version only). Simply let the game play the audio you want to change, extract the most
+recently logged .wem files, and play the automatically converted .wav files to isolate the one you're after.
 
 Once you have the file name, you can move on to create your own .wav file with that same name.
 
@@ -525,8 +525,8 @@ These can be installed for free through the [Audiokinetic Launcher](https://www.
 While it's possible to do the conversion using these tools alone, it's a bit cumbersome,
 so you can use the modding toolset's WwiseSoundConverter.exe instead.
 
-Once you have your .wem file, place it in your mod with the same folder structure as the original,
-and you're done.
+Once you have your .wem file, place it in your mod with the same folder structure as the original
+(mod\\pcx64-w\\wwise\\...), and you're done.
 
 
 ## Mod packaging

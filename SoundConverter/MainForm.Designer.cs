@@ -29,13 +29,13 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            this._lstWavFiles = new System.Windows.Forms.ListBox();
+            this._lstInputFiles = new System.Windows.Forms.ListBox();
             this._lblWavFiles = new System.Windows.Forms.Label();
             this._lblOutputFolder = new System.Windows.Forms.Label();
             this._btnAddWavFile = new System.Windows.Forms.Button();
             this._btnRemoveSelectedWavs = new System.Windows.Forms.Button();
             this._btnClearWavFiles = new System.Windows.Forms.Button();
-            this._txtOutputWemFolder = new System.Windows.Forms.TextBox();
+            this._txtOutputFolder = new System.Windows.Forms.TextBox();
             this._btnBrowseWemFolder = new System.Windows.Forms.Button();
             this._btnConvert = new System.Windows.Forms.Button();
             this._progressBar = new System.Windows.Forms.ProgressBar();
@@ -47,22 +47,22 @@
             this._pnlOptions.SuspendLayout();
             this.SuspendLayout();
             // 
-            // _lstWavFiles
+            // _lstInputFiles
             // 
-            this._lstWavFiles.AllowDrop = true;
-            this._lstWavFiles.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this._lstInputFiles.AllowDrop = true;
+            this._lstInputFiles.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this._lstWavFiles.FormattingEnabled = true;
-            this._lstWavFiles.IntegralHeight = false;
-            this._lstWavFiles.ItemHeight = 12;
-            this._lstWavFiles.Location = new System.Drawing.Point(8, 27);
-            this._lstWavFiles.Name = "_lstWavFiles";
-            this._lstWavFiles.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
-            this._lstWavFiles.Size = new System.Drawing.Size(660, 223);
-            this._lstWavFiles.TabIndex = 0;
-            this._lstWavFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this._lstWavFiles_DragDrop);
-            this._lstWavFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this._lstWavFiles_DragEnter);
+            this._lstInputFiles.FormattingEnabled = true;
+            this._lstInputFiles.IntegralHeight = false;
+            this._lstInputFiles.ItemHeight = 12;
+            this._lstInputFiles.Location = new System.Drawing.Point(8, 27);
+            this._lstInputFiles.Name = "_lstInputFiles";
+            this._lstInputFiles.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
+            this._lstInputFiles.Size = new System.Drawing.Size(660, 223);
+            this._lstInputFiles.TabIndex = 0;
+            this._lstInputFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this._lstWavFiles_DragDrop);
+            this._lstInputFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this._lstWavFiles_DragEnter);
             // 
             // _lblWavFiles
             // 
@@ -79,9 +79,9 @@
             this._lblOutputFolder.AutoSize = true;
             this._lblOutputFolder.Location = new System.Drawing.Point(6, 320);
             this._lblOutputFolder.Name = "_lblOutputFolder";
-            this._lblOutputFolder.Size = new System.Drawing.Size(103, 12);
+            this._lblOutputFolder.Size = new System.Drawing.Size(147, 12);
             this._lblOutputFolder.TabIndex = 2;
-            this._lblOutputFolder.Text = "Output .wem folder:";
+            this._lblOutputFolder.Text = "Output folder for .wem files:";
             // 
             // _btnAddWavFile
             // 
@@ -116,21 +116,21 @@
             this._btnClearWavFiles.UseVisualStyleBackColor = true;
             this._btnClearWavFiles.Click += new System.EventHandler(this._btnClearWavFiles_Click);
             // 
-            // _txtOutputWemFolder
+            // _txtOutputFolder
             // 
-            this._txtOutputWemFolder.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this._txtOutputFolder.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this._txtOutputWemFolder.Location = new System.Drawing.Point(8, 335);
-            this._txtOutputWemFolder.Name = "_txtOutputWemFolder";
-            this._txtOutputWemFolder.Size = new System.Drawing.Size(585, 19);
-            this._txtOutputWemFolder.TabIndex = 4;
+            this._txtOutputFolder.Location = new System.Drawing.Point(8, 335);
+            this._txtOutputFolder.Name = "_txtOutputFolder";
+            this._txtOutputFolder.Size = new System.Drawing.Size(613, 19);
+            this._txtOutputFolder.TabIndex = 4;
             // 
             // _btnBrowseWemFolder
             // 
             this._btnBrowseWemFolder.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this._btnBrowseWemFolder.Location = new System.Drawing.Point(599, 326);
+            this._btnBrowseWemFolder.Location = new System.Drawing.Point(627, 334);
             this._btnBrowseWemFolder.Name = "_btnBrowseWemFolder";
-            this._btnBrowseWemFolder.Size = new System.Drawing.Size(69, 37);
+            this._btnBrowseWemFolder.Size = new System.Drawing.Size(41, 21);
             this._btnBrowseWemFolder.TabIndex = 5;
             this._btnBrowseWemFolder.Text = "...";
             this._btnBrowseWemFolder.UseVisualStyleBackColor = true;
@@ -176,13 +176,13 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this._pnlOptions.Controls.Add(this._btnBrowseWemFolder);
-            this._pnlOptions.Controls.Add(this._txtOutputWemFolder);
+            this._pnlOptions.Controls.Add(this._txtOutputFolder);
             this._pnlOptions.Controls.Add(this._btnClearWavFiles);
             this._pnlOptions.Controls.Add(this._btnRemoveSelectedWavs);
             this._pnlOptions.Controls.Add(this._btnAddWavFile);
             this._pnlOptions.Controls.Add(this._lblOutputFolder);
             this._pnlOptions.Controls.Add(this._lblWavFiles);
-            this._pnlOptions.Controls.Add(this._lstWavFiles);
+            this._pnlOptions.Controls.Add(this._lstInputFiles);
             this._pnlOptions.Location = new System.Drawing.Point(12, 6);
             this._pnlOptions.Name = "_pnlOptions";
             this._pnlOptions.Size = new System.Drawing.Size(670, 379);
@@ -190,7 +190,7 @@
             // 
             // _dlgSelectInputFiles
             // 
-            this._dlgSelectInputFiles.Filter = "Wav files|*.wav";
+            this._dlgSelectInputFiles.Filter = "Wave files|*.wav";
             this._dlgSelectInputFiles.Multiselect = true;
             // 
             // _dlgSelectWwiseConsole
@@ -220,13 +220,13 @@
 
         #endregion
 
-        private System.Windows.Forms.ListBox _lstWavFiles;
+        private System.Windows.Forms.ListBox _lstInputFiles;
         private System.Windows.Forms.Label _lblWavFiles;
         private System.Windows.Forms.Label _lblOutputFolder;
         private System.Windows.Forms.Button _btnAddWavFile;
         private System.Windows.Forms.Button _btnRemoveSelectedWavs;
         private System.Windows.Forms.Button _btnClearWavFiles;
-        private System.Windows.Forms.TextBox _txtOutputWemFolder;
+        private System.Windows.Forms.TextBox _txtOutputFolder;
         private System.Windows.Forms.Button _btnBrowseWemFolder;
         private System.Windows.Forms.Button _btnConvert;
         private System.Windows.Forms.ProgressBar _progressBar;
