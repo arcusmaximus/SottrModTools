@@ -277,7 +277,8 @@ class Cloth(SlotsBase):
             strip_group_collisions: list[CollisionKey] = []
             reader.seek(dtp_strip_group.collision_set_indices_ref)
             for collision_set_idx in reader.read_uint32_list(dtp_strip_group.num_collision_set_indices):
-                strip_group_collisions.extend(collision_sets[collision_set_idx])
+                if collision_set_idx < len(collision_sets):
+                    strip_group_collisions.extend(collision_sets[collision_set_idx])
             
             reader.seek(dtp_strip_group.strip_ids_ref)
             for strip_id in reader.read_uint16_list(dtp_strip_group.num_strip_ids):
