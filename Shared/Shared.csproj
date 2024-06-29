@@ -72,6 +72,7 @@
     <Compile Include="Cdc\ResourceRefDefinitions.cs" />
     <Compile Include="Cdc\ResourceReference.cs" />
     <Compile Include="Cdc\ResourceUsageCache.cs" />
+    <Compile Include="Cdc\WwiseSound.cs" />
     <Compile Include="Cdc\WwiseSoundBankItemReference.cs" />
     <Compile Include="Cdc\SpecMasksToc.cs" />
     <Compile Include="Cdc\WwiseSoundBank.cs" />

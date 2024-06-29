@@ -64,7 +64,9 @@ class ModelData(SlotsBase):
         self.header.num_meshes = len(self.meshes)
         self.header.num_mesh_parts = Enumerable(self.meshes).sum(lambda m: len(m.parts))
         self.header.num_indexes = Enumerable(self.meshes).select_many(lambda m: m.parts).sum(lambda p: len(p.indices))
-        self.header.initialized = 1
+        
+        if self.header.num_bone_mappings > 0:
+            self.header.is_skinned = 1
 
         writer.write_struct(self.header)
 

@@ -17,6 +17,7 @@ namespace SottrModManager.Mod
 
         private readonly string _folderPath;
         private readonly ArchiveSet _archiveSet;
+        private readonly Dictionary<ulong, ulong?> _gameFileLocales = new();
         private readonly ResourceUsageCache _resourceUsageCache;
         private readonly Dictionary<ArchiveFileKey, string> _files = new();
         private readonly Dictionary<ResourceKey, string> _physicalResources = new();
@@ -33,6 +34,12 @@ namespace SottrModManager.Mod
             _folderPath = folderPath;
             _archiveSet = archiveSet;
             _resourceUsageCache = resourceUsageCache;
+            foreach (ArchiveFileKey fileKey in archiveSet.Files)
+            {
+                if (fileKey.Locale != 0xFFFFFFFFFFFFFFFF)
+                    _gameFileLocales[fileKey.NameHash] = !_gameFileLocales.ContainsKey(fileKey.NameHash) ? fileKey.Locale : null;
+            }
+
             ScanFolder(_folderPath, _folderPath);
             AddVirtualResources(_virtualResources, _physicalResources, _files, _archiveSet, _resourceUsageCache);
         }
@@ -58,14 +65,14 @@ namespace SottrModManager.Mod
 
         private void ScanFolder(string baseFolderPath, string folderPath)
         {
-            AddFilesAndResourcesFromFolder(baseFolderPath, folderPath, _files, _physicalResources, false);
+            AddFilesAndResourcesFromFolder(baseFolderPath, folderPath, _files, _physicalResources, false, _gameFileLocales);
 
             foreach (string subFolderPath in Directory.EnumerateDirectories(folderPath))
             {
                 if (File.Exists(Path.Combine(subFolderPath, VariationDescriptionFileName)) ||
                     File.Exists(Path.Combine(subFolderPath, VariationImageFileName)))
                 {
-                    Variations.Add(new FolderModVariation(subFolderPath, _archiveSet, _resourceUsageCache));
+                    Variations.Add(new FolderModVariation(subFolderPath, _archiveSet, _resourceUsageCache, _gameFileLocales));
                 }
                 else
                 {
@@ -74,7 +81,13 @@ namespace SottrModManager.Mod
             }
         }
 
-        private static void AddFilesAndResourcesFromFolder(string baseFolderPath, string folderPath, Dictionary<ArchiveFileKey, string> files, Dictionary<ResourceKey, string> resources, bool recursive)
+        private static void AddFilesAndResourcesFromFolder(
+            string baseFolderPath,
+            string folderPath,
+            Dictionary<ArchiveFileKey, string> files,
+            Dictionary<ResourceKey, string> resources,
+            bool recursive,
+            Dictionary<ulong, ulong?> gameFileLocales)
         {
             if (!baseFolderPath.EndsWith("\\"))
                 baseFolderPath += "\\";
@@ -88,6 +101,10 @@ namespace SottrModManager.Mod
                     continue;
                 }
 
+                string extension = Path.GetExtension(filePath);
+                if (extension is ".txt" or ".png")
+                    continue;
+
                 string filePathToHash = filePath.Substring(baseFolderPath.Length);
                 ulong locale = 0xFFFFFFFFFFFFFFFF;
                 if (Enum.TryParse(Path.GetFileNameWithoutExtension(filePath), true, out LocaleLanguage localeLang) && Enum.IsDefined(typeof(LocaleLanguage), localeLang))
@@ -96,9 +113,9 @@ namespace SottrModManager.Mod
                     locale = 0xFFFFFFFFFFFF0400 | (ulong)localeLang;
                 }
 
-                string extension = Path.GetExtension(filePath);
-                if (extension != ".txt" && extension != ".png")
-                    files[new ArchiveFileKey(CdcHash.Calculate(filePathToHash), locale)] = filePath;
+                ulong nameHash = CdcHash.Calculate(filePathToHash);
+                locale = gameFileLocales.GetOrDefault(nameHash) ?? locale;
+                files[new ArchiveFileKey(nameHash, locale)] = filePath;
             }
         }
 
@@ -110,10 +127,14 @@ namespace SottrModManager.Mod
             ResourceUsageCache resourceUsageCache)
         {
             Dictionary<ResourceKey, WwiseSoundBank> virtualSoundBanks = new();
-            foreach (string wemFilePath in files.Values.Where(p => Path.GetExtension(p) == ".wem"))
+            foreach ((ArchiveFileKey wemFileKey, string wemFilePath) in files.Where(p => Path.GetExtension(p.Value) == ".wem"))
             {
                 if (!int.TryParse(Path.GetFileNameWithoutExtension(wemFilePath), out int soundId))
                     continue;
+
+                ArchiveFileReference fileRef = archiveSet.GetFileReference(wemFileKey);
+                if (fileRef == null)
+                    throw new Exception($"{Path.GetFileName(wemFilePath)} in the mod was not found in the game's original files; incorrect subfolder?");
 
                 foreach (WwiseSoundBankItemReference soundUsage in resourceUsageCache.GetSoundUsages(soundId))
                 {
@@ -138,13 +159,17 @@ namespace SottrModManager.Mod
                         virtualSoundBanks.Add(bankResourceKey, bank);
                     }
 
-                    var indexSection = bank.GetSection<WwiseSoundBank.DataIndexSection>();
-                    if (indexSection == null)
-                        continue;
-
-                    var indexEntry = indexSection.Entries[soundUsage.Index];
-                    indexEntry.Length = 0;
-                    indexSection.Entries[soundUsage.Index] = indexEntry;
+                    if (bank.EmbeddedSounds.GetOrDefault(soundId).Count == fileRef.Length)
+                    {
+                        using (Stream stream = OpenFile(files, wemFileKey, archiveSet))
+                        {
+                            bank.EmbeddedSounds[soundId] = stream.GetContent();
+                        }
+                    }
+                    else
+                    {
+                        bank.EmbeddedSounds.Remove(soundId);
+                    }
                 }
             }
 
@@ -163,21 +188,72 @@ namespace SottrModManager.Mod
             if (filePath == null)
                 return null;
 
-            Stream stream = File.OpenRead(filePath);
-            if (filePath.EndsWith(".json") && Path.GetFileName(Path.GetDirectoryName(filePath)) == "locals.bin")
+            Stream fileStream = File.OpenRead(filePath);
+            Stream resultStream = null;
+
+            try
             {
-                Stream localsStream;
-                try
-                {
-                    localsStream = GetPatchedLocalsBin(stream, fileKey, archiveSet);
-                }
-                finally
-                {
-                    stream.Close();
-                }
-                stream = localsStream;
+                if (filePath.EndsWith(".json") && Path.GetFileName(Path.GetDirectoryName(filePath)) == "locals.bin")
+                    resultStream = GetPatchedLocalsBin(fileStream, fileKey, archiveSet);
+                else if (filePath.EndsWith(".wem"))
+                    resultStream = GetPatchedSound(fileStream, fileKey, archiveSet);
+                else
+                    resultStream = fileStream;
             }
-            return stream;
+            finally
+            {
+                if (resultStream != fileStream)
+                    fileStream.Close();
+            }
+
+            return resultStream;
+        }
+
+        private static Stream GetPatchedSound(Stream modSoundFileStream, ArchiveFileKey fileKey, ArchiveSet archiveSet)
+        {
+            if (modSoundFileStream.Length == 0)
+                return modSoundFileStream;
+
+            WwiseSound modSound = new WwiseSound(modSoundFileStream);
+            modSoundFileStream.Position = 0;
+
+            if (modSound.Chunks.OfType<WwiseSound.CueChunk>().Any())
+                return modSoundFileStream;
+
+            ArchiveFileReference fileRef = archiveSet.GetFileReference(fileKey);
+            if (fileRef == null)
+                return modSoundFileStream;
+
+            WwiseSound origSound;
+            using (Stream origSoundStream = archiveSet.OpenFile(fileRef))
+            {
+                origSound = new WwiseSound(origSoundStream);
+            }
+
+            int modSampleFreq = modSound.Format.SampleFrequency;
+            int origSampleFreq = origSound.Format.SampleFrequency;
+
+            int chunkInsertIdx = modSound.Chunks.IndexOf(c => c is WwiseSound.FormatChunk) + 1;
+            foreach (WwiseSound.Chunk origChunk in origSound.Chunks)
+            {
+                if (origChunk is WwiseSound.CueChunk origCueChunk && modSampleFreq != origSampleFreq)
+                {
+                    for (int i = 0; i < origCueChunk.Points.Count; i++)
+                    {
+                        WwiseSound.CuePoint point = origCueChunk.Points[i];
+                        point.Position = (int)((long)point.Position * modSampleFreq / origSampleFreq);
+                        origCueChunk.Points[i] = point;
+                    }
+                }
+                
+                if (origChunk is WwiseSound.CueChunk or WwiseSound.ListChunk)
+                    modSound.Chunks.Insert(chunkInsertIdx++, origChunk);
+            }
+
+            MemoryStream modSoundMemStream = new();
+            modSound.Write(modSoundMemStream);
+            modSoundMemStream.Position = 0;
+            return modSoundMemStream;
         }
 
         private static Stream GetPatchedLocalsBin(Stream jsonStream, ArchiveFileKey fileKey, ArchiveSet archiveSet)
@@ -301,13 +377,13 @@ namespace SottrModManager.Mod
             private readonly Dictionary<ResourceKey, string> _physicalResources = new();
             private readonly Dictionary<ResourceKey, MemoryStream> _virtualResources = new();
 
-            public FolderModVariation(string folderPath, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache)
+            public FolderModVariation(string folderPath, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache, Dictionary<ulong, ulong?> gameFileLocales)
                 : base(Path.GetFileName(folderPath), GetDescription(folderPath), GetImage(folderPath))
             {
                 FolderPath = folderPath;
                 _archiveSet = archiveSet;
                 _resourceUsageCache = resourceUsageCache;
-                AddFilesAndResourcesFromFolder(FolderPath, FolderPath, _files, _physicalResources, true);
+                AddFilesAndResourcesFromFolder(FolderPath, FolderPath, _files, _physicalResources, true, gameFileLocales);
                 AddVirtualResources(_virtualResources, _physicalResources, _files, _archiveSet, _resourceUsageCache);
             }
 

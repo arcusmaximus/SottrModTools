@@ -246,9 +246,7 @@ class ModelImporter(SlotsBase):
             polygon_idx_base += num_polygons
     
     def create_vertex_groups(self, bl_obj: bpy.types.Object, tr_mesh: Mesh, tr_skeleton: Skeleton | None) -> None:
-        if tr_skeleton is None or \
-           not tr_mesh.vertex_format.has_attribute(Hashes.skin_indices) or \
-           not tr_mesh.vertex_format.has_attribute(Hashes.skin_weights):
+        if tr_skeleton is None or not tr_mesh.vertex_format.has_attribute(Hashes.skin_indices):
             return
         
         has_8_weights_per_vertex = self.get_consistent_flag(tr_mesh.parts, lambda p: p.has_8_weights_per_vertex, "has_8_weights_per_vertex")
@@ -270,11 +268,11 @@ class ModelImporter(SlotsBase):
 
         for vertex_idx, vertex in enumerate(tr_mesh.vertices):
             bone_indices = vertex.attributes[Hashes.skin_indices]
-            weights      = vertex.attributes[Hashes.skin_weights]
+            weights      = vertex.attributes.get(Hashes.skin_weights)
             for i in range(4):
                 for j in range(has_8_weights_per_vertex and 2 or 1):
                     mesh_bone_index = (int(bone_indices[i]) >> (j * bone_index_shift)) & bone_index_mask
-                    weight = ((int(weights[i]) >> (j * 8)) & 0xFF) / 255.0
+                    weight = ((int(weights[i]) >> (j * 8)) & 0xFF) / 255.0 if weights is not None else 1.0
                     if weight > 0:
                         bl_vertex_groups[mesh_bone_index].add([vertex_idx], weight, "ADD")
     

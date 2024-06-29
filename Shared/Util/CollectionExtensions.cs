@@ -2,12 +2,24 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Windows.Forms;
 
 namespace SottrModManager.Shared.Util
 {
     public static class CollectionExtensions
     {
+        public static int IndexOf<T>(this IEnumerable<T> items, Func<T, bool> predicate)
+        {
+            int index = 0;
+            foreach (T item in items)
+            {
+                if (predicate(item))
+                    return index;
+
+                index++;
+            }
+            return -1;
+        }
+
         public static int LastIndexOf<T>(this IEnumerable<T> items, Func<T, bool> predicate)
         {
             int lastIndex = -1;

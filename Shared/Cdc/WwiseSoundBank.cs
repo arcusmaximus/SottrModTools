@@ -10,17 +10,19 @@ namespace SottrModManager.Shared.Cdc
 {
     public class WwiseSoundBank
     {
-        private delegate Section SectionFactory(string tag, int length, BinaryReader reader);
+        private delegate Section SectionFactory(WwiseSoundBank bank, string tag, BinaryReader reader, int length);
         private delegate HircEntry HircEntryFactory(byte type, byte[] data);
 
         private static readonly Dictionary<string, SectionFactory> SectionFactories =
             new Dictionary<string, SectionFactory>
             {
-                { "DIDX", (tag, length, reader) => new DataIndexSection(tag, length, reader) },
-                { "HIRC", (tag, length, reader) => new HircSection(tag, length, reader) }
+                { "BKHD", (bank, tag, reader, length) => new HeaderSection(bank, tag, reader, length) },
+                { "DIDX", (bank, tag, reader, length) => new DataIndexSection(tag, reader, length) },
+                { "DATA", (bank, tag, reader, length) => new DataSection(bank, tag, reader, length) },
+                { "HIRC", (bank, tag, reader, length) => new HircSection(tag, reader) }
             };
 
-        private static readonly SectionFactory DefaultSectionFactory = (tag, length, reader) => new UnknownSection(tag, length, reader);
+        private static readonly SectionFactory DefaultSectionFactory = (bank, tag, reader, length) => new UnknownSection(tag, reader, length);
 
         private static readonly Dictionary<byte, HircEntryFactory> HircEntryFactories =
             new Dictionary<byte, HircEntryFactory>
@@ -29,6 +31,8 @@ namespace SottrModManager.Shared.Cdc
             };
 
         private static readonly HircEntryFactory DefaultHircEntryFactory = (type, data) => new HircEntry(type, data);
+
+        private readonly List<Section> _sections = new();
 
         public WwiseSoundBank(Stream stream)
         {
@@ -43,11 +47,13 @@ namespace SottrModManager.Shared.Cdc
                 int sectionLength = reader.ReadInt32();
 
                 SectionFactory factory = SectionFactories.GetOrDefault(sectionTag) ?? DefaultSectionFactory;
-                Section section = factory(sectionTag, sectionLength, reader);
-                Sections.Add(section);
+                Section section = factory(this, sectionTag, reader, sectionLength);
+                _sections.Add(section);
 
                 position += 8 + sectionLength;
             }
+
+            GetEmbeddedSoundsFromSections();
         }
 
         public int Id
@@ -55,23 +61,31 @@ namespace SottrModManager.Shared.Cdc
             get;
         }
 
-        public List<Section> Sections
+        public Dictionary<int, ArraySegment<byte>> EmbeddedSounds
         {
             get;
         } = new();
 
-        public T GetSection<T>()
-            where T : Section
+        public IEnumerable<int> ReferencedSoundIds
         {
-            return Sections.OfType<T>().FirstOrDefault();
+            get
+            {
+                HircSection section = GetSection<HircSection>();
+                if (section == null)
+                    return Enumerable.Empty<int>();
+
+                return section.Entries.OfType<HircSoundEntry>().Select(e => e.SoundId);
+            }
         }
 
         public void Write(Stream stream)
         {
+            ApplyEmbeddedSoundsToSections();
+
             BinaryWriter writer = new BinaryWriter(stream);
             writer.Write(Id);
             writer.Write(0);
-            foreach (Section section in Sections)
+            foreach (Section section in _sections)
             {
                 int sectionOffset = (int)stream.Position;
                 writer.Write(Encoding.ASCII.GetBytes(section.Tag));
@@ -90,7 +104,44 @@ namespace SottrModManager.Shared.Cdc
             stream.Position = stream.Length;
         }
 
-        public abstract class Section
+        private void GetEmbeddedSoundsFromSections()
+        {
+            DataIndexSection indexSection = GetSection<DataIndexSection>();
+            DataSection dataSection = GetSection<DataSection>();
+            if (indexSection == null || dataSection == null)
+                return;
+
+            for (int i = 0; i < indexSection.Entries.Count; i++)
+            {
+                EmbeddedSounds.Add(indexSection.Entries[i].SoundId, dataSection.SoundFiles[i]);
+            }
+        }
+
+        private void ApplyEmbeddedSoundsToSections()
+        {
+            DataIndexSection indexSection = GetSection<DataIndexSection>();
+            DataSection dataSection = GetSection<DataSection>();
+            if (indexSection == null || dataSection == null)
+                return;
+
+            indexSection.Entries.Clear();
+            dataSection.SoundFiles.Clear();
+            int offset = 0;
+            foreach ((int soundId, ArraySegment<byte> content) in EmbeddedSounds)
+            {
+                indexSection.Entries.Add(new DataIndexEntry { SoundId = soundId, Offset = offset, Length = content.Count });
+                dataSection.SoundFiles.Add(content);
+                offset += (content.Count + 0xF) & ~0xF;
+            }
+        }
+
+        private T GetSection<T>()
+            where T : Section
+        {
+            return _sections.OfType<T>().FirstOrDefault();
+        }
+
+        private abstract class Section
         {
             public Section(string tag)
             {
@@ -107,9 +158,83 @@ namespace SottrModManager.Shared.Cdc
             public override string ToString() => Tag;
         }
 
-        public class DataIndexSection : Section
+        private class HeaderSection : Section
         {
-            public DataIndexSection(string tag, int length, BinaryReader reader)
+            private readonly WwiseSoundBank _bank;
+
+            public HeaderSection(WwiseSoundBank bank, string tag, BinaryReader reader, int length)
+                : base(tag)
+            {
+                _bank = bank;
+
+                if (length < 0x14 || (length % 4) != 0)
+                    throw new InvalidDataException($"SoundBank: Invalid BHKD length {length}");
+
+                Version = reader.ReadInt32();
+                Id = reader.ReadInt32();
+                Int1 = reader.ReadInt32();
+                Int2 = reader.ReadInt32();
+                Int3 = reader.ReadInt32();
+                for (int offset = 0x14; offset < length; offset += 4)
+                {
+                    if (reader.ReadInt32() != 0)
+                        throw new InvalidDataException("SoundBank: Unexpected nonzero padding in BKHD");
+                }
+            }
+
+            public int Id
+            {
+                get;
+                set;
+            }
+
+            public int Version
+            {
+                get;
+                set;
+            }
+
+            public int Int1
+            {
+                get;
+                set;
+            }
+
+            public int Int2
+            {
+                get;
+                set;
+            }
+
+            public int Int3
+            {
+                get;
+                set;
+            }
+
+            public override void Write(BinaryWriter writer)
+            {
+                writer.Write(Version);
+                writer.Write(Id);
+                writer.Write(Int1);
+                writer.Write(Int2);
+                writer.Write(Int3);
+
+                DataIndexSection indexSection = _bank.GetSection<DataIndexSection>();
+                if (indexSection == null)
+                    return;
+
+                int indexSectionSize = 8 + 0xC * indexSection.Entries.Count;
+                while (((writer.BaseStream.Position + indexSectionSize) & 0xF) != 0)
+                {
+                    writer.Write(0);
+                }
+            }
+        }
+
+        private class DataIndexSection : Section
+        {
+            public DataIndexSection(string tag, BinaryReader reader, int length)
                 : base(tag)
             {
                 int numEntries = length / 0xC;
@@ -134,9 +259,49 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public class HircSection : Section
+        [StructLayout(LayoutKind.Sequential)]
+        private struct DataIndexEntry
         {
-            public HircSection(string tag, int length, BinaryReader reader)
+            public int SoundId;
+            public int Offset;
+            public int Length;
+        }
+
+        private class DataSection : Section
+        {
+            public DataSection(WwiseSoundBank bank, string tag, BinaryReader reader, int length)
+                : base(tag)
+            {
+                byte[] data = reader.ReadBytes(length);
+                DataIndexSection index = bank.GetSection<DataIndexSection>();
+                foreach (DataIndexEntry entry in index.Entries)
+                {
+                    SoundFiles.Add(new ArraySegment<byte>(data, entry.Offset, entry.Length));
+                }
+            }
+
+            public List<ArraySegment<byte>> SoundFiles
+            {
+                get;
+            } = new();
+
+            public override void Write(BinaryWriter writer)
+            {
+                long startPos = writer.BaseStream.Position;
+                foreach (ArraySegment<byte> blob in SoundFiles)
+                {
+                    writer.Write(blob.Array, blob.Offset, blob.Count);
+                    while (((writer.BaseStream.Position - startPos) & 0xF) != 0)
+                    {
+                        writer.Write((byte)0);
+                    }
+                }
+            }
+        }
+
+        private class HircSection : Section
+        {
+            public HircSection(string tag, BinaryReader reader)
                 : base(tag)
             {
                 int count = reader.ReadInt32();
@@ -167,7 +332,7 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public class HircEntry
+        private class HircEntry
         {
             public HircEntry(byte type, byte[] data)
             {
@@ -186,7 +351,7 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public class HircSoundEntry : HircEntry
+        private class HircSoundEntry : HircEntry
         {
             public HircSoundEntry(byte type, byte[] data)
                 : base(type, data)
@@ -200,9 +365,9 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public class UnknownSection : Section
+        private class UnknownSection : Section
         {
-            public UnknownSection(string tag, int length, BinaryReader reader)
+            public UnknownSection(string tag, BinaryReader reader, int length)
                 : base(tag)
             {
                 Data = reader.ReadBytes(length);
@@ -217,14 +382,6 @@ namespace SottrModManager.Shared.Cdc
             {
                 writer.Write(Data);
             }
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct DataIndexEntry
-        {
-            public int SoundId;
-            public int Offset;
-            public int Length;
         }
     }
 }

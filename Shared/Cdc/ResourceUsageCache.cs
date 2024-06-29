@@ -105,27 +105,18 @@ namespace SottrModManager.Shared.Cdc
                 bank = new WwiseSoundBank(stream);
             }
 
-            var dataIndexSection = bank.GetSection<WwiseSoundBank.DataIndexSection>();
-            if (dataIndexSection != null)
+            int index = 0;
+            foreach (int soundId in bank.EmbeddedSounds.Keys)
             {
-                for (int i = 0; i < dataIndexSection.Entries.Count; i++)
-                {
-                    _soundUsages.GetOrAdd(dataIndexSection.Entries[i].SoundId, () => new())
-                                .Add(new WwiseSoundBankItemReference(resourceRef.Id, WwiseSoundBankItemReferenceType.DataIndex, i));
-                }
+                _soundUsages.GetOrAdd(soundId, () => new())
+                            .Add(new WwiseSoundBankItemReference(resourceRef.Id, WwiseSoundBankItemReferenceType.DataIndex, index++));
             }
 
-            var eventsSection = bank.GetSection<WwiseSoundBank.HircSection>();
-            if (eventsSection != null)
+            index = 0;
+            foreach (int soundId in bank.ReferencedSoundIds)
             {
-                for (int i = 0; i < eventsSection.Entries.Count; i++)
-                {
-                    if (eventsSection.Entries[i] is not WwiseSoundBank.HircSoundEntry soundEntry)
-                        continue;
-                    
-                    _soundUsages.GetOrAdd(soundEntry.SoundId, () => new())
-                                .Add(new WwiseSoundBankItemReference(resourceRef.Id, WwiseSoundBankItemReferenceType.Event, i));
-                }
+                _soundUsages.GetOrAdd(soundId, () => new())
+                            .Add(new WwiseSoundBankItemReference(resourceRef.Id, WwiseSoundBankItemReferenceType.Event, index++));
             }
         }
 
@@ -170,6 +161,8 @@ namespace SottrModManager.Shared.Cdc
             ResourceCollection collection = archiveSet.GetResourceCollection(collectionItem.CollectionReference);
             return collection?.ResourceReferences[collectionItem.ResourceIndex];
         }
+
+        public IEnumerable<int> SoundIds => _soundUsages.Keys;
 
         public IEnumerable<WwiseSoundBankItemReference> GetSoundUsages(int soundId)
         {

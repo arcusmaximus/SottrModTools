@@ -127,7 +127,7 @@ namespace SottrModManager.Shared.Cdc
                     for (int i = 0; i < _numParts; i++)
                     {
                         string partFilePath = GetPartFilePath(i);
-                        _partStreams.Add(File.OpenRead(partFilePath));
+                        _partStreams.Add(File.Open(partFilePath, FileMode.Open, FileAccess.ReadWrite));
                     }
                 }
                 return _partStreams;

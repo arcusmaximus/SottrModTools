@@ -24,7 +24,7 @@ class ModelDataHeader(CStruct):
     field_64:       CInt
     field_68:       CInt
     field_6C:       CInt
-    initialized:    CInt
+    is_skinned:     CInt
     field_74:       CInt
     field_78:       CInt
     field_7C:       CInt
@@ -56,6 +56,7 @@ class ModelDataHeader(CStruct):
     field_158:                  CInt
     field_15C:                  CInt
 
+    has_vertex_weights = CFlag("flags", 1)
     has_blend_shapes = CFlag("flags", 0x4000)
 
 assert(sizeof(ModelDataHeader) == 0x160)

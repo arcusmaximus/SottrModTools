@@ -77,7 +77,8 @@ class ModelExporter(SlotsBase):
     
     def create_model_data(self, tr_model: Model, bl_objs: list[bpy.types.Object]) -> ModelData:
         tr_model_data = ModelData(cast(ResourceKey, tr_model.model_data_resource).id)
-        tr_model_data.header.flags = 0xE01
+        tr_model_data.header.flags = 0xE00
+        tr_model_data.header.has_vertex_weights = Enumerable(bl_objs).any(lambda o: len(o.vertex_groups) > 0)
         
         bl_shape_keys = Enumerable(bl_objs).select(lambda o: o.data)        \
                                            .cast(bpy.types.Mesh)            \

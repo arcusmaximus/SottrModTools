@@ -79,5 +79,17 @@ namespace SottrModManager.Shared.Util
                     break;
             }
         }
+
+        public static ArraySegment<byte> GetContent(this Stream stream)
+        {
+            if (stream is MemoryStream memStream && memStream.TryGetBuffer(out ArraySegment<byte> buffer))
+                return buffer;
+
+            stream.Position = 0;
+            byte[] data = new byte[stream.Length];
+            stream.Read(data, 0, data.Length);
+            stream.Position = 0;
+            return new ArraySegment<byte>(data);
+        }
     }
 }
