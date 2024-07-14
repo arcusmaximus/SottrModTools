@@ -108,7 +108,9 @@ class ModelExporter(SlotsBase):
                 bl_obj.modifiers.new("Triangulate", "TRIANGULATE")
 
             bl_mesh = self.get_evaluated_bl_mesh(bl_obj)
-            bl_mesh.calc_normals_split()
+            
+            if hasattr(bl_mesh, "calc_normals_split"):
+                bl_mesh.calc_normals_split()
 
             bl_mesh_maps = _BlenderMeshMaps(
                 self.collect_bl_color_maps(bl_mesh),
@@ -323,14 +325,19 @@ class ModelExporter(SlotsBase):
         shape_corner_normals = [0] * (len(bl_mesh.loops) * 3)
         
         bl_obj.show_only_shape_key = True
-        cast(bpy.types.Mesh, bl_obj.data).use_auto_smooth = False
+
+        if hasattr(bl_mesh, "use_auto_smooth"):
+            cast(bpy.types.Mesh, bl_obj.data).use_auto_smooth = False
+
         color_offset = Vector((0.0, 0.0, 0.4, 0.0))                         # Z component = normal blending suppression strength
         for bl_shape_key_idx in range(1, len(bl_mesh.shape_keys.key_blocks)):
             bl_obj.active_shape_key_index = bl_shape_key_idx
             tr_blend_shape_idx = BlenderNaming.parse_shape_key_name(bl_obj.active_shape_key.name).local_id
 
             bl_mesh = self.get_evaluated_bl_mesh(bl_obj)
-            bl_mesh.calc_normals_split()
+            if hasattr(bl_mesh, "calc_normals_split"):
+                bl_mesh.calc_normals_split()
+
             bl_mesh.vertices.foreach_get("co", shape_vertex_positions)
             bl_mesh.loops.foreach_get("normal", shape_corner_normals)
             

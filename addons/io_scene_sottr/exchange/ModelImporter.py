@@ -165,7 +165,9 @@ class ModelImporter(SlotsBase):
 
         normals: list[Vector] = [self.get_vertex_normal(vertex) for vertex in tr_mesh.vertices]
         bl_mesh.normals_split_custom_set_from_vertices(normals)     # type: ignore
-        bl_mesh.use_auto_smooth = True
+
+        if hasattr(bl_mesh, "use_auto_smooth"):
+            bl_mesh.use_auto_smooth = True
     
     def clean_mesh(self, bl_mesh: bpy.types.Mesh) -> None:
         bl_mesh.validate()

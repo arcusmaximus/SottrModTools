@@ -250,9 +250,10 @@ class BlenderModelExportContext(SlotsBase):
         self.only_active_shape_key = bl_obj.show_only_shape_key
         bl_obj.show_only_shape_key = False
 
-        self.use_auto_smooth = bl_mesh.use_auto_smooth
-        if bl_mesh.has_custom_normals:
-            bl_mesh.use_auto_smooth = True
+        if hasattr(bl_mesh, "use_auto_smooth"):
+            self.use_auto_smooth = bl_mesh.use_auto_smooth
+            if bl_mesh.has_custom_normals:
+                bl_mesh.use_auto_smooth = True
         
         bpy.ops.object.select_all(action = "DESELECT")
         bl_obj.select_set(True)
@@ -272,7 +273,8 @@ class BlenderModelExportContext(SlotsBase):
 
         self.bl_obj.active_shape_key_index = self.active_shape_key_idx
         self.bl_obj.show_only_shape_key = self.only_active_shape_key
-        bl_mesh.use_auto_smooth = self.use_auto_smooth
+        if hasattr(bl_mesh, "use_auto_smooth"):
+            bl_mesh.use_auto_smooth = self.use_auto_smooth
 
 class BlenderShowAllBonesContext(SlotsBase):
     bl_armature_obj: bpy.types.Object

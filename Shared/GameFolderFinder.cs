@@ -14,7 +14,7 @@ namespace SottrModManager.Shared
             {
                 GetGameFolderFromConfiguration,
                 GetGameFolderFromRegistry,
-                GetGameFolderFromFolderBrowser
+                GetGameFolderFromFileBrowser
             };
             foreach (Func<string> getter in getters)
             {
@@ -53,7 +53,7 @@ namespace SottrModManager.Shared
             return null;
         }
 
-        private static string GetGameFolderFromFolderBrowser()
+        private static string GetGameFolderFromFileBrowser()
         {
             MessageBox.Show(
                 "Could not automatically determine the Shadow of the Tomb Raider installation folder. Please select it manually.",
