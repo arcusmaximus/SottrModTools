@@ -3,7 +3,7 @@ bl_info = {
     "description": "Import/export files for Shadow of the Tomb Raider",
     "author": "arc_",
     "blender": (3, 6, 5),
-    "version": (1, 3, 10),
+    "version": (1, 3, 11),
     "location": "File > Import-Export",
     "support": "COMMUNITY",
     "category": "Import-Export"
@@ -28,7 +28,7 @@ from io_scene_sottr.operator.PinClothBonesOperator import PinClothBonesOperator
 from io_scene_sottr.operator.UnpinClothBonesOperator import UnpinClothBonesOperator
 from io_scene_sottr.properties.BlenderPropertyGroup import BlenderPropertyGroup
 from io_scene_sottr.properties.BoneProperties import BoneClothProperties, BoneConstraintProperties, BoneProperties
-from io_scene_sottr.properties.ObjectProperties import ObjectClothProperties, ObjectProperties
+from io_scene_sottr.properties.ObjectProperties import ObjectClothProperties, ObjectProperties, ObjectSkeletonProperties
 from io_scene_sottr.properties.ToolSettingProperties import ToolSettingProperties
 from io_scene_sottr.ui.BonePanel import BonePanel
 from io_scene_sottr.ui.ClothStripPanel import ClothStripPanel
@@ -67,6 +67,7 @@ custom_property_groups: list[type[BlenderPropertyGroup]] = [
     BoneClothProperties,
     BoneProperties,
     ObjectClothProperties,
+    ObjectSkeletonProperties,
     ObjectProperties,
     ToolSettingProperties
 ]

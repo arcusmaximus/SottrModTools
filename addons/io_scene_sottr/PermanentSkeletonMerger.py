@@ -3,7 +3,9 @@ import bpy
 from io_scene_sottr.BlenderHelper import BlenderHelper
 from io_scene_sottr.BlenderNaming import BlenderBoneIdSet, BlenderNaming
 from io_scene_sottr.SkeletonMerger import SkeletonMerger
+from io_scene_sottr.properties.ObjectProperties import ObjectProperties
 from io_scene_sottr.util.Enumerable import Enumerable
+from io_scene_sottr.util.Serializer import Serializer
 
 class _BoneRenames(NamedTuple):
     target_renames: dict[str, str]
@@ -33,6 +35,7 @@ class PermanentModelMerger(SkeletonMerger):
 
         self.move_armature_children(bl_source_armature_obj, bl_target_armature_obj)
         self.remove_bones(bl_source_armature_obj, bone_renames.existing_target_bones_in_source)
+        self.add_blend_shape_id_mappings(bl_target_armature_obj, bl_source_armature_obj)
         BlenderHelper.join_objects(bl_target_armature_obj, [bl_source_armature_obj])
 
         self.apply_global_bone_parents(bl_target_armature_obj, bone_parents)
@@ -133,4 +136,13 @@ class PermanentModelMerger(SkeletonMerger):
             for bone_name in bone_names:
                 bl_armature.edit_bones.remove(bl_armature.edit_bones[bone_name])
 
-    
+    def add_blend_shape_id_mappings(self, bl_target_armature_obj: bpy.types.Object, bl_source_armature_obj: bpy.types.Object) -> None:
+        target_skeleton_props = ObjectProperties.get_instance(bl_target_armature_obj).skeleton
+        source_skeleton_props = ObjectProperties.get_instance(bl_source_armature_obj).skeleton
+
+        target_mappings: dict[str, str] = Serializer.deserialize_dict(target_skeleton_props.global_blend_shape_ids)
+        source_mappings: dict[str, str] = Serializer.deserialize_dict(source_skeleton_props.global_blend_shape_ids)
+
+        target_mappings.update(source_mappings)
+        
+        target_skeleton_props.global_blend_shape_ids = Serializer.serialize_dict(target_mappings)

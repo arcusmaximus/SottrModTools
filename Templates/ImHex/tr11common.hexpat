@@ -1,11 +1,13 @@
-#include <std/core.pat>
-#include <std/io.pat>
-#include <std/mem.pat>
-#include <std/string.pat>
-#include <std/sys.pat>
-#include <type/magic.pat>
+import std.core;
+import std.io;
+import std.mem;
+import std.string;
+import std.sys;
+import type.magic;
 
 bool revealRefs in;
+
+#pragma pattern_limit 5000000
 
 enum ResourceType : u8
 {

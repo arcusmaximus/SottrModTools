@@ -27,8 +27,12 @@ class ObjectClothProperties(BlenderPropertyGroup):
     rigidity: Annotated[float, Prop("Rigidity", min = 0, max = 1, default = 0.6, subtype = PropSubType.FACTOR)]
     dampening: Annotated[float, Prop("Drag", min = 0, max = 1, default = 0.2, subtype = PropSubType.FACTOR)]
 
+class ObjectSkeletonProperties(BlenderPropertyGroup):
+    global_blend_shape_ids: Annotated[str, Prop("Local -> global blend shape ID mappings")]
+
 class ObjectProperties(BlenderAttachedPropertyGroup[bpy.types.Object]):
     property_name = "tr11_properties"
 
     blend_shape_normals_source_file_path: Annotated[str, Prop("Shape Key Normals Source", description = ".tr11modeldata file to copy shape key normals from")]
     cloth: Annotated[ObjectClothProperties, Prop("Cloth properties")]
+    skeleton: Annotated[ObjectSkeletonProperties, Prop("Skeleton properties")]

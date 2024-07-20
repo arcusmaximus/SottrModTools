@@ -5,14 +5,16 @@ from mathutils import Matrix, Quaternion, Vector
 from io_scene_sottr.BlenderHelper import BlenderHelper
 from io_scene_sottr.BlenderNaming import BlenderBoneIdSet, BlenderNaming
 from io_scene_sottr.properties.BoneProperties import BoneProperties
+from io_scene_sottr.properties.ObjectProperties import ObjectProperties
 from io_scene_sottr.tr.Bone import Bone
-from io_scene_sottr.tr.BoneConstraint import BoneConstraint, BoneConstraint3
+from io_scene_sottr.tr.BoneConstraint import BoneConstraint
 from io_scene_sottr.tr.Collection import Collection
 from io_scene_sottr.tr.Enumerations import ResourceType
 from io_scene_sottr.tr.ResourceBuilder import ResourceBuilder
 from io_scene_sottr.tr.ResourceKey import ResourceKey
 from io_scene_sottr.tr.Skeleton import Skeleton
 from io_scene_sottr.util.Enumerable import Enumerable
+from io_scene_sottr.util.Serializer import Serializer
 from io_scene_sottr.util.SlotsBase import SlotsBase
 
 class SkeletonExporter(SlotsBase):
@@ -40,6 +42,10 @@ class SkeletonExporter(SlotsBase):
             file.write(writer.build())
     
     def add_blend_shape_id_mappings(self, tr_skeleton: Skeleton, bl_armature_obj: bpy.types.Object) -> None:
+        serialized_mappings = ObjectProperties.get_instance(bl_armature_obj).skeleton.global_blend_shape_ids
+        for local_id, global_id in Serializer.deserialize_dict(serialized_mappings).items():
+            tr_skeleton.global_blend_shape_ids[int(local_id)] = int(global_id)
+        
         for bl_mesh_obj in Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
             bl_mesh = cast(bpy.types.Mesh, bl_mesh_obj.data)
             if not bl_mesh.shape_keys:
@@ -79,7 +85,7 @@ class SkeletonExporter(SlotsBase):
             bl_bone = bl_armature.bones[bl_edit_bone.name]
             self.set_bone_common_fields(tr_bone, bl_edit_bone, bone_id_set, bone_ids)
             self.add_bone_counterpart(tr_bone, bl_bone)
-            self.add_bone_constraints(tr_skeleton, tr_bone, bl_bone)
+            self.add_bone_constraints(tr_bone, bl_bone)
 
             tr_skeleton.bones.append(tr_bone)
             prev_local_id = bone_id_set.local_id
@@ -125,11 +131,8 @@ class SkeletonExporter(SlotsBase):
         else:
             tr_bone.counterpart_local_id = None
     
-    def add_bone_constraints(self, tr_skeleton: Skeleton, tr_bone: Bone, bl_bone: bpy.types.Bone) -> None:
+    def add_bone_constraints(self, tr_bone: Bone, bl_bone: bpy.types.Bone) -> None:
         tr_bone.constraints = []
         for prop_constraint in BoneProperties.get_instance(bl_bone).constraints:
             tr_constraint = BoneConstraint.deserialize(prop_constraint.data)
-            if isinstance(tr_constraint, BoneConstraint3):
-                continue
-
             tr_bone.constraints.append(tr_constraint)
