@@ -66,7 +66,7 @@ namespace SottrModManager.Shared
             {
                 using OpenFileDialog dialog = new OpenFileDialog
                 {
-                    Filter = "SOTTR.exe|SOTTR.exe",
+                    Filter = "SOTTR.exe|SOTTR.exe;gamelaunchhelper.exe",
                     FileName = "SOTTR.exe"
                 };
                 if (dialog.ShowDialog() != DialogResult.OK)
