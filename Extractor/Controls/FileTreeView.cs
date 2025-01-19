@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Threading.Tasks;
-using SottrModManager.Shared.Util;
-using SottrModManager.Shared.Controls.VirtualTreeView;
 using System.IO;
 using System.Linq;
+using TrRebootTools.Shared.Controls.VirtualTreeView;
+using TrRebootTools.Shared.Util;
+using TrRebootTools.Extractor;
+using TrRebootTools.Extractor.Controls;
 
-namespace SottrExtractor.Controls
+namespace TrRebootTools.Extractor.Controls
 {
     internal class FileTreeView<TFile> : FileTreeViewBase
         where TFile : class

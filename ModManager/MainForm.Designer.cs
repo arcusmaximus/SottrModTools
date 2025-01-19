@@ -1,6 +1,7 @@
-﻿using SottrModManager.Controls;
+﻿using TrRebootTools.ModManager;
+using TrRebootTools.ModManager.Controls;
 
-namespace SottrModManager
+namespace TrRebootTools.ModManager
 {
     partial class MainForm
     {
@@ -20,6 +21,7 @@ namespace SottrModManager
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this._pnlToolbar = new System.Windows.Forms.TableLayoutPanel();
+            this._btnSelectGame = new System.Windows.Forms.Button();
             this._btnReinstall = new System.Windows.Forms.Button();
             this._btnRemove = new System.Windows.Forms.Button();
             this._btnAddFromZip = new System.Windows.Forms.Button();
@@ -28,7 +30,7 @@ namespace SottrModManager
             this._statusBar = new System.Windows.Forms.StatusStrip();
             this._lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
             this._progressBar = new System.Windows.Forms.ToolStripProgressBar();
-            this._lvMods = new SottrModManager.Controls.BindableListView();
+            this._lvMods = new TrRebootTools.ModManager.Controls.BindableListView();
             this._colModName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this._folderBrowser = new Ookii.Dialogs.WinForms.VistaFolderBrowserDialog();
             this._fileBrowser = new System.Windows.Forms.OpenFileDialog();
@@ -38,12 +40,14 @@ namespace SottrModManager
             // 
             // _pnlToolbar
             // 
-            this._pnlToolbar.ColumnCount = 4;
+            this._pnlToolbar.ColumnCount = 5;
             this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
             this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
             this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
-            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 80F));
             this._pnlToolbar.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this._pnlToolbar.Controls.Add(this._btnSelectGame, 4, 0);
             this._pnlToolbar.Controls.Add(this._btnReinstall, 3, 0);
             this._pnlToolbar.Controls.Add(this._btnRemove, 2, 0);
             this._pnlToolbar.Controls.Add(this._btnAddFromZip, 0, 0);
@@ -56,12 +60,25 @@ namespace SottrModManager
             this._pnlToolbar.Size = new System.Drawing.Size(641, 80);
             this._pnlToolbar.TabIndex = 1;
             // 
+            // _btnSelectGame
+            // 
+            this._btnSelectGame.Dock = System.Windows.Forms.DockStyle.Fill;
+            this._btnSelectGame.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this._btnSelectGame.Image = global::TrRebootTools.ModManager.Properties.Resources.SelectGame;
+            this._btnSelectGame.Location = new System.Drawing.Point(564, 3);
+            this._btnSelectGame.Name = "_btnSelectGame";
+            this._btnSelectGame.Size = new System.Drawing.Size(74, 74);
+            this._btnSelectGame.TabIndex = 4;
+            this._toolTip.SetToolTip(this._btnSelectGame, "Switch to a different game");
+            this._btnSelectGame.UseVisualStyleBackColor = true;
+            this._btnSelectGame.Click += new System.EventHandler(this._btnSelectGame_Click);
+            // 
             // _btnReinstall
             // 
             this._btnReinstall.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this._btnReinstall.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this._btnReinstall.Image = global::SottrModManager.Properties.Resources.Reinstall;
-            this._btnReinstall.Location = new System.Drawing.Point(564, 3);
+            this._btnReinstall.Image = global::TrRebootTools.ModManager.Properties.Resources.Reinstall;
+            this._btnReinstall.Location = new System.Drawing.Point(484, 3);
             this._btnReinstall.Name = "_btnReinstall";
             this._btnReinstall.Size = new System.Drawing.Size(74, 74);
             this._btnReinstall.TabIndex = 3;
@@ -86,7 +103,7 @@ namespace SottrModManager
             // 
             this._btnAddFromZip.Dock = System.Windows.Forms.DockStyle.Fill;
             this._btnAddFromZip.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this._btnAddFromZip.Image = global::SottrModManager.Properties.Resources.AddZip;
+            this._btnAddFromZip.Image = global::TrRebootTools.ModManager.Properties.Resources.AddZip;
             this._btnAddFromZip.Location = new System.Drawing.Point(3, 3);
             this._btnAddFromZip.Name = "_btnAddFromZip";
             this._btnAddFromZip.Size = new System.Drawing.Size(74, 74);
@@ -178,7 +195,7 @@ namespace SottrModManager
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MinimumSize = new System.Drawing.Size(360, 320);
             this.Name = "MainForm";
-            this.Text = "SOTTR Mod Manager";
+            this.Text = "{0} Mod Manager {1}";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.Resize += new System.EventHandler(this.MainForm_Resize);
@@ -205,5 +222,6 @@ namespace SottrModManager
         private System.Windows.Forms.OpenFileDialog _fileBrowser;
         private System.Windows.Forms.Button _btnReinstall;
         private System.Windows.Forms.Button _btnRemove;
+        private System.Windows.Forms.Button _btnSelectGame;
     }
 }

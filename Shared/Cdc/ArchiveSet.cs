@@ -4,22 +4,45 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Cdc.Rise;
+using TrRebootTools.Shared.Cdc.Shadow;
+using TrRebootTools.Shared.Cdc.Tr2013;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
-    public class ArchiveSet : IDisposable
+    public abstract class ArchiveSet : IDisposable
     {
         public const string ModArchivePrefix = "bigfile._mod.";
+        public const string OriginalGameArchivePrefix = "bigfile._orig.";
 
         private readonly object _lock = new();
         private readonly Dictionary<(int, int), Archive> _archives = new();
         private readonly List<Archive> _duplicateArchives = new List<Archive>();
         private readonly Dictionary<ArchiveFileKey, ArchiveFileReference> _files = new Dictionary<ArchiveFileKey, ArchiveFileReference>();
 
-        public ArchiveSet(string folderPath, bool includeGame, bool includeMods)
+        public static ArchiveSet Open(string folderPath, bool includeGame, bool includeMods, CdcGame game)
+        {
+            return game switch
+            {
+                CdcGame.Tr2013 => new Tr2013ArchiveSet(folderPath, includeGame, includeMods),
+                CdcGame.Rise => new RiseArchiveSet(folderPath, includeGame, includeMods),
+                CdcGame.Shadow => new ShadowArchiveSet(folderPath, includeGame, includeMods)
+            };
+        }
+
+        protected ArchiveSet(string folderPath, bool includeGame, bool includeMods)
         {
             FolderPath = folderPath;
+
+            GetFlattenedModArchiveDetails(out int flattenedModArchiveId, out string flattenedModArchiveFileName);
+            if (flattenedModArchiveFileName != null)
+            {
+                string flattenedModArchiveFilePath = Path.Combine(FolderPath, flattenedModArchiveFileName);
+                string origGameArchiveFilePath = Path.Combine(FolderPath, OriginalGameArchivePrefix + flattenedModArchiveFileName);
+                if (File.Exists(flattenedModArchiveFilePath) && !File.Exists(origGameArchiveFilePath))
+                    File.Copy(flattenedModArchiveFilePath, origGameArchiveFilePath);
+            }
 
             Dictionary<int, ArchiveMetaData> metaDatas = new();
             foreach (string nfoFilePath in Directory.EnumerateFiles(folderPath))
@@ -27,20 +50,23 @@ namespace SottrModManager.Shared.Cdc
                 if (!nfoFilePath.EndsWith(".nfo") && !nfoFilePath.EndsWith(".nfo.disabled"))
                     continue;
 
-                if (Path.GetFileName(nfoFilePath).StartsWith(ModArchivePrefix) ? !includeMods : !includeGame)
-                    continue;
-
                 ArchiveMetaData metaData = ArchiveMetaData.Load(nfoFilePath);
                 metaDatas[metaData.DlcIndex] = metaData;
             }
 
-            foreach (string archiveFilePath in Directory.EnumerateFiles(folderPath, "*.tiger"))
+            foreach (string archiveFilePath in Directory.EnumerateFiles(folderPath, "*.000.tiger"))
             {
+                if (Path.GetFileName(archiveFilePath).StartsWith(ModArchivePrefix) ? !includeMods : !includeGame)
+                    continue;
+
+                if (flattenedModArchiveFileName != null && Path.GetFileName(archiveFilePath) == flattenedModArchiveFileName)
+                    continue;
+
                 using Stream stream = File.OpenRead(archiveFilePath);
                 using BinaryReader reader = new BinaryReader(stream);
                 var header = reader.ReadStruct<Archive.ArchiveHeader>();
-                ArchiveMetaData metaData = metaDatas.GetOrDefault(header.Id);
-                if (metaData != null)
+                ArchiveMetaData metaData = metaDatas?.GetOrDefault(header.Id);
+                if (metaData != null || !SupportsMetaData)
                     Load(archiveFilePath, metaData);
             }
 
@@ -52,6 +78,10 @@ namespace SottrModManager.Shared.Cdc
                 }
             }
         }
+
+        public abstract CdcGame Game { get; }
+
+        protected abstract bool SupportsMetaData { get; }
 
         public string FolderPath
         {
@@ -71,12 +101,18 @@ namespace SottrModManager.Shared.Cdc
 
         private void Load(string archiveFilePath, ArchiveMetaData metaData)
         {
-            Archive archive = Archive.Open(archiveFilePath, metaData);
+            Archive archive = Archive.Open(archiveFilePath, metaData, Game);
             var archiveKey = (archive.Id, archive.SubId);
             if (!_archives.ContainsKey(archiveKey))
                 _archives.Add(archiveKey, archive);
             else
                 _duplicateArchives.Add(archive);
+        }
+
+        public Archive CreateFlattenedModArchive(int maxFiles)
+        {
+            GetFlattenedModArchiveDetails(out int archiveId, out string archiveFileName);
+            return Archive.Create(Path.Combine(FolderPath, archiveFileName), archiveId, 0, null, maxFiles, Game);
         }
 
         public Dictionary<ulong, Archive> CreateModArchives(string modName, Dictionary<ulong, int> maxFilesByLocale)
@@ -86,10 +122,12 @@ namespace SottrModManager.Shared.Cdc
                 string simplifiedName = Regex.Replace(modName, @"[^-.\w]", "_").ToLower();
                 simplifiedName = Regex.Replace(simplifiedName, @"__+", "_").Trim('_');
 
-                int gameId = _archives.Values.First().MetaData.GameId;
-                int version = _archives.Values.Max(a => a.MetaData.Version) + 1;
+                int gameId = _archives.Values.Select(a => a.MetaData?.GameId ?? 0).FirstOrDefault(id => id > 0);
+                int version = _archives.Values.Max(a => a.MetaData?.Version ?? 0) + 1;
                 int id = _archives.Values.Max(a => a.Id) + 1;
-                string steamId = _archives.Values.First().MetaData.CustomEntries.FirstOrDefault(c => c.StartsWith("steamID:"));
+                string steamId = _archives.Values
+                                          .SelectMany(a => (IEnumerable<string>)a.MetaData?.CustomEntries ?? Array.Empty<string>())
+                                          .FirstOrDefault(c => c.StartsWith("steamID:"));
 
                 string nfoFilePath = Path.Combine(FolderPath, $"{ModArchivePrefix}{simplifiedName}.000.000.nfo");
                 ArchiveMetaData metaData = ArchiveMetaData.Create(nfoFilePath, gameId, version, id, id);
@@ -107,46 +145,26 @@ namespace SottrModManager.Shared.Cdc
                 {
                     string archiveFileName = $"{ModArchivePrefix}{simplifiedName}.000{MakeLocaleSuffix(locale)}.000.tiger";
                     toc.Entries.Add(locale, archiveFileName);
-                    archives.Add(locale, Archive.Create(Path.Combine(FolderPath, archiveFileName), metaData, subId, maxFiles));
+                    archives.Add(locale, Archive.Create(Path.Combine(FolderPath, archiveFileName), id, subId, metaData, maxFiles, Game));
                     subId++;
                 }
 
-                if (toc.Entries.Count > 1)
+                if (toc.Entries.Count > 1 && RequiresSpecMaskFiles)
                     toc.Write(SpecMasksToc.GetFilePathForArchive(Path.ChangeExtension(nfoFilePath, ".tiger")));
 
                 return archives;
             }
         }
 
-        private static string MakeLocaleSuffix(ulong locale)
+        public virtual void GetFlattenedModArchiveDetails(out int archiveId, out string archiveFileName)
         {
-            if (locale == 0xFFFFFFFFFFFFFFFF)
-                return "";
-
-            int textFlags = (int)(locale & 0xFFFFFFF);
-            string textLanguage;
-            if (textFlags == 0xFFFFFFF)
-                textLanguage = "alltxt";
-            else
-                textLanguage = Enum.GetValues(typeof(LocaleLanguage)).Cast<LocaleLanguage>().First(l => (textFlags & (int)l) != 0).ToString().ToLower();
-
-            int voiceFlags = (int)((locale >> 28) & 0xFFFFFFF);
-            string voiceLanguage;
-            if (voiceFlags == 0xFFFFFFF)
-                voiceLanguage = "allvo";
-            else
-                voiceLanguage = Enum.GetValues(typeof(LocaleLanguage)).Cast<LocaleLanguage>().First(l => (voiceFlags & (int)l) != 0).ToString().ToLower();
-
-            int platformFlags = (int)(locale >> 56);
-            string platform = platformFlags switch
-            {
-                0xFF => "allplt",
-                0x20 => "neutral",
-                _ => platformFlags.ToString("X02")
-            };
-
-            return $"_{textLanguage}_{voiceLanguage}_{platform}";
+            archiveId = 0;
+            archiveFileName = null;
         }
+
+        protected abstract string MakeLocaleSuffix(ulong locale);
+
+        protected abstract bool RequiresSpecMaskFiles { get; }
 
         public void Add(Archive archive, ResourceUsageCache gameResourceUsageCache, ITaskProgress progress, CancellationToken cancellationToken)
         {
@@ -288,7 +306,7 @@ namespace SottrModManager.Shared.Cdc
                         ResourceReference resourceRef = collection.ResourceReferences[resourceIdx];
                         if (resourceRef.ArchiveId == archive.Id)
                         {
-                            resourceUsageCache.AddResourceReference(collection, resourceIdx);
+                            resourceUsageCache.AddResourceReference(this, collection, resourceIdx);
                             modResourceRefs[resourceRef] = resourceRef;
                         }
                         else if (modResourceRefs.TryGetValue(resourceRef, out ResourceReference modResourceRef))
@@ -326,7 +344,7 @@ namespace SottrModManager.Shared.Cdc
 
         public ArchiveFileReference GetFileReference(string name, ulong locale = 0xFFFFFFFFFFFFFFFF)
         {
-            return GetFileReference(CdcHash.Calculate(name), locale);
+            return GetFileReference(CdcHash.Calculate(name, Game), locale);
         }
 
         public ResourceCollection GetResourceCollection(ArchiveFileReference file)
@@ -356,9 +374,9 @@ namespace SottrModManager.Shared.Cdc
             return _archives[(resourceRef.ArchiveId, resourceRef.ArchiveSubId)].OpenResource(resourceRef);
         }
 
-        public List<Archive> GetSortedArchives()
+        public virtual List<Archive> GetSortedArchives()
         {
-            List<Archive> sortedArchives = _archives.Values.Where(a => a.MetaData.Enabled).ToList();
+            List<Archive> sortedArchives = _archives.Values.Where(a => a.MetaData?.Enabled ?? false).ToList();
             sortedArchives.Sort(CompareArchivePriority);
             return sortedArchives;
         }

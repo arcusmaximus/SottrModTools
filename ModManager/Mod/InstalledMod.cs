@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Runtime.CompilerServices;
 
-namespace SottrModManager.Mod
+namespace TrRebootTools.ModManager.Mod
 {
     internal class InstalledMod : INotifyPropertyChanged
     {

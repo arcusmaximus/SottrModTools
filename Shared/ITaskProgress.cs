@@ -1,4 +1,4 @@
-﻿namespace SottrModManager.Shared
+﻿namespace TrRebootTools.Shared
 {
     public interface ITaskProgress
     {

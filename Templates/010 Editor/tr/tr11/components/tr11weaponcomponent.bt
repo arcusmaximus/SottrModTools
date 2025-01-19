@@ -1,0 +1,892 @@
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+RefDefinitions refDefinitions;
+
+typedef struct
+{
+  float m_offset[3];
+  float m_horizWeight;
+  float m_vertWeight;
+  uint32 m_useOffsetFromMaya : 1;
+  int32 __bitfieldpadding3 : 31;
+} dtpOrientControllerWeight;
+
+typedef struct
+{
+    float m_facingAngle;
+    float m_blendValue1;
+    float m_blendValue2;
+    Ref dtpOrientControllerWeightRef;
+    if (CanSeekTo(dtpOrientControllerWeightRef))
+    {
+        SeekToRef(dtpOrientControllerWeightRef);
+        dtpOrientControllerWeight m_orientControllerWeightList;
+        ReturnFromRef();
+    }
+    uint m_numOrientControllerWeights;
+} dtpOrientControllerWeightSet;
+
+
+typedef struct
+{
+    float m_min;
+    float m_max;
+} dtpDefaultDATCurveWithLimitsYAxisValue;
+
+typedef struct
+{
+    float m_min;
+    float m_max;
+} dtpDefaultDATCurveWithLimitsXAxisValue;
+
+typedef struct
+{
+    float m_x;
+    float m_y;
+} dtpDATCurvePoint;
+
+typedef struct
+{
+    dtpDefaultDATCurveWithLimitsYAxisValue m_xAxis;
+    dtpDefaultDATCurveWithLimitsXAxisValue m_yAxis;
+    uint m_numPoints;
+    FSkip(4);
+    Ref dtpDATCurvePointRef;
+    if (CanSeekTo(dtpDATCurvePointRef))
+    {
+        SeekToRef(dtpDATCurvePointRef);
+        dtpDATCurvePoint m_points[m_numPoints];
+        ReturnFromRef();
+    }
+} dtpDefaultDATCurveWithLimits;
+
+typedef struct
+{
+    float m_threat;
+    char m_heard;
+    char m_seen;
+    char m_smelled;
+    char m_radiusFromNoiseAlarm;
+    float m_radius;
+    char m_attenuate;
+    FSkip(3);
+    Ref tpDefaultDATCurveWithLimitsRef;
+    if (CanSeekTo(tpDefaultDATCurveWithLimitsRef))
+    {
+        SeekToRef(tpDefaultDATCurveWithLimitsRef);
+        dtpDefaultDATCurveWithLimits m_attenuationCurve;
+        ReturnFromRef();
+    }
+} dtpWeaponFiringThreat;
+
+typedef struct
+{
+    uint m_numPoints;
+    FSkip(4);
+    Ref dtpDATCurvePointRef;
+    if (CanSeekTo(dtpDATCurvePointRef))
+    {
+        SeekToRef(dtpDATCurvePointRef);
+        dtpDATCurvePoint m_points[m_numPoints];
+        ReturnFromRef();
+    }
+} dtpDefaultDATCurve;
+
+typedef union
+{
+    int16 m_byUserDefinedIndex;
+    uint16 m_byBoneIndex;
+    int16 m_byBoneID;
+    uint16 m_byMarkerIndex;
+    uint16 m_byMarkerID;
+} dtpModelBoneOrMarkerReferenceWithZoneContextModelBoneOrMarkerRefData;
+
+typedef struct
+{
+    ubyte m_refType;
+    FSkip(1);
+    dtpModelBoneOrMarkerReferenceWithZoneContextModelBoneOrMarkerRefData m_refData;
+} dtpModelBoneOrMarkerReferenceWithZoneContext;
+
+typedef struct
+{
+    float m_probeShoulderOffset[3];
+    float m_probeStartOffset[3];
+    float m_probeLeanOffset[3];
+} dtpWeaponComponentAvoidClippingParamsACPTiltOffsets;
+
+typedef struct
+{
+    float m_probeStartOffset[3];
+    float m_probeEndOffset[3];
+    float m_probeCoverOffset[3];
+    float m_probeLeanOffset[3];
+} dtpWeaponComponentAvoidClippingParamsACPOffsets;
+
+typedef struct
+{
+  dtpWeaponComponentAvoidClippingParamsACPTiltOffsets m_rightShoulderOffsets;
+  dtpWeaponComponentAvoidClippingParamsACPTiltOffsets m_leftShoulderOffsets;
+  float m_probeAngle;
+  float m_probeLen;
+} dtpWeaponComponentAvoidClippingParamsACPTiltData;
+
+typedef struct
+{
+    dtpWeaponComponentAvoidClippingParamsACPOffsets m_rightShoulderOffsets;
+    dtpWeaponComponentAvoidClippingParamsACPOffsets m_leftShoulderOffsets;
+    float m_probeRadius;
+    float m_probeAimDownwardAngle;
+    float m_probeAimDownwardAngleCover;
+    dtpWeaponComponentAvoidClippingParamsACPTiltData m_tiltStanding;
+    dtpWeaponComponentAvoidClippingParamsACPTiltData m_tiltCover;
+    float m_tiltForwardProbeLen;
+    float m_tiltDiffToDisableFire;
+    uint16 m_weaponProxyID;
+    FSkip(2);
+    float m_tiltBlockedPitchVel;
+} dtpWeaponComponentAvoidClippingParams;
+
+typedef struct
+{
+    char m_isTurret;
+} dtpWeaponComponentMiscData;
+
+typedef struct
+{
+    float angleFrontLeft;
+    float angleLeftBack;
+    float angleBackRight;
+    float angleRightFront;
+    float turnAngleGap;
+} MovementParams;
+
+typedef struct
+{
+    float m_aimSpeed;
+    float m_damage;
+    float m_recoilReduction;
+    float m_reloadSpeed;
+    float m_ammoCapacity;
+    float m_rateOfFire;
+} DefaultUIData;
+
+typedef struct
+{
+    float m_rampOnControllerTime;
+    float m_rampOffControllerTime;
+    float m_rampOnChainTime;
+    float m_rampOffChainTime;
+    uint m_leftHandTargetMarkerIndex;
+    int m_leftArmIKChainIndex;
+    float m_oneHandTransitionAngle;
+    uint32 m_useProceduralAim : 1;
+    uint32 m_useLeftHandIK : 1;
+    int32 __bitfieldpadding8 : 30;
+    Ref dtpOrientControllerWeightSetRef;
+    uint m_numWeightSets;
+    if (CanSeekTo(dtpOrientControllerWeightSetRef))
+    {
+        SeekToRef(dtpOrientControllerWeightSetRef);
+        dtpOrientControllerWeightSet m_weightSetList[m_numWeightSets];
+        ReturnFromRef();
+    }
+} ProceduralAnimParams;
+
+typedef struct
+{
+    float m_minDamage;
+    float m_maxDamage;
+    Ref dtpDefaultDATCurveRef;
+    if (CanSeekTo(dtpDefaultDATCurveRef))
+    {
+        SeekToRef(dtpDefaultDATCurveRef);
+        dtpDefaultDATCurve m_damageCurve;
+        ReturnFromRef();
+    }
+} DistanceDamage;
+
+typedef struct
+{
+    int m_minFiringspeed;
+    int m_maxFiringspeed;
+    float m_maxDist;
+    FSkip(4);
+    int64 m_curve;
+} dtpDistanceVSFiringspeed;
+
+typedef struct
+{
+    int m_minFiringspeed;
+    int m_maxFiringspeed;
+    float m_maxTime;
+    int64 m_curve;
+} dtpFiringSpeedUnion;
+
+typedef union
+{
+    dtpDistanceVSFiringspeed m_distSpeed;
+    dtpFiringSpeedUnion m_timeSpeed;
+    float fProjectileSpeed;
+} FiringSpeedUnion;
+
+typedef struct
+{
+    int iChamberSize;
+    int iPickupCount;
+    uint bSingleAmmoReload;
+    uint bAmmoFromInventory;
+    uint32 bInfiniteAmmo : 1;
+    int32 __bitfieldpadding4 : 31;
+    int iLowAmmo;
+    int iLowClip;
+} dtpAmmoProfile;
+
+typedef struct
+{
+    float m_minJitterArc;
+    float m_maxJitterArc;
+    float m_jitterArc_EasyMult;
+    float m_jitterArc_HardMult;
+    float m_jitterArc_SurvivorMult;
+    float m_maxTime;
+    int m_maxShots;
+    float m_jitterPatternDegrees;
+    float m_jitterPatternDegrees_EasyMod;
+    float m_jitterPatternDegrees_HardMod;
+    float m_jitterPatternDegrees_SurvivorMod;
+    float m_jitterPatternDuration;
+    float m_firstShootFakedReticuleJitterScreenWidth;
+    char m_movementPenalty;
+    FSkip(3);
+    Ref dtpDefaultDATCurveRef;
+    if (CanSeekTo(dtpDefaultDATCurveRef))
+    {
+        SeekToRef(dtpDefaultDATCurveRef);
+        dtpDefaultDATCurve m_curve;
+        ReturnFromRef();
+    }
+} dtpTimeVSJitter;
+
+typedef struct
+{
+    float m_minSpreadAngle;
+    float m_maxSpreadAngle;
+    Ref dtpDefaultDATCurveRef;
+    if (CanSeekTo(dtpDefaultDATCurveRef))
+    {
+        SeekToRef(dtpDefaultDATCurveRef);
+        dtpDefaultDATCurve m_curve;
+        ReturnFromRef();
+    }
+} dtpAccuracyVSSpreadAngle;
+
+typedef struct
+{
+    float m_minKickbackAnglePerShot;
+    float m_maxKickbackAnglePerShot;
+    int m_maxShotsFired;
+    FSkip(4);
+    Ref dtpDefaultDATCurveRef;
+    if (CanSeekTo(dtpDefaultDATCurveRef))
+    {
+        SeekToRef(dtpDefaultDATCurveRef);
+        dtpDefaultDATCurve m_curve;
+        ReturnFromRef();
+    }
+} dtpShotsFiredVSKickbackAngle;
+
+typedef struct
+{
+    float m_minLateralDriftPerShot;
+    float m_maxLateralDriftPerShot;
+    float m_basePercentChanceForDirChange;
+    float m_perShotPercentChanceForDirChange;
+} dtpKickbackLateralDriftData;
+
+typedef struct
+{
+    uint ammoConsumedPerShot;
+    uint bulletsPerShot;
+    char m_bUseMultishotFan;
+    FSkip(3);
+    float m_multishotFanReticleDelta;
+    uint shotsPerBurstFire;
+    float m_delayBetweenBursts;
+    uint m_rateOfFireRoundsPerMinute;
+    int m_aimFilter;
+    int m_aimFilterAlt;
+    uint m_multiProjFirstBulletToAimFilter;
+    int m_fireMode;
+    float m_accuracyLostPerShot;
+    float m_magicShotRadius;
+    float m_magicShotDistance;
+    float m_magicShotLeadMultiplier;
+    char m_bMagicShot_SetHitMarker;
+    FSkip(3);
+    dtpTimeVSJitter m_timeJitterArc;
+    dtpAccuracyVSSpreadAngle m_accuracySpreadArc;
+    int m_kickBack;
+    float m_kickBack_MaxAngle;
+    float m_kickBack_ReturnTime;
+    int m_kickBack_ReturnMaxShots;
+    float m_kickBack_ReturnPercent;
+    FSkip(4);
+    dtpShotsFiredVSKickbackAngle m_kickbackAnglePerShotsFiredCurve;
+    char m_bEnableLateralKickback;
+    FSkip(3);
+    float m_maxAngleTotalLateralDriftDeg;
+    char m_moveAwayFromDriftLimits;
+    char m_bUseAsymetricLateralDrift;
+    char m_bResetChanceOnDirectionSwitch;
+    FSkip(1);
+    dtpKickbackLateralDriftData m_lateralDriftDataPrimary;
+    dtpKickbackLateralDriftData m_lateralDriftDataLeft;
+    char m_bTargetRootNode;
+    FSkip(3);
+} dtpFiringProfile;
+
+typedef struct
+{
+    int m_pitchMode;
+    int m_targetingMode;
+    float m_wantedThrowAngle;
+    float m_linearDampeningCompensation;
+    int m_maxPointsPerSolution;
+    int m_maxFireSolutions;
+    int m_numTimestepsBetweenProbes;
+    float m_targetRadius;
+    float m_failAdjustmentMult;
+    float m_wantedSimpleReleaseUpFactor;
+    float m_throwZBoost;
+} dtpFireModeParams;
+
+typedef struct
+{
+    float m_innerDistance;
+    float m_outerDistance;
+    float m_innerStrength;
+    float m_outerStrength;
+    float m_nearZDepth;
+    float m_farZDepth;
+    float m_tooFarZDepth;
+    float m_directionSmoothing;
+    float m_rotationScalar;
+    float m_idleAssistTime;
+    float m_idleFalloffTime;
+    float m_idleAssistDistanceMin;
+    float m_idleAssistDistanceMax;
+    float m_idleAssistAngle;
+    float m_idleAssistScale;
+    float m_maxAngleForAttraction;
+} dtpAimAttraction;
+
+typedef struct
+{
+    float m_foundTargetTime;
+    float m_stickThreshold;
+    float m_lostTargetTime;
+    float m_directionSmoothing;
+    float m_idleCameraTrackTime;
+    char m_idleMovementTracking;
+    FSkip(3);
+    float m_fMaxDist;
+    float m_fMaxAngleExemptDist;
+    float m_fMaxAngleCameraDirToScreenDir;
+    FSkip(4);
+    Ref dtpDefaultDATCurveRef;
+    if (CanSeekTo(dtpDefaultDATCurveRef))
+    {
+        SeekToRef(dtpDefaultDATCurveRef);
+        dtpDefaultDATCurve m_strengthCurve;
+        ReturnFromRef();
+    }
+} dtpAimTracking;
+
+typedef struct
+{
+    float m_stickThreshold;
+    float m_activationTimeLimit;
+    float m_blendTime;
+} dtpAimHighGear;
+
+typedef struct
+{
+    dtpAimAttraction m_attraction;
+    dtpAimTracking m_tracking;
+    dtpAimHighGear m_highGear;
+    char m_bEnableAimAttraction;
+    char m_bEnableAimTracking;
+    FSkip(2);
+} dtpaim_data;
+
+typedef struct
+{
+    float snapTargetLockTime;
+    FSkip(4);
+    dtpaim_data m_aimData;
+} dtpAimingProfile;
+
+typedef struct
+{
+    FSkip(4);
+    dtpAmmoProfile m_ammoProfile;
+    dtpFiringProfile m_firingProfile;
+    dtpAimingProfile m_aimingProfile;
+    dtpFireModeParams m_fireModeParams;
+    int m_fireSpeedMode;
+    FiringSpeedUnion firingSpeedUnion;
+    Ref dtpWeaponFiringThreatRef;
+    if (CanSeekTo(dtpWeaponFiringThreatRef))
+    {
+        SeekToRef(dtpWeaponFiringThreatRef);
+        dtpWeaponFiringThreat m_firingThreat;
+        ReturnFromRef();
+    };
+    Ref dtpWeaponFiringThreatRef;
+    if (CanSeekTo(dtpWeaponFiringThreatRef))
+    {
+        SeekToRef(dtpWeaponFiringThreatRef);
+        dtpWeaponFiringThreat m_impactThreat;
+        ReturnFromRef();
+    };
+    dtpModelBoneOrMarkerReferenceWithZoneContext m_fireFromMarkerRef;
+    char m_fireFromWeaponMarker;
+    char m_fireFromWeaponMarkerMPOnly;
+    char m_dualWeapon;
+    FSkip(1);
+    uint16 m_dualWeaponRef;
+    FSkip(6);
+    dtpModelBoneOrMarkerReferenceWithZoneContext m_fireFromMarkerRef_dual;
+    float fLongRangeDist;
+    float fLongRangeJitterArc;
+    char enableDamageMultiplier;
+    FSkip(3);
+    DistanceDamage m_distanceDamage;
+    char m_enableJamming;
+    FSkip(3);
+    float m_jamming_MinTimeSinceLast;
+    float m_jamming_Probability;
+    char m_enableHeatLevel;
+    FSkip(3);
+    float m_heatlevel_coolDownSpeedEquipped;
+    float m_heatlevel_coolDownSpeedUnEquipped;
+    float m_heatlevel_heatSpeed;
+    float m_heatlevel_recoverThreshold;
+    float m_npcMod_CoverUsage_MaxDist;
+    float m_npcMod_CoverUsage_MaxAngle;
+    float m_npcMod_CoverUsage_MaxTimeSinceLastUsage;
+    float m_npcMod_Projectile_ImpactEventBroadcastRadius;
+    char m_npcMod_Projectile_ImpactEventVisualBroadcastEnabled;
+    FSkip(3);
+    float m_npcMod_Projectile_ImpactEventVisualBroadcastRadiusMod;
+    float m_npcMod_Weapon_UsageEventBroadcastRadius;
+    float m_npcMod_Targeting_TargetDistanceOffset;
+    float m_npcMod_Targeting_TargetDistanceError_Min;
+    float m_npcMod_Targeting_TargetDistanceError_Max;
+    float m_npcMod_Targeting_TargetHorizontalError_Min;
+    float m_npcMod_Targeting_TargetHorizontalError_Max;
+    int m_loadoutToggleType;
+    float m_reticleAnimChargeTime;
+    uint16 m_reticleFireTimer;
+    uint16 m_reticleChargeTimer;
+    uint16 m_reticleChargeDestabilizeTimer;
+    FSkip(2);
+    float m_reticleChargeDestabilizeDriftMax;
+    FSkip(4);
+    Ref tpDefaultDATCurveWithLimitsRef;
+    if (CanSeekTo(tpDefaultDATCurveWithLimitsRef))
+    {
+        SeekToRef(tpDefaultDATCurveWithLimitsRef);
+        dtpDefaultDATCurveWithLimits m_reticleChargeDestabilizeCurve;
+        ReturnFromRef();
+    }
+    char m_bEnableCollisionForOwnedWeapons;
+    FSkip(3);
+    uint m_contactEffect;
+    Ref dtpWeaponFiringThreatRef;
+    if (CanSeekTo(dtpWeaponFiringThreatRef))
+    {
+        SeekToRef(dtpWeaponFiringThreatRef);
+        dtpWeaponFiringThreat m_firingThreatList;
+        ReturnFromRef();
+    };
+} dtpweaponAttributes;
+
+typedef struct
+{
+    float m_multiplier;
+} dtpDamageMultiplierStruct;
+
+typedef struct
+{
+    float m_multiplier;
+} dtpKickbackAngleMultiplierStruct;
+
+typedef struct
+{
+    float m_multiplier;
+} dtpKickbackYawAngleMultiplierStruct;
+
+typedef struct
+{
+    float m_multiplier;
+} dtpHostedSCTimerMultiplierStruct;
+
+typedef struct
+{
+    float m_multiplier;
+} dtpHostedSCTimerAbsoluteStruct;
+
+typedef struct
+{
+    float m_multiplier;
+} dtpMaxJitterMultiplierStruct;
+
+typedef union
+{
+  dtpDamageMultiplierStruct DamageMultiplier;
+  dtpKickbackAngleMultiplierStruct KickbackAngleMultiplier;
+  dtpKickbackYawAngleMultiplierStruct KickbackYawAngleMultiplier;
+  dtpHostedSCTimerMultiplierStruct HostedSCTimerMultiplier;
+  dtpHostedSCTimerAbsoluteStruct HostedSCTimerAbsolute;
+  dtpMaxJitterMultiplierStruct MaxJitterMultiplier;
+} dtpWeaponUpgradeLoadoutTypeUnion;
+
+typedef struct
+{
+    int16 m_type;
+    dtpWeaponUpgradeLoadoutTypeUnion m_modifier;
+} dtpLoadoutWeaponModifier;
+
+
+typedef struct
+{
+    Ref dtpLoadoutWeaponModifierRef;
+    uint m_weaponModifierCount;
+    if (CanSeekTo(dtpLoadoutWeaponModifierRef))
+    {
+        SeekToRef(dtpLoadoutWeaponModifierRef);
+        dtpLoadoutWeaponModifier m_weaponModifiers[m_weaponModifierCount];
+        ReturnFromRef();
+    }
+} dtpLoadoutWeaponModifiers;
+
+typedef struct
+{
+    char m_projectile;
+    char m_ropeAttach;
+    char m_pitonAttach;
+    char m_fire;
+    char m_shotgunBreakable;
+    char m_grenadeBreakable;
+} dtpSenseSubCategories;
+
+typedef struct
+{
+  uint16 TimerType;
+  FSkip(2);
+  int Frames;
+} dtpHostedSCTimer;
+
+typedef struct
+{
+    uint16 m_trait;
+    FSkip(2);
+    int m_not;
+} dtpPlayerTraitListIndexComparison;
+
+typedef struct
+{
+    uint16 m_fxaTraitRequirementListCount;
+    FSkip(6);
+    Ref dtpPlayerTraitListIndexComparisonRef;
+    if (CanSeekTo(dtpPlayerTraitListIndexComparisonRef))
+    {
+        SeekToRef(dtpPlayerTraitListIndexComparisonRef);
+        dtpPlayerTraitListIndexComparison m_fxaTraitRequirementList;
+        ReturnFromRef();
+    }
+    uint m_fxaTraitOnUse;
+} dtpFxaTraitRequirementSet;
+
+typedef struct
+{
+    char enableProjectile;
+    FSkip(3);
+    int ProjectileType;
+    uint16 uProjectileID;
+    FSkip(2);
+    uint ProjectileComponentID;
+    uint ammoType;
+    int m_slotID;
+    FSkip(2);
+    uint16 infiniteAmmoTraitReq;
+    int infiniteAmmoOption;
+    int m_eReticule;
+    int m_eReticuleCharged;
+    int64 m_eAmmoIcon;
+    float maxDistanceForHeadshotUI;
+    FSkip(4);
+    Ref dtpFxaTraitRequirementSetRef;
+    if (CanSeekTo(dtpFxaTraitRequirementSetRef))
+    {
+        SeekToRef(dtpFxaTraitRequirementSetRef);
+        dtpFxaTraitRequirementSet m_fxaTraitRequirementSetList;
+        ReturnFromRef();
+    }
+    uint16 m_fxaTraitRequirementSetListNum;
+    FSkip(2);
+    int m_percentChanceForFreeAmmoUseBySkill;
+} dtpProjectileListItem <optimize=false>;
+
+typedef struct
+{
+    char enableLoadout;
+    FSkip(7);
+    int64 m_traitsRequired;
+    uint m_traitsRequiredCount;
+    FSkip(4);
+    int64 m_traitsToGate;
+    uint m_traitsToGateCount;
+    uint16 m_traitForShootThrough;
+    uint16 m_traitForFreeAmmo;
+    char m_allowPlayerSelection;
+    FSkip(7);
+    Ref dtpProjectileListItemRef;
+    uint projectileListCount;
+    if (CanSeekTo(dtpProjectileListItemRef))
+    {
+        SeekToRef(dtpProjectileListItemRef);
+        dtpProjectileListItem projectileList[projectileListCount];
+        ReturnFromRef();
+    }
+    FSkip(4);
+    Ref dtpHostedSCTimerRef;
+    uint iHostedSCTimerListCount;
+    if (CanSeekTo(dtpHostedSCTimerRef))
+    {
+        SeekToRef(dtpHostedSCTimerRef);
+        dtpHostedSCTimer pHostedSCTimerList[iHostedSCTimerListCount];
+        ReturnFromRef();
+    }
+    char bAllowModeSwitchWhenNoAmmo;
+    char bRestoreCurrentModeWhenReEquippingWeapon;
+    char bRestoreCurrentModeWhenSwitchingBackToThisWeapon;
+    dtpSenseSubCategories m_senseSubCategories;
+    char m_bAllowSnapTarget;
+    char m_bAllowRapidFire;
+    char m_bAllowSplitShot;
+    char m_bSilenced;
+    FSkip(3);
+    int m_multipleItemUseMode;
+    char m_allowActivateReticule;
+    FSkip(3);
+    unsigned int m_recipeToCraft;
+    ubyte m_weaponCameraData;
+    FSkip(1);
+    uint16 m_newWeaponCameraTrait;
+    ubyte m_newWeaponCameraData;
+    char m_bOverrideFiringMode;
+    FSkip(2);
+    int m_fireModeOverride;
+    int m_loadoutType;
+    uint m_linkedLoadout;
+    float m_inactivityTimeBeforeAutoSwitchToPrimary;
+    Ref weaponSelectIconTypeRef;
+    if (CanSeekTo(weaponSelectIconTypeRef))
+    {
+        SeekToRef(weaponSelectIconTypeRef);
+        string m_weaponSelectIconType;
+        ReturnFromRef();
+    }
+    dtpLoadoutWeaponModifiers m_loadoutWeaponModifiers;
+    char m_bAutoSwitchSecondaryLoadout;
+    FSkip(3);
+    uint m_autoSwitchSecondaryLoadoutIdx;
+    char m_bOverrideMuzzleFlash;
+    FSkip(3);
+    uint m_fxaMuzzleFlashOverride;
+    uint m_weaponSelectionSound;
+    char m_bOverrideWeaponAttr;
+    FSkip(7);
+    dtpweaponAttributes m_pWeaponAttrOverride;
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string m_debugName;
+        ReturnFromRef();
+    }
+} dtpLoadoutListItem;
+
+typedef struct
+{
+    uint m_camType;
+    char enabled;
+    FSkip(3);
+    unsigned int CameraID;
+    float TimeInFrom_NonAim;
+    float TimeInFrom_NormalAim;
+    float TimeInFrom_ZoomedAim;
+    float TimeInFrom_SwitchedAim;
+    float TimeInFrom_ZoomedSwitchedAim;
+    float TimeInFrom_OtherCam;
+    char ForceReset;
+    char pauseOtherCamsWhenActivating;
+    char pauseSelfWhenDeactivating;
+    FSkip(1);
+    float MovespeedMult;
+    float AimReticleOffset[2];
+} dtpWeaponCameraProperties;
+
+typedef struct
+{
+    Ref dtpPlayerTraitListIndexComparisonRef;
+    if (CanSeekTo(dtpPlayerTraitListIndexComparisonRef))
+    {
+        SeekToRef(dtpPlayerTraitListIndexComparisonRef);
+        dtpPlayerTraitListIndexComparison upgradedWeaponCameraRequirementTraitList;
+        ReturnFromRef();
+    }
+    uint upgradedWeaponCameraRequirementTraitListCount;
+    FSkip(4);
+    Ref dtpWeaponCameraPropertiesRef;
+    uint upgradedWeaponCameraPropertyListCount;
+    if (CanSeekTo(dtpWeaponCameraPropertiesRef))
+    {
+        SeekToRef(dtpWeaponCameraPropertiesRef);
+        dtpWeaponCameraProperties upgradedWeaponCameraPropertyList[upgradedWeaponCameraPropertyListCount];
+        ReturnFromRef();
+    }
+} dtpUpgradedWeaponCamera;
+
+typedef struct
+{
+    Ref dtpWeaponCameraPropertiesRef;
+    uint weaponCameraPropertyListCount;
+    if (CanSeekTo(dtpWeaponCameraPropertiesRef))
+    {
+        SeekToRef(dtpWeaponCameraPropertiesRef);
+        dtpWeaponCameraProperties weaponCameraPropertyList[weaponCameraPropertyListCount];
+        ReturnFromRef();
+    }
+    char allowZoom;
+    char allowShoulderSwitch;
+    char requirePlayerTraitToZoom;
+    FSkip(1);
+    uint16 playerTraitRequiredForZoom;
+    char canUpgradeCameraProps;
+    FSkip(5);
+    Ref dtpUpgradedWeaponCameraRef;
+    uint upgradedWeaponCameraListCount;
+    if (CanSeekTo(dtpUpgradedWeaponCameraRef))
+    {
+        SeekToRef(dtpUpgradedWeaponCameraRef);
+        dtpUpgradedWeaponCamera upgradedWeaponCameraList[upgradedWeaponCameraListCount];
+        ReturnFromRef();
+    }
+} dtpWeaponCameraListItem;
+
+typedef struct
+{
+  float renderRadius;
+  FSkip(4);
+  Ref ropeMaterial;
+  float vLength;
+  float uWidth;
+  char bSmoothRope;
+  FSkip(3);
+  float maxSmoothDistFromPoint;
+  char bRenderHighlight;
+  char bCastShadows;
+  FSkip(2);
+  uint siRenderType;
+} dtpRopeRenderData;
+
+typedef struct
+{
+  uint16 type : 3;
+  uint16 disable : 1;
+  uint16 oneshot : 1;
+  uint16 padding : 3;
+  uint16 triggercondition : 2;
+  int16 __bitfieldpadding0 : 6;
+  int16 frame;
+  ubyte m_iFxEvent;
+  FSkip(3);
+} dtpFxHeader;
+
+typedef struct
+{
+  uint16 fxtype;
+  uint16 modifier1;
+  uint16 modifier2;
+  uint16 modifier3;
+} dtpeffect;
+
+typedef struct
+{
+    dtpFxHeader header;
+    Ref dtpeffectRef;
+    if (CanSeekTo(dtpeffectRef))
+    {
+        SeekToRef(dtpeffectRef);
+        dtpeffect payload;
+        ReturnFromRef();
+    }
+} dtpfx_effectfx;
+
+typedef struct
+{
+    dtpweaponAttributes pWeaponAttr;
+    ProceduralAnimParams proceduralAnimParams;
+    MovementParams movementParams;
+    FSkip(8);
+    Ref dtpLoadoutListItemRef;
+    if (CanSeekTo(dtpLoadoutListItemRef))
+    {
+        SeekToRef(dtpLoadoutListItemRef);
+        dtpLoadoutListItem loadoutList;
+        ReturnFromRef();
+    }
+    uint loadoutListCount;
+    FSkip(4);
+    Ref dtpWeaponCameraListItemRef;
+    uint weaponCameraListCount;
+    if (CanSeekTo(dtpWeaponCameraListItemRef))
+    {
+        SeekToRef(dtpWeaponCameraListItemRef);
+        dtpWeaponCameraListItem weaponCameraList[weaponCameraListCount];
+        ReturnFromRef();
+    }
+    DefaultUIData defaultUIData;
+    char m_drawTrajectory;
+    FSkip(3);
+    Ref dtpRopeRenderDataRef;
+    if (CanSeekTo(dtpRopeRenderDataRef))
+    {
+        SeekToRef(dtpRopeRenderDataRef);
+        dtpRopeRenderData ropeRenderData;
+        ReturnFromRef();
+    }
+    Ref dtpfx_effectfxRef;
+    if (CanSeekTo(dtpfx_effectfxRef))
+    {
+        SeekToRef(dtpfx_effectfxRef);
+        dtpfx_effectfx m_parabolaEndFx;
+        ReturnFromRef();
+    }
+    dtpWeaponComponentAvoidClippingParams avoidClippingParams;
+    uint m_fxaDefaultMuzzleFlash;
+    dtpWeaponComponentMiscData miscData;
+    FSkip(7);
+} dtpWeaponComponentWeaponProp <open=true>;
+
+typedef struct
+{
+    dtpWeaponComponentWeaponProp m_weaponProp;
+} WeaponComponent;
+
+WeaponComponent weaponComponent <open=true>;

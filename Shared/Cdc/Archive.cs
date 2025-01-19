@@ -4,53 +4,44 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
-using SottrModManager.Shared.Util;
+using System.Text;
+using TrRebootTools.Shared.Cdc.Rise;
+using TrRebootTools.Shared.Cdc.Shadow;
+using TrRebootTools.Shared.Cdc.Tr2013;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
-    public class Archive : IDisposable
+    public abstract class Archive : IDisposable
     {
-        private static readonly byte[] Platform =
-        {
-            0x70, 0x63, 0x78, 0x36, 0x34, 0x2D, 0x77, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        };
-
         private const int MaxResourceChunkSize = 0x40000;
-
-        private static readonly byte[] NonLastResourceEndMarker =
-        {
-            0x4E, 0x45, 0x58, 0x54, 0x10, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        };
-
-        private static readonly byte[] LastResourceEndMarker =
-        {
-            0x4E, 0x45, 0x58, 0x54, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        };
 
         private int _numParts = 1;
         private List<Stream> _partStreams;
         private readonly List<ArchiveFileReference> _fileRefs = new List<ArchiveFileReference>();
+        private long _nextFileRefPos;
         private int _maxFiles;
+        private bool _hasWrittenResources;
 
-        private Archive(string baseFilePath, ArchiveMetaData metaData)
+        protected Archive(string baseFilePath, ArchiveMetaData metaData)
         {
             BaseFilePath = baseFilePath;
             MetaData = metaData;
         }
 
-        public static Archive Create(string baseFilePath, ArchiveMetaData metaData, int subId, int maxFiles)
+        protected abstract CdcGame Game { get; }
+        protected abstract int HeaderVersion { get; }
+        protected abstract bool SupportsSubId { get; }
+        protected abstract ArchiveFileReference ReadFileReference(BinaryReader reader);
+        protected abstract void WriteFileReference(BinaryWriter writer, ArchiveFileReference fileRef);
+        protected virtual int ContentAlignment => 0x10;
+
+        public static Archive Create(string baseFilePath, int id, int subId, ArchiveMetaData metaData, int maxFiles, CdcGame game)
         {
-            Archive archive = new Archive(baseFilePath, metaData)
-                              {
-                                  Id = metaData.PackageId,
-                                  SubId = subId,
-                                  _maxFiles = maxFiles
-                              };
+            Archive archive = InstantiateArchive(baseFilePath, metaData, game);
+            archive.Id = id;
+            archive.SubId = subId;
+            archive._maxFiles = maxFiles;
 
             Stream stream = File.Open(baseFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
             archive._partStreams = new List<Stream> { stream };
@@ -60,26 +51,33 @@ namespace SottrModManager.Shared.Cdc
                 new ArchiveHeader
                 {
                     Magic = 0x53464154,
-                    Version = 5,
+                    Version = archive.HeaderVersion,
                     NumParts = 1,
-                    Id = archive.Id,
-                    SubId = archive.SubId
+                    Id = archive.Id
                 };
             writer.WriteStruct(header);
-            writer.Write(Platform);
 
-            ArchiveFileEntry fileEntry = new ArchiveFileEntry();
+            if (archive.SupportsSubId)
+                writer.Write(archive.SubId);
+
+            string platformStr = CdcGameInfo.Get(game).ArchivePlatform;
+            byte[] platformBytes = new byte[0x20];
+            Encoding.ASCII.GetBytes(platformStr, 0, platformStr.Length, platformBytes, 0);
+            writer.Write(platformBytes);
+
+            archive._nextFileRefPos = stream.Position;
+            ArchiveFileReference fileRef = new ArchiveFileReference(0, 0, 0, 0, 0, 0, 0);
             for (int i = 0; i < maxFiles; i++)
             {
-                writer.WriteStruct(fileEntry);
+                archive.WriteFileReference(writer, fileRef);
             }
 
             return archive;
         }
 
-        public static Archive Open(string baseFilePath, ArchiveMetaData metaData)
+        public static Archive Open(string baseFilePath, ArchiveMetaData metaData, CdcGame game)
         {
-            Archive archive = new Archive(baseFilePath, metaData);
+            Archive archive = InstantiateArchive(baseFilePath, metaData, game);
 
             using Stream stream = File.OpenRead(baseFilePath);
             BinaryReader reader = new BinaryReader(stream);
@@ -88,32 +86,40 @@ namespace SottrModManager.Shared.Cdc
             if (header.Magic != 0x53464154)
                 throw new InvalidDataException("Invalid magic in tiger file");
 
-            if (header.Version != 5)
-                throw new NotSupportedException("Only version 5 archive files are supported");
+            if (header.Version != archive.HeaderVersion)
+                throw new NotSupportedException($"Only version {archive.HeaderVersion} archive files are supported");
 
             archive._numParts = header.NumParts;
             archive._maxFiles = header.NumFiles;
             archive.Id = header.Id;
-            archive.SubId = header.SubId;
 
-            stream.Position = 0x38;
+            if (archive.SupportsSubId)
+            {
+                archive.SubId = reader.ReadInt32();
+            }
+            else
+            {
+                string archiveName = Path.GetFileName(baseFilePath).Replace(".000.tiger", "");
+                archive.SubId = CdcGameInfo.Get(game).Languages.IndexOf(l => archiveName.EndsWith(l.Name)) + 1;
+            }
+
+            stream.Position += 0x20;
             for (int i = 0; i < header.NumFiles; i++)
             {
-                ArchiveFileEntry entry = reader.ReadStruct<ArchiveFileEntry>();
-                archive._fileRefs.Add(
-                    new ArchiveFileReference(
-                        entry.NameHash,
-                        entry.Locale,
-                        entry.ArchiveId,
-                        entry.ArchiveSubId,
-                        entry.ArchivePart,
-                        entry.Offset,
-                        entry.UncompressedSize
-                    )
-                );
+                archive._fileRefs.Add(archive.ReadFileReference(reader));
             }
 
             return archive;
+        }
+
+        private static Archive InstantiateArchive(string baseFilePath, ArchiveMetaData metaData, CdcGame game)
+        {
+            return game switch
+            {
+                CdcGame.Tr2013 => new Tr2013Archive(baseFilePath, metaData),
+                CdcGame.Rise => new RiseArchive(baseFilePath, metaData),
+                CdcGame.Shadow => new ShadowArchive(baseFilePath, metaData),
+            };
         }
 
         private List<Stream> PartStreams
@@ -126,7 +132,7 @@ namespace SottrModManager.Shared.Cdc
                     for (int i = 0; i < _numParts; i++)
                     {
                         string partFilePath = GetPartFilePath(i);
-                        _partStreams.Add(File.Open(partFilePath, FileMode.Open, ModName != null ? FileAccess.ReadWrite : FileAccess.Read));
+                        _partStreams.Add(File.Open(partFilePath, FileMode.Open, ModName != null ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read));
                     }
                 }
                 return _partStreams;
@@ -159,7 +165,7 @@ namespace SottrModManager.Shared.Cdc
         {
             get
             {
-                string entry = MetaData.CustomEntries.FirstOrDefault(c => c.StartsWith("mod:"));
+                string entry = MetaData?.CustomEntries.FirstOrDefault(c => c.StartsWith("mod:"));
                 return entry?.Substring("mod:".Length);
             }
         }
@@ -175,7 +181,7 @@ namespace SottrModManager.Shared.Cdc
             stream.Position = file.Offset;
             try
             {
-                return new ResourceCollection(file.NameHash, file.Locale, stream);
+                return ResourceCollection.Open(file.NameHash, file.Locale, stream, Game);
             }
             catch
             {
@@ -222,28 +228,20 @@ namespace SottrModManager.Shared.Cdc
 
             Stream contentStream = PartStreams.Last();
             BinaryWriter contentWriter = new BinaryWriter(contentStream);
+            contentStream.Position = contentStream.Length;
+            contentWriter.Align(ContentAlignment);
+
             int offset = (int)contentStream.Length;
-            contentStream.Position = offset;
             contentWriter.Write(data.Array, data.Offset, data.Count);
 
             Stream indexStream = PartStreams[0];
             BinaryWriter indexWriter = new BinaryWriter(indexStream);
-            indexStream.Position = 0x38 + _fileRefs.Count * Marshal.SizeOf<ArchiveFileEntry>();
-
-            ArchiveFileEntry entry =
-                new ArchiveFileEntry
-                {
-                    NameHash = nameHash,
-                    Locale = locale,
-                    ArchiveId = (byte)Id,
-                    ArchiveSubId = (byte)SubId,
-                    ArchivePart = 0,
-                    Offset = offset,
-                    UncompressedSize = data.Count
-                };
-            indexWriter.WriteStruct(entry);
 
             ArchiveFileReference fileRef = new ArchiveFileReference(nameHash, locale, Id, SubId, 0, offset, data.Count);
+            indexStream.Position = _nextFileRefPos;
+            WriteFileReference(indexWriter, fileRef);
+            _nextFileRefPos = indexStream.Position;
+
             _fileRefs.Add(fileRef);
             indexStream.Position = 0xC;
             indexWriter.Write(_fileRefs.Count);
@@ -258,22 +256,26 @@ namespace SottrModManager.Shared.Cdc
             partStream.Position = partStream.Length;
 
             BinaryWriter writer = new BinaryWriter(partStream);
-            writer.Align16();
 
-            partStream.Position -= 0x10;
-            BinaryReader reader = new BinaryReader(partStream);
-            byte[] prevMarker = reader.ReadBytes(0x10);
-            if (prevMarker.SequenceEqual(LastResourceEndMarker))
+            int resourceOffset = ((int)partStream.Position + ContentAlignment - 1) & ~(ContentAlignment - 1);
+
+            if (_hasWrittenResources)
             {
-                partStream.Position -= 0x10;
-                writer.Write(NonLastResourceEndMarker);
+                int nextMarkerOffset = (int)partStream.Position - 0x10;
+                partStream.Position -= 0xC;
+                writer.Write(resourceOffset - nextMarkerOffset);
+                partStream.Position += 8;
             }
 
-            int resourceOffset = (int)partStream.Position;
+            writer.Align(ContentAlignment);
             WriteResource(contentStream, writer);
             int resourceLength = (int)partStream.Position - resourceOffset;
 
-            writer.Write(LastResourceEndMarker);
+            writer.Align(0x10);
+            writer.Write(0x5458454E);       // "NEXT" marker
+            writer.Write(0);                // Offset to next resource (0 for last)
+            writer.Align(0x10);
+            _hasWrittenResources = true;
 
             return new ArchiveBlobReference(Id, SubId, archivePart, resourceOffset, resourceLength);
         }
@@ -305,7 +307,7 @@ namespace SottrModManager.Shared.Cdc
                 writer.Write(0);
                 writer.Write(0);
             }
-            writer.Align16();
+            writer.Align(0x10);
 
             long remainingSize = contentStream.Length;
             byte[] uncompressedChunkData = new byte[MaxResourceChunkSize];
@@ -330,7 +332,7 @@ namespace SottrModManager.Shared.Cdc
                 chunkSizesOffset += 8;
 
                 partStream.Position = partStream.Length;
-                writer.Align16();
+                writer.Align(0x10);
 
                 remainingSize -= uncompressedChunkSize;
             }
@@ -386,20 +388,6 @@ namespace SottrModManager.Shared.Cdc
             public int NumParts;
             public int NumFiles;
             public int Id;
-            public int SubId;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct ArchiveFileEntry
-        {
-            public ulong NameHash;
-            public ulong Locale;
-            public int UncompressedSize;
-            public int CompressedSize;
-            public short ArchivePart;
-            public byte ArchiveId;
-            public byte ArchiveSubId;
-            public int Offset;
         }
     }
 }

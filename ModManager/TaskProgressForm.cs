@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Threading;
 using System.Windows.Forms;
-using SottrModManager.Shared;
+using TrRebootTools.Shared;
 
-namespace SottrModManager
+namespace TrRebootTools.ModManager
 {
     public partial class TaskProgressForm : Form, ITaskProgress
     {

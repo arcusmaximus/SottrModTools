@@ -6,13 +6,13 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using SottrModManager.Shared;
-using SottrModManager.Shared.Cdc;
-using SottrModManager.Shared.Util;
-using SottrModManager.Mod;
 using System.Drawing;
+using TrRebootTools.Shared;
+using TrRebootTools.Shared.Cdc;
+using TrRebootTools.Shared.Util;
+using TrRebootTools.ModManager.Mod;
 
-namespace SottrModManager
+namespace TrRebootTools.ModManager
 {
     internal partial class MainForm : Form, ITaskProgress
     {
@@ -28,14 +28,14 @@ namespace SottrModManager
             Font = SystemFonts.MessageBoxFont;
         }
 
-        public MainForm(string gameFolderPath)
+        public MainForm(string gameFolderPath, CdcGame game)
             : this()
         {
-            _archiveSet = new ArchiveSet(gameFolderPath, true, true);
+            _archiveSet = ArchiveSet.Open(gameFolderPath, true, true, game);
             _gameResourceUsages = new ResourceUsageCache();
 
             Version version = Assembly.GetEntryAssembly().GetName().Version;
-            Text += $" {version.Major}.{version.Minor}.{version.Build}";
+            Text = string.Format(Text, CdcGameInfo.Get(game).ShortName, $"{version.Major}.{version.Minor}.{version.Build} Beta 5");
         }
 
         private async void MainForm_Load(object sender, EventArgs e)
@@ -51,15 +51,21 @@ namespace SottrModManager
 
             if (!_gameResourceUsages.Load(_archiveSet.FolderPath))
             {
-                using (ArchiveSet gameArchiveSet = new ArchiveSet(_archiveSet.FolderPath, true, false))
+                using (ArchiveSet gameArchiveSet = ArchiveSet.Open(_archiveSet.FolderPath, true, false, _archiveSet.Game))
                 {
                     await Task.Run(() => _gameResourceUsages.AddArchiveSet(gameArchiveSet, this, _cancellationTokenSource.Token));
                     _gameResourceUsages.Save(_archiveSet.FolderPath);
                 }
             }
 
-            if (_archiveSet.DuplicateArchives.Count > 0)
-                await ReinstallMods();
+            if (_archiveSet.DuplicateArchives.Any(a => a.ModName != null))
+                await ReinstallMods(false);
+        }
+
+        public bool GameSelectionRequested
+        {
+            get;
+            private set;
         }
 
         private void MainForm_Resize(object sender, EventArgs e)
@@ -81,9 +87,12 @@ namespace SottrModManager
             try
             {
                 ModInstaller installer = new ModInstaller(_archiveSet, _gameResourceUsages);
-                InstalledMod installedMod = await Task.Run(() => installer.InstallFromZip(filePath, this, _cancellationTokenSource.Token));
-                if (installedMod != null)
-                    _installedMods.Add(installedMod);
+                InstalledMod mod = await Task.Run(() => installer.InstallFromZip(filePath, this, _cancellationTokenSource.Token));
+                if (mod == null)
+                    return;
+
+                await UpdateFlatModArchiveAsync();
+                _installedMods.Add(mod);
             }
             catch (Exception ex)
             {
@@ -104,7 +113,11 @@ namespace SottrModManager
             try
             {
                 ModInstaller installer = new ModInstaller(_archiveSet, _gameResourceUsages);
-                await Task.Run(() => installer.InstallFromFolder(folderPath, this, _cancellationTokenSource.Token));
+                InstalledMod mod = await Task.Run(() => installer.InstallFromFolder(folderPath, this, _cancellationTokenSource.Token));
+                if (mod == null)
+                    return;
+
+                await UpdateFlatModArchiveAsync();
                 RefreshModList();
             }
             catch (Exception ex)
@@ -126,6 +139,8 @@ namespace SottrModManager
                     await Task.Run(() => _archiveSet.Enable(mod.ArchiveId, _gameResourceUsages, this, _cancellationTokenSource.Token));
                 else
                     await Task.Run(() => _archiveSet.Disable(mod.ArchiveId, _gameResourceUsages, this, _cancellationTokenSource.Token));
+
+                await UpdateFlatModArchiveAsync();
             }
             catch (Exception ex)
             {
@@ -163,6 +178,7 @@ namespace SottrModManager
                     await Task.Run(() => _archiveSet.Delete(mod.ArchiveId, _gameResourceUsages, this, _cancellationTokenSource.Token));
                     _installedMods.RemoveAt(index);
                 }
+                await UpdateFlatModArchiveAsync();
             }
             catch (Exception ex)
             {
@@ -176,15 +192,36 @@ namespace SottrModManager
 
         private async void _btnReinstall_Click(object sender, EventArgs e)
         {
-            await ReinstallMods();
-            MessageBox.Show("Mod reinstallation complete.", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            await ReinstallMods(true);
         }
 
-        private async Task ReinstallMods()
+        private async Task ReinstallMods(bool showCompletionMessage)
         {
             ModInstaller installer = new ModInstaller(_archiveSet, _gameResourceUsages);
-            await Task.Run(() => installer.ReinstallAll(this, _cancellationTokenSource.Token));
+            try
+            {
+                await Task.Run(() => installer.ReinstallAll(this, _cancellationTokenSource.Token));
+                await UpdateFlatModArchiveAsync();
+                if (showCompletionMessage)
+                    MessageBox.Show("Mod reinstallation complete.", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            }
             RefreshModList();
+        }
+
+        private void _btnSelectGame_Click(object sender, EventArgs e)
+        {
+            GameSelectionRequested = true;
+            Close();
+        }
+
+        private async Task UpdateFlatModArchiveAsync()
+        {
+            ModInstaller installer = new ModInstaller(_archiveSet, _gameResourceUsages);
+            await Task.Run(() => installer.UpdateFlatModArchive(this, _cancellationTokenSource.Token));
         }
 
         private void _lvMods_DragEnter(object sender, DragEventArgs e)

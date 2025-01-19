@@ -1,0 +1,16 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr9material.bt
+//   Authors: arc_
+//   Purpose: Parse TR2013 material files
+//  Category: TR2013
+// File Mask: *.tr9material
+//------------------------------------------------
+
+#define TR_VERSION 9
+#include "../trcommon.bt"
+#include "../trmaterialcommon.bt"
+
+RefDefinitions refDefinitions;
+Material material <open=true>;

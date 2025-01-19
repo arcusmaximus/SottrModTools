@@ -6,11 +6,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Newtonsoft.Json;
-using SottrModManager.Shared;
-using SottrModManager.Shared.Cdc;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Cdc;
+using TrRebootTools.Shared;
+using TrRebootTools.Shared.Util;
 
-namespace SottrExtractor
+namespace TrRebootTools.Extractor
 {
     internal class Extractor
     {
@@ -35,20 +35,12 @@ namespace SottrExtractor
             }
         }
 
-        private static string GetFilePath(string baseFolderPath, ArchiveFileReference fileRef)
+        private string GetFilePath(string baseFolderPath, ArchiveFileReference fileRef)
         {
-            string fileName = CdcHash.Lookup(fileRef.NameHash) ?? fileRef.NameHash.ToString("X016");
+            string fileName = CdcHash.Lookup(fileRef.NameHash, _archiveSet.Game) ?? fileRef.NameHash.ToString("X016");
             if ((fileRef.Locale & 0xFFFFFFF) != 0xFFFFFFF)
-            {
-                string locales = string.Join(
-                    ".",
-                    Enum.GetValues(typeof(LocaleLanguage))
-                        .Cast<LocaleLanguage>()
-                        .Where(l => (fileRef.Locale & (uint)l) != 0)
-                        .Select(l => l.ToString().ToLower())
-                );
-                fileName += "\\" + locales + Path.GetExtension(fileName);
-            }
+                fileName += "\\" + CdcGameInfo.Get(_archiveSet.Game).LocaleToLanguageCode(fileRef.Locale) + Path.GetExtension(fileName);
+            
             return Path.Combine(baseFolderPath, fileName);
         }
 
@@ -66,13 +58,17 @@ namespace SottrExtractor
 
                 foreach ((string collectionName, ResourceReference resourceRef) in refResources)
                 {
-                    string filePath = Path.Combine(folderPath, collectionName + ResourceNaming.GetExtension(resourceRef.Type, resourceRef.SubType));
+                    string filePath = Path.Combine(folderPath, collectionName + ResourceNaming.GetExtension(resourceRef.Type, resourceRef.SubType, _archiveSet.Game));
                     ExtractResource(filePath, resourceRef, ref numExtractedResources, numTotalResources, progress, cancellationToken);
                 }
 
+                ulong localeMask = CdcGameInfo.Get(collection.Game).LocalePlatformMask;
                 foreach (ResourceReference resourceRef in otherResources)
                 {
-                    string filePath = Path.Combine(folderPath, ResourceNaming.GetFilePath(resourceRef));
+                    if ((resourceRef.Locale & localeMask) != localeMask)
+                        continue;
+
+                    string filePath = Path.Combine(folderPath, ResourceNaming.GetFilePath(_archiveSet, resourceRef));
                     Directory.CreateDirectory(Path.GetDirectoryName(filePath));
                     ExtractResource(filePath, resourceRef, ref numExtractedResources, numTotalResources, progress, cancellationToken);
                 }
@@ -96,8 +92,8 @@ namespace SottrExtractor
                         CdcTexture texture = CdcTexture.Read(resourceStream);
                         texture.WriteAsDds(fileStream);
                         break;
-
-                    case ResourceType.SoundBank:
+                    
+                    case ResourceType.SoundBank when CdcGameInfo.Get(_archiveSet.Game).UsesWwise:
                         byte[] header = new byte[8];
                         resourceStream.Read(header, 0, 8);
                         int length = BitConverter.ToInt32(header, 4);
@@ -126,7 +122,7 @@ namespace SottrExtractor
             while (collections.Count > 0)
             {
                 collection = collections.Dequeue();
-                string collectionName = Path.GetFileNameWithoutExtension(CdcHash.Lookup(collection.NameHash));
+                string collectionName = Path.GetFileNameWithoutExtension(CdcHash.Lookup(collection.NameHash, _archiveSet.Game));
 
                 foreach (ResourceReference resource in collection.ResourceReferences)
                 {
@@ -180,17 +176,27 @@ namespace SottrExtractor
 
         private void ExtractLocalsBin(Stream archiveFileStream, Stream extractedFileStream)
         {
-            LocalsBin locals = new LocalsBin(archiveFileStream);
+            LocalsBin locals = LocalsBin.Open(archiveFileStream, _archiveSet.Game);
+            if (locals == null)
+                return;
 
             using StreamWriter streamWriter = new StreamWriter(extractedFileStream);
             using JsonWriter jsonWriter = new JsonTextWriter(streamWriter) { Formatting = Formatting.Indented };
             jsonWriter.WriteStartObject();
-            foreach ((string key, string value) in locals.Strings.OrderBy(s => s.Key))
+            foreach ((string key, string value) in locals.Strings.OrderBy(p => p.Key, Comparer<string>.Create(CompareLocalsBinKeys)))
             {
                 jsonWriter.WritePropertyName(key);
                 jsonWriter.WriteValue(value);
             }
             jsonWriter.WriteEndObject();
+        }
+
+        private static int CompareLocalsBinKeys(string a, string b)
+        {
+            if (int.TryParse(a, out int aInt) && int.TryParse(b, out int bInt))
+                return aInt - bInt;
+            else
+                return a.CompareTo(b);
         }
 
         private static void ConvertWwiseSound(string wemFilePath)

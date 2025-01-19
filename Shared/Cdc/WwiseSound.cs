@@ -1,11 +1,12 @@
-﻿using SottrModManager.Shared.Util;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using TrRebootTools.Shared.Cdc;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
     public class WwiseSound
     {

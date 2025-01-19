@@ -2,43 +2,37 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Cdc.Rise;
+using TrRebootTools.Shared.Cdc.Shadow;
+using TrRebootTools.Shared.Cdc.Tr2013;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
-    public class LocalsBin
+    public abstract class LocalsBin
     {
-        public LocalsBin()
+        public static LocalsBin Open(Stream stream, CdcGame version)
         {
+            return version switch
+            {
+                CdcGame.Tr2013 => new Tr2013LocalsBin(stream),
+                CdcGame.Rise => new RiseLocalsBin(stream),
+                CdcGame.Shadow => new ShadowLocalsBin(stream),
+                _ => null
+            };
         }
 
-        public LocalsBin(Stream stream)
+        private byte[] _encodeBuffer = new byte[4096];
+
+        public int LanguageId
         {
-            byte[] data = new byte[stream.Length];
-            stream.Read(data, 0, data.Length);
-            int numStrings = BitConverter.ToInt32(data, 4);
-            for (int i = 0; i < numStrings; i++)
-            {
-                int keyPos = BitConverter.ToInt32(data, 8 + 8 * i);
-                if (keyPos == 0)
-                    continue;
+            get;
+            set;
+        }
 
-                int separatorPos = keyPos;
-                while (data[separatorPos] != ' ')
-                {
-                    separatorPos++;
-                }
-
-                int terminatorPos = separatorPos;
-                while (data[terminatorPos] != 0)
-                {
-                    terminatorPos++;
-                }
-
-                string key = Encoding.UTF8.GetString(data, keyPos, separatorPos - keyPos);
-                string value = Encoding.UTF8.GetString(data, separatorPos + 1, terminatorPos - (separatorPos + 1));
-                Strings.Add(key, value);
-            }
+        public string[] InputSpecificKeys
+        {
+            get;
+            set;
         }
 
         public Dictionary<string, string> Strings
@@ -46,35 +40,32 @@ namespace SottrModManager.Shared.Cdc
             get;
         } = new();
 
-        public void Write(Stream stream)
+        public abstract void Write(Stream stream);
+
+        protected string ReadString(byte[] data, int pos)
         {
-            byte[] encodeBuffer = new byte[4096];
-
-            BinaryWriter writer = new BinaryWriter(stream);
-            writer.Write(0);
-            writer.Write(Strings.Count);
-            for (int i = 0; i < Strings.Count; i++)
+            int terminatorPos = pos;
+            while (data[terminatorPos] != 0)
             {
-                writer.Write(0L);
+                terminatorPos++;
             }
+            return Encoding.UTF8.GetString(data, pos, terminatorPos - pos);
+        }
 
-            int stringIdx = 0;
-            foreach ((string key, string value) in Strings)
+        protected void WriteString(BinaryWriter writer, string str)
+        {
+            int numBytes;
+            try
             {
-                stream.Position = 8 + 8 * stringIdx;
-                writer.Write(stream.Length);
-                stream.Position = stream.Length;
-
-                int keyLength = Encoding.UTF8.GetBytes(key, 0, key.Length, encodeBuffer, 0);
-                writer.Write(encodeBuffer, 0, keyLength);
-                writer.Write((byte)' ');
-
-                int valueLength = Encoding.UTF8.GetBytes(value, 0, value.Length, encodeBuffer, 0);
-                writer.Write(encodeBuffer, 0, valueLength);
-                writer.Write((byte)0);
-
-                stringIdx++;
+                numBytes = Encoding.UTF8.GetBytes(str, 0, str.Length, _encodeBuffer, 0);
             }
+            catch (ArgumentException)
+            {
+                _encodeBuffer = new byte[Encoding.UTF8.GetByteCount(str)];
+                numBytes = Encoding.UTF8.GetBytes(str, 0, str.Length, _encodeBuffer, 0);
+            }
+            writer.Write(_encodeBuffer, 0, numBytes);
+            writer.Write((byte)0);
         }
     }
 }

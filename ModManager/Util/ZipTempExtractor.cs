@@ -2,12 +2,12 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
-using SottrModManager.Shared;
 using SharpCompress.Archives;
 using SharpCompress.Common;
 using SharpCompress.Readers;
+using TrRebootTools.Shared;
 
-namespace SottrModManager.Util
+namespace TrRebootTools.ModManager.Util
 {
     internal class ZipTempExtractor : IDisposable
     {

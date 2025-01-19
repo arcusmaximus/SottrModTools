@@ -1,4 +1,6 @@
-﻿namespace SottrModManager.Shared
+﻿using TrRebootTools.Shared;
+
+namespace TrRebootTools.Shared
 {
     public class MultiStepTaskProgress : ITaskProgress
     {

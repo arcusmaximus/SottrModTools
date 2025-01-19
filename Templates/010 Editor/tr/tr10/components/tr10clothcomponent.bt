@@ -1,0 +1,187 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr10clothcomponent.bt
+//   Authors: arc_
+//   Purpose: Parse ROTTR cloth component files
+//  Category: ROTTR
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../../trcommon.bt"
+
+typedef struct
+{
+    int numStripGroups;
+    FSkip(4);
+    Ref stripGroupIndicesRef;
+    if (CanSeekTo(stripGroupIndicesRef))
+    {
+        SeekToRef(stripGroupIndicesRef);
+        int stripGroupIndices[numStripGroups];
+        ReturnFromRef();
+    }
+} Config <optimize=false>;
+
+typedef struct
+{
+    ubyte terrain : 1;
+    ubyte player : 1;
+    ubyte npc : 1;
+    ubyte enemy : 1;
+    ubyte object : 1;
+    ubyte shard : 1;
+    ubyte camera : 1;
+    ubyte cloth : 1;
+    ubyte incidental : 1;
+    ubyte gear : 1;
+    ubyte thrownProjectile : 1;
+    ubyte arrow : 1;
+    ubyte clutter : 1;
+    ubyte cameraLineOfSight : 1;
+    ubyte __bitfieldpadding8 : 2;
+} CollisionTypesBitfield;
+
+typedef struct
+{
+    float gravity;
+    float drag;
+    int maxVelocityUpdateIterations;
+    int maxPositionUpdateIterations;
+    int relaxationIterations;
+    int subStepCount;
+    float windFactor;
+    byte windOnConstraints;
+    FSkip(3);
+    float maxMassBounceBackStrength;
+    int transformType <comment="0, 1, or 2">;
+    int springStretchinessDefaultPercentage;
+    int springStretchinessLowerPercentage;
+    int rigidityPercentage;
+    float accelerationDivider;
+    float timeDeltaScale;
+    byte collideWithDynamicHair;
+    FSkip(3);
+    
+    int numStripIds;
+    int zoneContext;
+    Ref stripIdsRef;
+    if (CanSeekTo(stripIdsRef))
+    {
+        SeekToRef(stripIdsRef);
+        int stripIds[numStripIds];
+        ReturnFromRef();
+    }
+    
+    int numCollisionSetIndices;
+    FSkip(4);
+    Ref collisionSetIndicesRef;
+    if (CanSeekTo(collisionSetIndicesRef))
+    {
+        SeekToRef(collisionSetIndicesRef);
+        int collisionSetIndices[numCollisionSetIndices];
+        ReturnFromRef();
+    }
+    
+    byte collidesExternal;
+    CollisionTypesBitfield collideWith;
+    CollisionTypesBitfield collideNotWith;
+    CollisionTypesBitfield collideAs;
+    FSkip(1);
+    int collideGroup;
+    FSkip(4);
+} StripGroup <optimize=false>;
+
+enum <ubyte> CollisionType
+{
+    SPHERE,
+    CAPSULE,
+    TYPE2,
+    TYPE3,
+    BOX,
+    DOUBLERADIICAPSULE = 6
+};
+
+typedef struct
+{
+    CollisionType type;
+    FSkip(0x14 - 1);
+    int state <comment="Invalid if -2">;
+    uquad hashData1 <format=hex>;
+    uquad hashData2 <format=hex>;
+    Ref hashData3Ref;
+    if (CanSeekTo(hashData3Ref))
+    {
+        SeekToRef(hashData3Ref);
+        while (true)
+        {
+            uquad hashData3 <format=hex>;
+            if (hashData3 == 0)
+                break;
+        }
+        ReturnFromRef();
+    }
+} Collision <optimize=false>;
+
+typedef struct
+{
+    int count;
+    FSkip(4);
+    Ref collisionsRef;
+    if (CanSeekTo(collisionsRef))
+    {
+        SeekToRef(collisionsRef);
+        Collision collisions[count];
+        ReturnFromRef();
+    }
+} CollisionSet <optimize=false>;
+
+typedef struct
+{
+    ubyte enabled;
+    FSkip(7);
+    int defaultConfigIdx;
+    int wetConfigIdx;
+    int lowCoverConfigIdx;
+    int flammableConfigIdx;
+    float innerDistance;
+    float outerDistance;
+    
+    Ref configsRef;
+    int numConfigs;
+    FSkip(4);
+    if (CanSeekTo(configsRef))
+    {
+        SeekToRef(configsRef);
+        Config configs[numConfigs];
+        ReturnFromRef();
+    }
+    
+    Ref stripGroupsRef;
+    int numStripGroups;
+    FSkip(4);
+    if (CanSeekTo(stripGroupsRef))
+    {
+        SeekToRef(stripGroupsRef);
+        StripGroup stripGroups[numStripGroups];
+        ReturnFromRef();
+    }
+    
+    Ref collisionSetsRef;
+    int numCollisionSets;
+    FSkip(4);
+    if (CanSeekTo(collisionSetsRef))
+    {
+        SeekToRef(collisionSetsRef);
+        CollisionSet collisionSets[numCollisionSets];
+        ReturnFromRef();
+    }
+    
+    byte flammable;
+    FSkip(3);
+    int numFlammableConfigs;
+    Ref flammableConfigsRef;
+} ClothComponent <style=sSection1>;
+
+RefDefinitions refDefinitions;
+ClothComponent clothComponent <open=true>;

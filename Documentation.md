@@ -1,4 +1,17 @@
-# Shadow of the Tomb Raider Modding Tools
+# Tomb Raider Reboot Modding Tools
+
+## Introduction
+
+This toolset allows modding the games from the Tomb Raider Reboot trilogy. The following are supported:
+
+|                                            | Tomb Raider (2013) | Rise of the Tomb Raider | Shadow of the Tomb Raider |
+| ------------------------------------------ | ------------------ | ----------------------- | ------------------------- |
+| Meshes                                     | ✓                  | ✓                      | ✓                         |
+| Textures                                   | ✓                  | ✓                      | ✓                         |
+| Text (outfit descriptions, subtitles etc.) | ✓                  | ✓                      | ✓                         |
+| Cloth physics                              |                    | ~                       | ✓                         |
+| Animations                                 |                    |                         | ✓                         |
+| Sound                                      |                    |                         | ✓                         |
 
 This page will give a quick introduction to the various file types involved, and then explain how to create and package mods.
 
@@ -6,43 +19,52 @@ If you're reading on GitHub, you can access the table of contents using the butt
 
 ## File extensions
 
-When modding SOTTR, you'll encounter the following file types:
+The list below describes the most common file types you'll encounter. An "X" in an extension is a placeholder for a game
+version number. For example, when you see ".trXdtp", this refers to one of the following:
+
+- .tr9dtp: Tomb Raider (2013).
+- .tr10dtp: Rise of the Tomb Raider.
+- .tr11dtp: Shadow of the Tomb Raider.
+
+The file extensions are as follows:
 
 - **.tiger**
 
   An archive that contains *resources* and *files*. Resources only have an ID; examples include meshes and textures.
   Files have a folder path and filename; examples include sound files, string localization files, and .drm resource collections.
-  
-  (Previous modding tools have referred to resources as "sections," which is also what the game calls them internally.
+
+  (Previous modding tools have referred to resources as "sections," which is also what the games call them internally.
   However, this page will refer to them as "resources" for simplicity's sake.)
 
-  If two archives contain the same file, the one with the highest version number in its .nfo takes precedence. This makes it
-  possible to mod the game by creating new archives rather than modifying existing ones.
+  If two archives contain the same file, the archive with the highest version number in its .nfo takes precedence. This makes it
+  possible to mod the game by creating new archives rather than modifying existing ones. The exception is TR2013, which
+  doesn't have .nfo files: in this case, the mod manager automatically creates a backup of patch2.000.tiger,
+  then replaces it by a modded one.
 
 - **.drm**
 
-  One of the most common file types found in archives. DRM stands for "Data RAM" in this case, not Digital Rights Management.
-  These are essentially resource collections: for a certain ingame object such as an outfit piece or weapon,
+  One of the most common file types found in archives. ("DRM" here stands for "Data RAM.")
+  These are essentially resource collections: for a certain ingame object such as an outfit or weapon,
   they list which resources (meshes, textures...) should be loaded into memory, and in which archives those
   resources can be found.
 
   It's good to know that .drm files only refer to resources; they don't contain them. Quite often, the same resource
   is referenced by multiple .drm files, which means that modding one texture may affect multiple outfits, for example.
-    
-- **.tr11objectref**
 
-  The root resource of a .drm resource collection. Contains nothing more than a reference to a .tr11dtp resource (the object
+- **.trXobjectref**
+
+  The root resource of a .drm resource collection. Contains nothing more than a reference to a .trXdtp resource (the object
   metadata) which in turn references a skeleton and models.
-    
-- **.tr11model**
+
+- **.trXmodel**
 
   A small metadata resource that references a model data resource and one or more materials.
-    
-- **.tr11modeldata**
+
+- **.trXmodeldata**
 
   Contains mesh geometry, including things like UV maps and blend shapes.
-    
-- **.tr11material**
+
+- **.trXmaterial**
 
   References texture and shader resources, and providers parameters for the latter. Can technically be edited using the binary
   templates, but usually it's easier to simply find an existing material that suits your needs.
@@ -51,37 +73,36 @@ When modding SOTTR, you'll encounter the following file types:
 
   Regular DirectX texture. The game actually has its own texture format, but it's so close to DDS that the extractor and
   mod manager perform the conversion automatically (without any quality loss).
-    
-- **.tr11shaderlib**
+
+- **.trXshaderlib**
 
   Contains one or more compiled shaders (DXBC).
-    
-- **.tr11contentref**
+
+- **.trXcontentref**
 
   The root resource of certain special .drm files containing lists of game content,
-  such as collectibles or outfit traits. Just like .tr11objectref, this resource type contains nothing more than a reference
-  to a .tr11dtp resource with the actual data.
-        
-  .tr11contentref resources can be found in .drm files starting with "global," such as globalcollectibleinfo.drm.
+  such as collectibles or outfit traits. Just like .trXobjectref, this resource type contains nothing more than a reference
+  to a .trXdtp resource with the actual data.
 
-- **.tr11dtp**
+- **.trXdtp**
 
   Catch-all resource type used for (almost) everything not listed above.
 
-There are a few other extensions such as .tr11script, which are however unexplored and not moddable.
+There are a few other extensions such as .trXscript, which are however unexplored and not moddable.
 
 ## Installation
 
 The extractor and manager need no installation and can be run from anywhere. They'll try to autodetect where
-SOTTR is installed and ask you to provide the location if they can't find it.
+each game is installed and ask you to provide the location if they can't find it.
 
 The Blender addon can be installed as follows. Note that it requires Blender **3.6.5** or above (including 4.0).
 
 - Click Edit → Preferences in the menu.
 - Select the "Add-ons" tab.
-- Click "Install..."
-- Select io_scene_sottr.zip.
-- Enable the checkmark next to "Import-Export: SOTTR mesh support."
+- Click "Install..." (in Blender 4.0 and above, this is hidden behind a small down-arrow button in the top right
+  of the window).
+- Select io_scene_tr_reboot.zip.
+- Enable the checkmark next to "Import-Export: TR Reboot mesh support."
 
 Finally, if you want to use the binary templates (not needed for mesh/animation editing), simply place them
 in the correct folder depending on which hex editor you have:
@@ -93,35 +114,27 @@ in the correct folder depending on which hex editor you have:
 
 ### Importing
 
-Start by extracting the .drm of the model you want to edit. Then launch Blender, choose File → Import → SOTTR object,
-and select the .tr11objectref file. This will import the model's meshes, materials, and skeleton if there is one.
+Start by extracting the .drm of the model you want to edit. Then launch Blender, choose File → Import →
+TR2013/ROTTR/SOTTR object, and select the .trXobjectref file. This will import the model's meshes, materials,
+and skeleton if there is one.
 
 The import filechooser has the following options on the right hand side:
-
-- **Import unlinked models**
-
-  By default, the addon only imports the models referenced by the object metadata. Use this checkbox to instead import all models
-  in the "Model" folder.
 
 - **Import LODs**
 
   By default, the addon doesn't import any of the model's LOD meshes to reduce clutter. In certain cases, though,
   you may want to see them: if you're looking to replace Lara's head (explained further below), or if an original outfit
   simply doesn't have a full-detail mesh for one of its parts.
-        
+
   Note, however, that the addon doesn't support *exporting* LODs. All meshes will be exported as full-detail
   meshes, regardless of whether they were LOD meshes when you imported them. This means you should delete any LOD meshes
   before exporting.
 
-- **Import cloth and collisions**
-  
-  Import cloth strips and collision shapes. See the section on cloth physics for details.
-
 - **Split meshes into parts**
 
-  By default, the addon creates a Blender mesh per SOTTR mesh in the model, where each mesh consists of one or more parts
+  By default, the addon creates a Blender mesh per TR mesh in the model, where each TR mesh consists of one or more parts
   (set of faces sharing the same material). If this isn't granular enough for you, you can enable this option to create
-  a Blender mesh per SOTTR mesh part. Alternatively, you can of course use Blender's "Separate By Material" operator
+  a Blender mesh per TR mesh part. Alternatively, you can of course use Blender's "Separate By Material" operator
   after importing.
 
 - **Merge with existing skeleton(s)**
@@ -135,27 +148,27 @@ The import filechooser has the following options on the right hand side:
   enabled. The merging feature is explained in more detail later on.
 
 - **Keep original skeletons**
-  
+
   Lets you choose between two different ways of merging skeletons:
-  
+
   * When this option is enabled, the original (partial) skeletons will be kept in a hidden Blender collection.
     When you export the model, it's automatically split into pieces and distributed over the partial skeletons.
     Use this option if you don't intend to export the merged skeleton.
-  
+
   * When this option is disabled, the original skeletons are not kept. You can — and need to — export the
     merged skeleton as a new SOTTR skeleton together with your models.
 
   This option only applies if *Merge with existing skeleton(s)* is enabled.
 
 The Blender meshes are named using the following convention:
-`<DRM name>_model_<model ID>_<model data ID>_<mesh index>`. Skeletons, bones, materials
+`<DRM name>_model_<object ID>_<model ID>_<model data ID>_<mesh index>`. Skeletons, bones, materials
 etc. follow similar conventions. These names should be left unchanged as they're needed for the export to work.
 
 
 ### Fixing materials
 
-The addon creates a Blender material for every SOTTR material in the "Material" folder (even ones not referenced by the model).
-Each Blender material's shader tree contains all the textures used by the SOTTR material, which makes it easier to find
+The addon creates a Blender material for every TR material in the "Material" folder (even ones not referenced by the model).
+Each Blender material's shader tree contains all the textures used by the TR material, which makes it easier to find
 textures to change.
 
 The addon also assigns these materials to the mesh parts, so that you can see a textured preview of the model right after importing.
@@ -178,26 +191,26 @@ If you want to remove the custom normals for other meshes (e.g. because they get
 selecting the mesh, switching to the Data tab (green triangle) in Blender's Properties panel, expanding the "Geometry Data" header,
 and clicking "Clear Custom Split Normals Data."
 
-Because SOTTR blend shapes use custom vertex normals but Blender's shape keys don't support these, exported heads tend to
+Because TR blend shapes use custom vertex normals but Blender's shape keys don't support these, exported heads tend to
 have artifacts even if you didn't change anything. (The most noticeable effect is dark patches on the eyelids.)
 To work around this, the addon lets you transfer the shape key normals from the original model to your modified one.
-Find the "SOTTR Mesh Properties" panel in Blender's Data Properties tab, select the original file
+Find the "TR Mesh Properties" panel in Blender's Data Properties tab, select the original file
 as the "Shape Key Normals Source", and export your model as usual.
 
 ### Skeletons
 
-Each outfit is split into up to four pieces — head, hair, torso, and legs — where each piece has its own skeleton
+In SOTTR, each outfit is split into up to four pieces — head, hair, torso, and legs — where each piece has its own skeleton
 that only contains the necessary bones.
 
 #### Bone hiding
 
-SOTTR skeletons contain quite a few bones that aren't used for deforming the model. To reduce clutter, the addon hides
-these bones by either moving them to the second bone layer (Blender 3.6) or into a hidden bone collection (Blender 4.0).
+TR skeletons contain quite a few bones that aren't used for deforming the model. To reduce clutter, the addon hides
+these bones by either moving them to the second bone layer (Blender 3) or into a hidden bone collection (Blender 4).
 So, if you import a file that seems to have way too few bones (like tr11_lara.drm), check this layer/bone collection.
 
 #### Twist bones
 
-Many bones are not animated directly, but are so-called twist bones that have their position and rotation calculated based
+Many SOTTR bones are not animated directly, but are so-called twist bones that have their position and rotation calculated based
 on other bones. They are displayed in green in Pose Mode, and can be hidden in Blender 4.0 by toggling the "Twist bones"
 bone collection. While the twisting information is not applied as Blender bone constraints or drivers,
 it's still stored in the Blender file, and will be written out again when exporting the skeleton (meaning that,
@@ -205,7 +218,7 @@ if you mod a skeleton, the twisting information won't be lost).
 
 #### Bone IDs
 
-Bones in SOTTR don't have human-readable names like in some other engines. Instead, each bone has one or two IDs that are
+Bones in TR don't have human-readable names like in some other engines. Instead, each bone has one or two IDs that are
 reflected in its name in Blender, e.g. `bone_x_141` or `bone_7893_140`.
 
 - The first ID, if present, is the *global ID* and is used by animations (e.g. "Rotate bone 7893 by 5°"). By necessity,
@@ -268,7 +281,7 @@ the physics bones from the merged skeleton to the partial skeletons, and then ex
 
 #### Merging without Keep Originals
 
-If you want to export the merged skeleton for use in the game, you can uncheck "Keep original skeletons."
+If you want to export the merged skeleton for use in SOTTR, you can uncheck "Keep original skeletons."
 If you do this, you'll again get a single merged skeleton without duplicate bones, meaning rigging again becomes
 easier. The original partial skeletons will *not* be kept around and (importantly) all bones will have
 complete names with local IDs, meaning the skeleton is exportable.
@@ -288,7 +301,7 @@ reason being that the local IDs in the vertex group names no longer match those 
 exception is when both skeletons were merged with "Keep originals.")
 
 However, if you select the mesh and go to Blender's Data Properties tab (green triangle), you'll
-find a panel labeled "SOTTR Mesh Properties" with a button named "Fix Vertex Group Names."
+find a panel labeled "TR Mesh Properties" with a button named "Fix Vertex Group Names."
 If you click this, the addon will match the vertex groups with the parent armature's bones based on
 global ID, and rename the vertex groups so they have the correct local ID. This way, you can
 reuse the mesh after all.
@@ -303,38 +316,45 @@ This toolset, however, exports model files from scratch, which gives you a lot m
 - Add, change, and remove blend shapes as you please.
 - Add, change, and remove material slots as you please, and freely assign different materials to faces.
   You can also reference materials that weren't originally referenced by the model — *including* materials from
-  another .drm file. It's enough to rename the Blender material to use the ID of the external SOTTR material,
+  another .drm file. It's enough to rename the Blender material to use the ID of the external TR material,
   but you can of course also import the external .drm file into the current scene and delete its armature/meshes again,
   keeping just the materials.
 
 
 ### Head modding
 
-If you're looking to replace Lara's head by a custom one, you'll run into two problems: blend shapes and PureHair.
+If you're looking to replace Lara's head in SOTTR by a custom one, you'll run into two problems: blend shapes and PureHair.
 
 The head mesh has over a hundred blend shapes for facial expressions, used in cutscenes and the Photo Mode. Replicating all these
-on a custom mesh would be quite the undertaking. Fortunately, it's not necessary: SOTTR also supports bone-based facial animation,
+on a custom mesh would be quite the undertaking. Fortunately, it's not necessary: TR also supports bone-based facial animation,
 meaning all you really have to do is transfer the weights. The full-detail head mesh isn't weighted for facial bones,
 but the LOD meshes are, which is where the "Import LODs" option comes in handy.
 
 Lara's hair, in turn, is stored in a [PureHair](https://en.wikipedia.org/wiki/TressFX) file that's referenced by the object metadata.
 You can't remove it through mesh editing — instead, you need to use the binary templates. This is done as follows:
 
-- Open the head's .tr11objectref in one of the supported hex editors.
-- Apply the "tr11objectref" template.
-  - ImHex: File → Import → Pattern File
-  - 010 Editor: Templates → Open Template... followed by Templates → Run Template
-- Find the `objectRef` entry and note its number.
-- Open the .tr11dtp file corresponding to this number and apply the "tr11object" template.
+- Read the object ID from the Blender mesh name (first number).
+- Open the .tr11dtp file corresponding to this number in a hex editor and apply the "tr11object" binary template.
 - Find the `simpleComponents` entry, and within it, the `DYNAMICHAIR` entry.
 - Change the `type` field of the hair entry to `_NONE`.
 - Save the file and include it in your mod.
 
+
+### Draw groups
+
+Certain parts of an outfit may only be visible under certain conditions. One example is the Expedition Jacket in ROTTR:
+it contains a version of the hood that's on Lara's head, and another that's hanging down the back. Each hood has a
+unique *Draw Group ID* that allows the game to find it and then show/hide it as needed.
+
+This Draw Group ID can be seen, and changed, in the "TR Mesh Properties" panel in the "Data" tab (green triangle icon)
+of Blender's Properties editor.
+
+
 ### Exporting
 
-Exporting is done through the menu item File → Export → SOTTR model. The addon will export
-the models you have selected, or all models in the scene if none are selected. It'll produce both a .tr11model file and
-a .tr11modeldata file per model.
+Exporting is done through the menu item File → Export → TR2013/ROTTR/SOTTR model. The addon will export
+the models you have selected, or all models in the scene if none are selected. It'll produce several files
+per model depending on the target game.
 
 As mentioned before, the addon creates model files from scratch, so there's no need to overwrite an existing file.
 
@@ -343,7 +363,7 @@ all other modifiers so they don't affect the export result.
 
 ## Animation modding
 
-Apart from models, the Blender addon also supports importing and exporting animations (.tr11anim files).
+Apart from models, the Blender addon also supports importing and exporting SOTTR animations (.tr11anim files).
 You can animate bone positions/rotations/scales and blendshape values.
 
 To find an animation to modify, you can click the Play button in the Extractor to launch the game and log animations
@@ -374,7 +394,9 @@ animation thus being slower overall, not faster.
 ## Cloth physics modding
 
 Not all bones in an outfit are driven by an animation or other bones: some are instead driven by a
-cloth physics simulation. You can add these physics to your own models.
+cloth physics simulation. You can add these physics to your own models in SOTTR.
+It technically "works" in ROTTR too, but results can be wonky to unusable (more due to an issue
+with the tools than with the game no doubt).
 
 The cloth system involves the following concepts:
 * Strip: a patch of fabric (or hair, or rope...) consisting of masses and springs.
@@ -404,65 +426,65 @@ whatever way you want.
 > to get things working. You can identify the object file by opening the .tr11objectref file
 > with the corresponding binary template.
 
-The addon adds a custom "SOTTR Cloth" tab to Blender's sidebar (which you can open by pressing `N`).
+The addon adds a custom "TR Cloth" tab to Blender's sidebar (which you can open by pressing `N`).
 This tab lets you perform various cloth-related operations:
 
 * **Bones**
   * **Regenerate**
-    
+
     After you've added/edited/removed a cloth strip mesh, you can click this button to update
     the skeleton to match. The addon will create, move, and delete physics bones so there's one bone
     at each cloth strip vertex (mass). Once you're happy with the bones, you can weight the model to them.
-  
+
   * **Pin** (Pose mode)
-    
+
     Pins the selected bones, marking them in red. Pinned bones (masses) are stuck in place and don't
     flutter around. You should pin the bones at the edge of the strip where it attaches to the rest
     of the outfit.
-  
+
   * **Unpin** (Pose mode)
 
     Unpins the selected bones, marking them in grey. Unpinned bones (masses) are free to flutter around.
-  
+
   * **Bounceback strength** (Pose mode)
-    
+
     Shows, and lets you change, the bounceback strength of the selected bones (masses).
     This determines how much the masses want to return to their original location.
-  
+
 * **Strip**
   * **Parent**
-    
+
     The outfit bone which the selected strip is attached to. This should be a bone that's
     close to the strip while not being part of it. After changing this, click *Regenerate*
     to parent the physics bones to this bone.
-  
+
   * **Gravity Factor**
-    
+
     The gravity multiplier of the selected strip. The default is 1, but you can make it higher or
     lower, including setting it to 0 or even making it negative.
-  
+
   * **Wind Factor**
-    
+
     Determines how strongly the strip is affected by wind.
-  
+
   * **Pose Follow Factor**
-    
+
     How much the cloth masses follow Lara's orientation and pose. With a low factor,
     they're free to move independently of the rest of the outfit, while with a high factor,
     they stick close to their original relative position.
-  
+
   * **Rigidity**
-    
+
     Overall spring rigidity. Appears to have little effect ingame.
-  
+
   * **Drag**
-    
+
     How much the mass movement is damped (slowed down over time).
 
 * **Springs** (Cloth strip edit mode)
-  
+
   * **Stretchiness**
-    
+
     Shows, and lets you change, the stretchiness of the selected springs (edges).
     With a value of 0, springs can't stretch beyond their original length.
     With a value of 1, they're allowed to stretch up to twice their original length.
@@ -478,7 +500,7 @@ making sure to check "Export skeleton" and "Export cloth" in the file chooser.
 
 ## External resource references
 
-Most SOTTR resources reference other resources. A .tr11objectref references an object. An object references
+Most TR resources reference other resources. A .trXobjectref references an object. An object references
 a skeleton and models. A model references materials, which in turn reference textures and shaders, and so on.
 
 You can change a model's material references by simply applying different materials in Blender. However,
@@ -492,12 +514,12 @@ won't crash.
 
 This also means you can simply overwrite a resource by a copy of any other resource. For example,
 you could overwrite a material by another and change just one texture reference, keeping the
-shader references and the other textures. 
+shader references and the other textures.
 
 ## Text modding
 
-You can mod the file pcx64-w\local\locals.bin, which contains all the text displayed in the game:
-menu items, subtitles, outfit names/descriptions, and so on.
+You can mod the file pcx64-w\local\locals.bin ("pc-w" for TR2013), which contains all the text
+displayed in the game: menu items, subtitles, outfit names/descriptions, and so on.
 
 As indicated by its extension, it's a binary file, but the extractor automatically converts
 it to JSON for convenience. Once extracted, you can change any text you like. To keep an overview,
@@ -511,17 +533,8 @@ manager will then create a new locals.bin that includes your changes.
 ## Sound modding
 
 SOTTR uses the Wwise sound engine, which has a proprietary file format called .wem
-(for Wwise Encoded Media). To make matters worse, all the files have meaningless names like 619254.wem.
-
-The first step is to identify the file holding the audio you want to mod. You can press the Play
-icon in the extractor for this: it'll launch the game and log all the file paths that it accesses
-(Steam version only). Simply let the game play the audio you want to change, extract the most
-recently logged .wem files, and play the automatically converted .wav files to isolate the one you're after.
-
-Once you have the file name, you can move on to create your own .wav file with that same name.
-
-Next, you need to convert this .wav back to .wem, for which you need the Wwise authoring tools.
-These can be installed for free through the [Audiokinetic Launcher](https://www.audiokinetic.com/download/).
+(for Wwise Encoded Media). To create such files, you need the Wwise authoring tools,
+which can be installed for free through the [Audiokinetic Launcher](https://www.audiokinetic.com/download/).
 While it's possible to do the conversion using these tools alone, it's a bit cumbersome,
 so you can use the modding toolset's WwiseSoundConverter.exe instead.
 
@@ -539,7 +552,7 @@ into a folder or compressed archive (.zip/.7z/.rar) and you're done. There's no 
 > When testing your mod during development, it's easiest to drag-and-drop the folder straight onto the
 > mod manager window to install it. Packing the mod into an archive is only necessary when you're ready
 > to publish it.
-> 
+>
 > What's more: if you install from a folder, the manager will first automatically uninstall
 > the existing mod with the same name (if present) so that you don't have to do this manually,
 > saving you some time when iterating.
@@ -579,8 +592,69 @@ can choose the one they like.
 
 ## Appendix 1: Outfit reference
 
-| Ingame name | Name in globalcollectibleinfo.drm | Model .drm prefix |
-| ----------- | ---------------------------------- | ------------------ |
+### Tomb Raider (2013)
+
+(Courtesy of Raq on tombraidermodding.com)
+
+| Description | .drm file |
+| ----------- | --------- |
+| "Innocent" Cinematic. Used in the very first in-game cutscene, where Lara is swimming in the sea getting to the shore. | cine_v1_lara |
+| "Innocent" Player. Only used in the Model Viewer. | v1_lara |
+| "Inexperienced" Cinematic. Used during the entire beginning section of the game, both gameplay and cutscenes. | cine_v2_lara |
+| "Inexperienced" Player. Used for gameplay right after the cutscene where Lara finds the radio and Sam's backpack. | v2_lara |
+| "Advanced" Cinematic. Used for all cutscenes playing from the one where Lara successfully escapes the plane wreck falling down. | cine_v4_lara |
+| "Advanced" Player. Used right after the above section. | v4_lara |
+| "Survivor" Cinematic. Used for all cutscenes playing from the one where Roth and Lara survive the helicopter crash. | cine_v5_lara |
+| "Survivor" Player. Used for gameplay right after the above section. | v5_lara |
+| Aviatrix outfit | (cine_)v3_lara_aviatrix |
+| Camouflage outfit | (cine_)v3_lara_camo |
+| Engineer outfit | dlc_lara_engineer |
+| Guerrilla outfit | (cine_)v3_lara_black |
+| Mountaineer outfit | dlc_lara_mountaineer |
+| Sure-Shot outfit | dlc_lara_modernarcher |
+
+### Rise of the Tomb Raider
+
+| Ingame name | Name in globalcrafting.drm | .drm file prefix |
+| ----------- | -------------------------- | ---------------- |
+| Ancient Vanguard | Armor_MongolsBane | laracroft_armor_mongolsbane |
+| Apex Predator | Huntress_BloodRed | laracroft_huntress_bloodred |
+| Battle Worn | LightJacket_BattleWorn | laracroft_jacket_light_battleworn |
+| Blue Henley | Henley_Blue | laracroft_long_sleeve_blue |
+| Classic Angel Of Darkness | Classic02 | laracroft_classic02 |
+| Classic Chronicles Catsuit | Classic05 | laracroft_classic05 |
+| Classic Croft Manor | Classic04 | laracroft_classic04 |
+| Classic Tomb Raider II | Classic01 | laracroft_classic01 |
+| Classic Tomb Raider II Bomber Jacket | Classic03 | laracroft_classic03 |
+| Commando | Infiltrator_Stalker | laracroft_infiltrator_stalker |
+| Dark Tank Top | TankTop_Dark | laracroft_tanktop_aqua |
+| Desert Tank Top | TankTop_Base | laracroft |
+| Expedition Jacket | WinterJacket_Base | laracroft_snow_gear |
+| Gray Henley | Henley_Base | laracroft_long_sleeve |
+| Hope's Bastion | Armor_UnholyVanguard | laracroft_armor_vanguard |
+| Huntress | Huntress_Base | laracroft_huntress |
+| Immortal Guardian | Armor_Base | laracroft_armor |
+| Infiltrator | Infiltrator_Deceiver | laracroft_infiltrator_deceiver |
+| Leather Jacket | Hoodie_Base | laracroft_hoodie |
+| Nightshade | Huntress_TheBeast | laracroft_huntress_thebeast |
+| Pioneer | Endurance | laracroft_endurance |
+| Reimagined Antarctica Outfit | Classic06 | laracroft_classic06 |
+| Remnant Jacket | LightJacket_Base | laracroft_jacket_light |
+| Rust Henley | Henley_Rust | laracroft_long_sleeve_rust |
+| Sacra Umbra | Armor_DemonSeed | laracroft_armor_demonseed |
+| Shadow Runner | Infiltrator_Base | laracroft_infiltrator |
+| Siberian Ranger | Infiltrator_Drifter | laracroft_infiltrator_drifter |
+| Sparrowhawk | Huntress_SnowWhite | laracroft_huntress_snowwhite |
+| Spirit Weaver | SpiritWeaver_Base | laracroft_spiritweaver |
+| Ushanka Camo | ColdDarkness | laracroft_colddarkness |
+| Valiant Explorer | Pringles | laracroft_pringles |
+| Whiteout Jacket | WinterJacket_WhiteOut | laracroft_snow_gear_whiteout |
+| Wraithskin | Witch_Base | laracroft_witch |
+
+### Shadow of the Tomb Raider
+
+| Ingame name | Name in globalcollectibleinfo.drm | .drm file prefix |
+| ----------- | --------------------------------- | ---------------- |
 | Adventurer | Lara_Prologue | paperdoll_piece_tr11_lara_jungle |
 | Angel Of Darkness | Lara_Loyalty_AOD | paperdoll_piece_tr11_lara_aod |
 | Blue Henley | Lara_Loyalty_TR10_BlueHenley | paperdoll_piece_tr11_lara_tr10_blue_henley |
@@ -647,7 +721,7 @@ can choose the one they like.
 | Yaway's Wooden Greaves | Assault_01_Legs | paperdoll_piece_tr11_lara_assault_01_legs |
 | (Main menu) |  | paperdoll_generator_lara_menu |
 
-## Appendix 2: Photo mode reference
+## Appendix 2: SOTTR Photo Mode
 
 The .tr11anim files listed below can be found in tr11_lara.drm.
 

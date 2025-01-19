@@ -3,18 +3,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
     public class ResourceUsageCache
     {
         private const string FileName = "resourceusage.bin";
-        private const int Version = 6;
+        private const int Version = 7;
 
-        private readonly ResourceUsageCache _baseCache;
-        private readonly Dictionary<ResourceKey, Dictionary<ArchiveFileKey, int>> _resourceUsages = new();
-        private readonly Dictionary<int, HashSet<WwiseSoundBankItemReference>> _soundUsages = new();
+        protected readonly ResourceUsageCache _baseCache;
+        protected readonly Dictionary<ResourceKey, Dictionary<ArchiveFileKey, int>> _resourceUsages = new();
+        protected readonly Dictionary<string, ResourceKey> _resourceKeysByOriginalFilePath = new();
+        protected readonly Dictionary<int, HashSet<WwiseSoundBankItemReference>> _soundUsages = new();
 
         public ResourceUsageCache()
         {
@@ -53,7 +54,7 @@ namespace SottrModManager.Shared.Cdc
 
         private void AddFiles(IEnumerable<ArchiveFileReference> files, ArchiveSet archiveSet, ITaskProgress progress, CancellationToken cancellationToken)
         {
-            List<ArchiveFileReference> collectionRefs = files.Where(f => CdcHash.Lookup(f.NameHash) != null).ToList();
+            List<ArchiveFileReference> collectionRefs = files.Where(f => CdcHash.Lookup(f.NameHash, archiveSet.Game)?.EndsWith(".drm") ?? false).ToList();
             int collectionIdx = 0;
             foreach (ArchiveFileReference collectionRef in collectionRefs)
             {
@@ -61,43 +62,68 @@ namespace SottrModManager.Shared.Cdc
 
                 ResourceCollection collection = archiveSet.GetResourceCollection(collectionRef);
                 if (collection != null)
-                    AddResourceCollection(collection, archiveSet);
+                    AddResourceCollection(archiveSet, collection);
 
                 collectionIdx++;
                 progress?.Report((float)collectionIdx / collectionRefs.Count);
             }
         }
 
-        public void AddResourceCollection(ResourceCollection collection, ArchiveSet archiveSet)
+        public void AddResourceCollection(ArchiveSet archiveSet, ResourceCollection collection)
         {
+            ArchiveFileKey fileKey = new ArchiveFileKey(collection.NameHash, collection.Locale);
+            foreach (ResourceReference resourceRef in collection.ResourceReferences)
+            {
+                _resourceUsages.GetOrDefault(resourceRef)?.Remove(fileKey);
+            }
+
+            ulong localePlatformMask = CdcGameInfo.Get(collection.Game).LocalePlatformMask;
+            bool parseSoundBanks = CdcGameInfo.Get(collection.Game).UsesWwise;
             for (int i = 0; i < collection.ResourceReferences.Count; i++)
             {
-                AddResourceReference(collection, i);
-
                 ResourceReference resourceRef = collection.ResourceReferences[i];
-                if (resourceRef.Type == ResourceType.SoundBank)
-                    AddSoundBank(resourceRef, archiveSet);
+                if ((resourceRef.Locale & localePlatformMask) != localePlatformMask)
+                    continue;
+
+                AddResourceReference(archiveSet, collection, i);
+                if (resourceRef.Type == ResourceType.SoundBank && parseSoundBanks)
+                    AddSoundBank(archiveSet, resourceRef);
             }
         }
 
-        public void AddResourceReference(ResourceCollection collection, int resourceIdx)
+        public void AddResourceReference(ArchiveSet archiveSet, ResourceCollection collection, int resourceIdx)
         {
             ResourceReference resourceRef = collection.ResourceReferences[resourceIdx];
+            if (!_resourceUsages.ContainsKey(resourceRef))
+            {
+                string originalFilePath = ResourceNaming.ReadOriginalFilePath(archiveSet, resourceRef);
+                if (originalFilePath != null)
+                    _resourceKeysByOriginalFilePath[originalFilePath] = resourceRef;
+            }
+
             Dictionary<ArchiveFileKey, int> usages = _resourceUsages.GetOrAdd(resourceRef, () => new());
 
             ArchiveFileKey collectionKey = new ArchiveFileKey(collection.NameHash, collection.Locale);
-            if (collection.Locale == 0xFFFFFFFFFFFFFFFF && !usages.ContainsKey(collectionKey))
+            if (collection.Locale == 0xFFFFFFFFFFFFFFFF)
             {
-                foreach (ArchiveFileKey localeSpecificCollectionKey in usages.Keys.Where(c => c.NameHash == collection.NameHash).ToList())
+                if (!usages.ContainsKey(collectionKey))
                 {
-                    usages.Remove(localeSpecificCollectionKey);
+                    foreach (ArchiveFileKey localeSpecificCollectionKey in usages.Keys.Where(c => c.NameHash == collection.NameHash).ToList())
+                    {
+                        usages.Remove(localeSpecificCollectionKey);
+                    }
                 }
+            }
+            else
+            {
+                if (usages.ContainsKey(new ArchiveFileKey(collection.NameHash, 0xFFFFFFFFFFFFFFFF)))
+                    return;
             }
 
             usages[collectionKey] = resourceIdx;
         }
 
-        private void AddSoundBank(ResourceReference resourceRef, ArchiveSet archiveSet)
+        private void AddSoundBank(ArchiveSet archiveSet, ResourceReference resourceRef)
         {
             WwiseSoundBank bank;
             using (Stream stream = archiveSet.OpenResource(resourceRef))
@@ -118,6 +144,11 @@ namespace SottrModManager.Shared.Cdc
                 _soundUsages.GetOrAdd(soundId, () => new())
                             .Add(new WwiseSoundBankItemReference(resourceRef.Id, WwiseSoundBankItemReferenceType.Event, index++));
             }
+        }
+
+        public bool TryGetResourceKeyByOriginalFilePath(string filePath, out ResourceKey resourceKey)
+        {
+            return _resourceKeysByOriginalFilePath.TryGetValue(filePath, out resourceKey);
         }
 
         public IEnumerable<ResourceCollectionItemReference> GetResourceUsages(ArchiveSet archiveSet, ResourceKey resourceKey)
@@ -181,11 +212,8 @@ namespace SottrModManager.Shared.Cdc
             if (version != Version)
                 return false;
 
-            int archiveDateHash = reader.ReadInt32();
-            if (archiveDateHash != GetArchiveDateHash(archiveFolderPath))
-                return false;
-
             ReadResourceUsages(reader);
+            ReadOriginalResourceFilePaths(reader);
             ReadSoundUsages(reader);
             return true;
         }
@@ -197,16 +225,28 @@ namespace SottrModManager.Shared.Cdc
             {
                 ResourceType type = (ResourceType)reader.ReadByte();
                 int id = reader.ReadInt32();
-                int numUsages = reader.ReadInt32();
-                Dictionary<ArchiveFileKey, int> usages = new(numUsages);
-                for (int j = 0; j < numUsages; j++)
+                int numCollections = reader.ReadUInt16();
+                Dictionary<ArchiveFileKey, int> usages = new(numCollections);
+                for (int j = 0; j < numCollections; j++)
                 {
                     ulong collectionNameHash = reader.ReadUInt64();
                     ulong collectionLocale = reader.ReadByte() == 0 ? 0xFFFFFFFFFFFFFFFF : reader.ReadUInt64();
-                    int resourceIdx = reader.ReadInt32();
+                    int resourceIdx = reader.ReadUInt16();
                     usages.Add(new ArchiveFileKey(collectionNameHash, collectionLocale), resourceIdx);
                 }
                 _resourceUsages.Add(new ResourceKey(type, id), usages);
+            }
+        }
+
+        private void ReadOriginalResourceFilePaths(BinaryReader reader)
+        {
+            int numPaths = reader.ReadInt32();
+            for (int i = 0; i < numPaths; i++)
+            {
+                string filePath = reader.ReadString();
+                ResourceType type = (ResourceType)reader.ReadByte();
+                int id = reader.ReadInt32();
+                _resourceKeysByOriginalFilePath[filePath] = new ResourceKey(type, id);
             }
         }
 
@@ -235,9 +275,9 @@ namespace SottrModManager.Shared.Cdc
             BinaryWriter writer = new BinaryWriter(stream);
 
             writer.Write(Version);
-            writer.Write(GetArchiveDateHash(archiveFolderPath));
 
             WriteResourceUsages(writer);
+            WriteOriginalResourceFilePaths(writer);
             WriteSoundUsages(writer);
         }
 
@@ -248,7 +288,7 @@ namespace SottrModManager.Shared.Cdc
             {
                 writer.Write((byte)resource.Type);
                 writer.Write(resource.Id);
-                writer.Write(usages.Count);
+                writer.Write((ushort)usages.Count);
                 foreach ((ArchiveFileKey collectionKey, int resourceIdx) in usages)
                 {
                     writer.Write(collectionKey.NameHash);
@@ -261,8 +301,19 @@ namespace SottrModManager.Shared.Cdc
                         writer.Write((byte)1);
                         writer.Write(collectionKey.Locale);
                     }
-                    writer.Write(resourceIdx);
+                    writer.Write((ushort)resourceIdx);
                 }
+            }
+        }
+
+        private void WriteOriginalResourceFilePaths(BinaryWriter writer)
+        {
+            writer.Write(_resourceKeysByOriginalFilePath.Count);
+            foreach ((string filePath, ResourceKey resourceKey) in _resourceKeysByOriginalFilePath)
+            {
+                writer.Write(filePath);
+                writer.Write((byte)resourceKey.Type);
+                writer.Write(resourceKey.Id);
             }
         }
 
@@ -280,20 +331,6 @@ namespace SottrModManager.Shared.Cdc
                     writer.Write(usage.Index);
                 }
             }
-        }
-
-        private static int GetArchiveDateHash(string archiveFolderPath)
-        {
-            int hash = 0;
-            unchecked
-            {
-                foreach (string archiveFilePath in Directory.EnumerateFiles(archiveFolderPath, "*.tiger"))
-                {
-                    if (!Path.GetFileName(archiveFilePath).StartsWith(ArchiveSet.ModArchivePrefix))
-                        hash = hash * 397 ^ File.GetLastWriteTime(archiveFilePath).GetHashCode();
-                }
-            }
-            return hash;
         }
     }
 }

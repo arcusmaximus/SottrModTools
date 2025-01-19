@@ -1,6 +1,10 @@
 // Taken from https://github.com/dk76/VirtualTreeView
 
-namespace SottrModManager.Shared.Controls.VirtualTreeView
+using TrRebootTools.Shared.Controls.VirtualTreeView;
+
+// Taken from https://github.com/dk76/VirtualTreeView
+
+namespace TrRebootTools.Shared.Controls.VirtualTreeView
 {
     public class VirtualTreeNode
     {

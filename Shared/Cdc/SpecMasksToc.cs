@@ -2,9 +2,9 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
     internal class SpecMasksToc
     {

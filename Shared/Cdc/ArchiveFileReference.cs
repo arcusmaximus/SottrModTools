@@ -1,4 +1,6 @@
-﻿namespace SottrModManager.Shared.Cdc
+﻿using TrRebootTools.Shared.Cdc;
+
+namespace TrRebootTools.Shared.Cdc
 {
     public class ArchiveFileReference : ArchiveBlobReference
     {

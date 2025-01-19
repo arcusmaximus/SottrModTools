@@ -1,0 +1,57 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11globalmenus.bt
+//   Authors: arc_
+//   Purpose: Parse the main DTPs in:
+//                global_menus.drm
+//                fontuniversal.drm
+//                fontbuttonicons.drm
+//                fontnvidia.drm
+//                pregame_menus.drm
+//                loadingscreen.drm
+//                ingame_menus.drm
+//                campsite_menus.drm
+//           And possibly others
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+typedef struct
+{
+    FSkip(0x10);
+    int dtpId;
+    FSkip(0x220 - 0x14);
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+} Item <read=Str("%s -> %d.tr11dtp", name, dtpId), optimize=false>;
+
+typedef struct
+{
+    int count;
+    FSkip(4);
+    Ref itemsRef;
+    if (CanSeekTo(itemsRef))
+    {
+        SeekToRef(itemsRef);
+        Item items[count];
+        ReturnFromRef();
+    }
+} Set <optimize=false>;
+
+RefDefinitions refDefinitions;
+Ref setsRef;
+if (CanSeekTo(setsRef))
+{
+    SeekToRef(setsRef);
+    FSkip(8);
+    Set sets[2];
+    ReturnFromRef();
+}

@@ -1,0 +1,107 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr10clothdefinition.bt
+//   Authors: arc_
+//   Purpose: Parse ROTTR cloth definition files
+//  Category: ROTTR
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../trcommon.bt"
+
+typedef struct
+{
+    Vector4 offset;
+    float weight;
+    ushort localBoneId;
+    FSkip(0x20 - 0x16);
+} AnchorBone <read=Str("Bone %d", localBoneId), style=sData, optimize=false>;
+
+typedef struct
+{
+    Vector3 vector;
+    float springIdx;
+} SpringVector;
+
+typedef struct
+{
+    int count;
+    FSkip(0xC);
+    SpringVector vectors[count];
+} SpringVectorArray <style=sSection2Accent, optimize=false>;
+
+typedef struct
+{
+    Vector4 position;
+    
+    Ref anchorBonesRef;
+    ushort numAnchorBones;
+    FSkip(6);
+    if (CanSeekTo(anchorBonesRef))
+    {
+        SeekToRef(anchorBonesRef);
+        AnchorBone anchorBones[numAnchorBones];
+        ReturnFromRef();
+    }
+    
+    Ref springVectorArrayRef;
+    if (CanSeekTo(springVectorArrayRef))
+    {
+        SeekToRef(springVectorArrayRef);
+        SpringVectorArray springVectorArray;
+        ReturnFromRef();
+    }
+    
+    ushort type;
+    ushort localBoneId;
+    ushort rank;
+    FSkip(2);
+} Mass <optimize=false, style=sSection2, read=Str("Bone %d", localBoneId)>;
+
+typedef struct
+{
+    float restLength;
+    ushort massIdx1;
+    ushort massIdx2;
+} Spring <style=sSection3>;
+
+typedef struct
+{
+    Ref massesRef;
+    Ref springsRef;
+    int parentBoneLocalId;
+    ushort numMasses;
+    ushort numSprings;
+    ushort maxRank;
+    FSkip(6);
+    
+    if (CanSeekTo(massesRef))
+    {
+        SeekToRef(massesRef);
+        Mass masses[numMasses];
+        ReturnFromRef();
+    }
+    
+    if (CanSeekTo(springsRef))
+    {
+        SeekToRef(springsRef);
+        Spring springs[numSprings];
+        ReturnFromRef();
+    }
+} Strip <optimize=false, style=sSection1>;
+
+typedef struct
+{
+    Ref stripsRef;
+    ushort numStrips;
+    if (CanSeekTo(stripsRef))
+    {
+        SeekToRef(stripsRef);
+        Strip strips[numStrips];
+        ReturnFromRef();
+    }
+} Cloth <open=true>;
+
+RefDefinitions refDefinitions;
+Cloth cloth;

@@ -1,11 +1,12 @@
-﻿namespace SottrModManager.Shared.Cdc
+﻿namespace TrRebootTools.Shared.Cdc
 {
     public class ResourceReference : ArchiveBlobReference
     {
         public ResourceReference(
-            int resourceId,
             ResourceType type,
             ResourceSubType subType,
+            int resourceId,
+            ulong locale,
             int archiveId,
             int archiveSubId,
             int archivePart,
@@ -16,17 +17,13 @@
             int bodySize)
             : base(archiveId, archiveSubId, archivePart, offsetInArchive, sizeInArchive)
         {
-            Id = resourceId;
             Type = type;
             SubType = subType;
+            Id = resourceId;
+            Locale = locale;
             OffsetInBatch = offsetInBatch;
             RefDefinitionsSize = refDefinitionsSize;
             BodySize = bodySize;
-        }
-
-        public int Id
-        {
-            get;
         }
 
         public ResourceType Type
@@ -35,6 +32,16 @@
         }
 
         public ResourceSubType SubType
+        {
+            get;
+        }
+
+        public int Id
+        {
+            get;
+        }
+
+        public ulong Locale
         {
             get;
         }

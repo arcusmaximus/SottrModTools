@@ -1,0 +1,16 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11material.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR material files
+//  Category: SOTTR
+// File Mask: *.tr11material
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+#include "../trmaterialcommon.bt"
+
+RefDefinitions refDefinitions;
+Material material <open=true>;

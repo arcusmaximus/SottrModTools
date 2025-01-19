@@ -1,0 +1,310 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: tr9modeldata.bt
+//   Authors: arc_
+//   Purpose: Parse TR2013 model data files
+//  Category: TR2013
+// File Mask: *.tr9modeldata
+//------------------------------------------------
+
+#define TR_VERSION 9
+#include "../trcommon.bt"
+#include "../trmodelcommon.bt"
+
+local int gCurrentVertexBufferIndex;
+
+typedef struct
+{
+    Ref modelDataRef;
+    Ref textureArrayRef;
+    Ref materialArrayRef;
+    Ref clothStripsArrayRef;
+} ModelDataRefs;
+
+typedef struct
+{
+    int count;
+    Ref refs[count] <optimize=false>;
+} RefArray;
+
+typedef struct
+{
+    char magic[4];
+    int isSkinned : 1;
+    int totalDataSize <format=hex>;
+    int numIndices;
+    Vector4 boundingSphereCenter;
+    Vector4 boundingBoxMin;
+    Vector4 boundingBoxMax;
+    float boundingSphereRadius;
+    float minLod;
+    float maxLod;
+    int modelType;
+    float sortBias;
+    int boneUsageMap[8] <format=hex>;
+    int meshPartsPos <format=hex>;
+    int meshesPos <format=hex>;
+    int boneMappingsPos <format=hex>;
+    int lodLevelsPos <format=hex>;
+    int indicesPos <format=hex>;
+    ushort numMeshParts;
+    ushort numMeshes;
+    ushort numBoneMappings;
+    ushort numLodLevels;
+    int preTesselationInfoPos <format=hex>;
+    uint namePos <format=hex>;
+} ModelDataHeader <style=sHeading1>;
+
+typedef struct
+{
+    Vertex vertices[parentof(this).numVertices];
+} VertexBuffer <optimize=false>;
+
+typedef struct
+{
+    int numParts;
+    ushort lodLevel;
+    ushort numBones;
+    int boneIndicesPos <format=hex>;
+    int vertexData1Pos <format=hex>;
+    int vertexBuffer1Ptr;
+    int vertexData2Pos <format=hex>;
+    int vertexBuffer2Ptr;
+    int vertexFormatPos <format=hex>;
+    int numVertices;
+    int numNonPreTessellationVertices;
+    int firstIndexIdx;
+    int numTriangles;
+    
+    local int endPos = FTell();
+    
+    FSeek(startof(parentof(this)) + boneIndicesPos);
+    int boneIndices[numBones];
+    
+    FSeek(startof(parentof(this)) + vertexFormatPos);
+    VertexFormat vertexFormat;
+    
+    FSeek(startof(parentof(this)) + vertexData1Pos);
+    gCurrentVertexBufferIndex = 0;
+    VertexBuffer vertexBuffer1;
+    
+    FSeek(startof(parentof(this)) + vertexData2Pos);
+    gCurrentVertexBufferIndex = 1;
+    VertexBuffer vertexBuffer2;
+    
+    FSeek(endPos);
+} Mesh <optimize=false, style=sHeading2>;
+
+typedef struct
+{
+    Vector4 center;
+    int firstIndexIdx;
+    int numTriangles;
+    int numVertices;
+    int flags_unk1 : 9;
+    int isHair : 1;
+    int drawGroupId;
+    int order;
+    int actualPG;
+    FSkip(0xC);
+    int materialIdx;
+    int textureIndices[5];
+} MeshPart <optimize=true, style=sHeading3>;
+
+typedef struct
+{
+    ModelDataHeader header;
+    
+    FSeek(startof(this) + header.boneMappingsPos);
+    int boneMappings[header.numBoneMappings] <style=sData>;
+    
+    FSeek(startof(this) + header.meshesPos);
+    Mesh meshes[header.numMeshes];
+    
+    FSeek(startof(this) + header.indicesPos);
+    ushort indices[header.numIndices] <style=sData>;
+    
+    FSeek(startof(this) + header.meshPartsPos);
+    MeshPart meshParts[header.numMeshParts];
+} ModelData;
+
+typedef struct
+{
+    Vector4 min;
+    Vector4 max;
+    Vector4 position;
+    int flags;
+    ushort firstVertex;
+    ushort lastVertex;
+    int parentBoneId;
+    Ref hInfoRef;
+} Bone <optimize=false>;
+
+typedef struct
+{
+    int numBones;
+    Ref bonesRef;
+    if (CanSeekTo(bonesRef))
+    {
+        SeekToRef(bonesRef);
+        Bone bones[numBones];
+        local int endPos = FTell();
+        ReturnFromRef();
+    }
+} BoneArray <style=sSection2>;
+
+typedef struct
+{
+    ushort globalBoneId;
+    ushort localBoneId;
+} BoneIdMapping <read=Str("%d -> %d", globalBoneId, localBoneId)>;
+
+typedef struct
+{
+    int size;
+    int capacity;
+    Ref itemsRef;
+    if (CanSeekTo(itemsRef))
+    {
+        SeekToRef(itemsRef);
+        BoneIdMapping mappings[size];
+        ReturnFromRef();
+    }
+} BoneIdMappingArray <style=sSection2>;
+
+typedef struct
+{
+    Vector4 offset;
+    float weight;
+    ushort localBoneId;
+    FSkip(0x20 - 0x16);
+} ClothAnchorBone <optimize=true>;
+
+typedef struct
+{
+    Vector3 vector;
+    float springIdx;
+} ClothSpringVector;
+
+typedef struct
+{
+    int count;
+    FSkip(0xC);
+    ClothSpringVector vectors[count];
+} ClothSpringVectorArray <style=sSection2Accent, optimize=false>;
+
+typedef struct
+{
+    Vector4 position;
+    Ref anchorBonesRef;
+    ushort numAnchorBones;
+    FSkip(2);
+    Ref springVectorArrayRef;
+    ushort type;
+    ushort boneId;
+    ushort rank;
+    FSkip(0xE);
+    
+    if (CanSeekTo(anchorBonesRef))
+    {
+        SeekToRef(anchorBonesRef);
+        ClothAnchorBone anchorBones[numAnchorBones];
+        ReturnFromRef();
+    }
+    
+    if (CanSeekTo(springVectorArrayRef))
+    {
+        SeekToRef(springVectorArrayRef);
+        ClothSpringVectorArray springVectorArray;
+        ReturnFromRef();
+    }
+} ClothMass <optimize=false>;
+
+typedef struct
+{
+    float restLength;
+    ushort massIdx1;
+    ushort massIdx2;
+    
+    local int endPos = FTell();
+} ClothSpring <optimize=false>;
+
+typedef struct
+{
+    Ref massesRef;
+    Ref springsRef;
+    int boneId;
+    ushort numMasses;
+    ushort numSprings;
+    ushort maxRank;
+    FSkip(2);
+    
+    if (CanSeekTo(massesRef))
+    {
+        SeekToRef(massesRef);
+        ClothMass masses[numMasses];
+        ReturnFromRef();
+    }
+    
+    if (CanSeekTo(springsRef))
+    {
+        SeekToRef(springsRef);
+        ClothSpring springs[numSprings];
+        ReturnFromRef();
+    }
+} ClothStrip <optimize=false>;
+
+typedef struct
+{
+    Ref stripsRef;
+    ushort numStrips;
+    
+    if (CanSeekTo(stripsRef))
+    {
+        SeekToRef(stripsRef);
+        ClothStrip strips[numStrips];
+        ReturnFromRef();
+    }
+} ClothStripArray <optimize=false, style=sSection1>;
+
+RefDefinitions refDefinitions;
+ModelDataRefs modelRefs;
+
+if (CanSeekTo(modelRefs.textureArrayRef))
+{
+    SeekToRef(modelRefs.textureArrayRef);
+    RefArray textureRefs;
+    ReturnFromRef();
+}
+
+if (CanSeekTo(modelRefs.materialArrayRef))
+{
+    SeekToRef(modelRefs.materialArrayRef);
+    RefArray materialRefs;
+    ReturnFromRef();
+}
+
+if (CanSeekTo(modelRefs.clothStripsArrayRef))
+{
+    SeekToRef(modelRefs.clothStripsArrayRef);
+    ClothStripArray clothStripArray;
+    if (clothStripArray.numStrips > 0)
+    {
+        local int lastStripIdx = clothStripArray.numStrips - 1;
+        local int lastSpringIdx = clothStripArray.strips[lastStripIdx].numSprings - 1;
+        FSeek(clothStripArray.strips[lastStripIdx].springs[lastSpringIdx].endPos);
+        BoneArray boneArray;
+        
+        FSeek(boneArray.endPos);
+        BoneIdMappingArray boneIdMappingArray;
+    }
+    ReturnFromRef();
+}
+
+if (CanSeekTo(modelRefs.modelDataRef))
+{
+    SeekToRef(modelRefs.modelDataRef);
+    ModelData modelData;
+    ReturnFromRef();
+}

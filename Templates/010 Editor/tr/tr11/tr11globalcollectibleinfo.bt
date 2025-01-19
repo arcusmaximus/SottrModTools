@@ -1,0 +1,245 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11globalcollectibleinfo.bt
+//   Authors: arc_
+//   Purpose: Parse the .tr11dtp file in globalcollectibleinfo.drm
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+typedef struct
+{
+    uint hash <format=hex>;
+    FSkip(4);
+    
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x1F0 - 0x10);
+} CollectibleItem1 <read=name, optimize=false>;
+
+typedef struct
+{
+    int type;
+    FSkip(0x10 - 4);
+    
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x38 - 0x18);
+    Ref filePath1Ref;
+    if (CanSeekTo(filePath1Ref))
+    {
+        SeekToRef(filePath1Ref);
+        string filePath1;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x60 - 0x40);
+    Ref filePath2Ref;
+    if (CanSeekTo(filePath2Ref))
+    {
+        SeekToRef(filePath2Ref);
+        string filePath2;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x98 - 0x68);
+    Ref itemsRef;
+    int numItems;
+    FSkip(4);
+    if (CanSeekTo(itemsRef))
+    {
+        SeekToRef(itemsRef);
+        CollectibleItem1 items[numItems];
+        ReturnFromRef();
+    }
+} CollectibleSet1 <read=name, optimize=false>;
+
+typedef struct
+{
+    uint hash <format=hex>;
+    FSkip(4);
+    
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0xF0-0x10);
+} CollectibleItem2 <read=name, optimize=false>;
+
+typedef struct
+{
+    int type;
+    FSkip(0x10 - 4);
+    
+    Ref itemsRef;
+    int numItems;
+    FSkip(4);
+    if (CanSeekTo(itemsRef))
+    {
+        SeekToRef(itemsRef);
+        CollectibleItem2 items[numItems];
+        ReturnFromRef();
+    }
+} CollectibleSet2 <optimize=false>;
+
+enum OutfitPieceSlot
+{
+    HEAD,
+    HAIR,
+    TORSO,
+    LEGS
+};
+
+typedef struct
+{
+    Ref childHashesRef;
+    int numChildHashes;
+    if (CanSeekTo(childHashesRef) && numChildHashes > 0)
+    {
+        SeekToRef(childHashesRef);
+        uint childHashes[numChildHashes] <format=hex>;
+        ReturnFromRef();
+    }
+    
+    OutfitPieceSlot slot;
+    ushort zoneId;
+    FSkip(2);
+} OutfitInfo <optimize=false>;
+
+typedef struct
+{
+    uint hash <format=hex>;
+    FSkip(4);
+    
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0xF0 - 0x10);
+    int isPiece;
+    FSkip(0x108-0xF4);
+    
+    Ref traitsRef;
+    int numTraits;
+    FSkip(4);
+    if (CanSeekTo(traitsRef) && numTraits > 0)
+    {
+        SeekToRef(traitsRef);
+        ushort traits[numTraits];
+        ReturnFromRef();
+    }
+    
+    uquad nameLocaleHash <format=hex>;
+    uquad descriptionLocaleHash <format=hex>;
+    FSkip(8);
+    
+    Ref infoRef;
+    if (CanSeekTo(infoRef))
+    {
+        SeekToRef(infoRef);
+        OutfitInfo info;
+        ReturnFromRef();
+    }
+    
+    int imageDtpId;
+    FSkip(4);
+    Ref imageFileNameRef;
+    if (CanSeekTo(imageFileNameRef))
+    {
+        SeekToRef(imageFileNameRef);
+        string imageFileName;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x1C8 - 0x148);
+    byte initiallyAvailable1;
+    FSkip(0x1D5 - 0x1C9);
+    byte initiallyAvailable2;
+    FSkip(0x1D8 - 0x1D6);
+    byte photoModeFaceChooserDisabled;
+    byte photoModeMuscleSliderDisabled;
+    FSkip(0x1E0 - 0x1DA);
+} Outfit <read=name, optimize=false>;
+
+typedef struct
+{
+    int type;
+    int field_4;
+    int field_8 <format=hex>;
+    int field_C;
+    Ref outfitsRef;
+    int numOutfits;
+    FSkip(4);
+    
+    if (CanSeekTo(outfitsRef))
+    {
+        SeekToRef(outfitsRef);
+        Outfit outfits[numOutfits];
+        ReturnFromRef();
+    }
+} OutfitSet <optimize=false>;
+
+typedef struct
+{
+    Ref set1sRef;
+    int numSet1s;
+    if (CanSeekTo(set1sRef))
+    {
+        SeekToRef(set1sRef);
+        CollectibleSet1 set1s[numSet1s];
+        ReturnFromRef();
+    }
+    
+    FSkip(0x20 - 0xC);
+    Ref set2sRef;
+    int numSet2s;
+    if (CanSeekTo(set2sRef))
+    {
+        SeekToRef(set2sRef);
+        CollectibleSet2 set2s[numSet2s];
+        ReturnFromRef();
+    }
+    
+    FSkip(0x58 - 0x2C);
+    Ref outfitSetsRef;
+    int numOutfitSets;
+    
+    if (CanSeekTo(outfitSetsRef))
+    {
+        SeekToRef(outfitSetsRef);
+        OutfitSet outfitSets[numOutfitSets];
+        ReturnFromRef();
+    }
+} Root;
+
+RefDefinitions refDefinitions;
+Ref rootRef;
+if (CanSeekTo(rootRef))
+{
+    SeekToRef(rootRef);
+    Root root <open=true>;
+    ReturnFromRef();
+}

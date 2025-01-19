@@ -1,0 +1,107 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr10skeleton.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse ROTTR skeletons
+//  Category: ROTTR
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../trcommon.bt"
+
+typedef struct
+{
+    Vector4 min;
+    Vector4 max;
+    Vector4 position;
+    int flags <format=hex>;
+    ushort firstVertex;
+    ushort lastVertex;
+    int parentBoneId;
+    Ref hInfoRef;
+    FSkip(0xC);
+} Bone <optimize=false>;
+
+typedef struct
+{
+    quad numBones;
+    Ref bonesRef;
+    if (exists(bonesRef.target))
+    {
+        local int prevPos = FTell();
+        FSeek(startof(bonesRef.target));
+        Bone bones[numBones] <style=sData>;
+        FSeek(prevPos);
+    }
+} BoneArray;
+
+typedef struct
+{
+    ushort globalId;
+    ushort localId;
+} IdMapping <read=Str("%d -> %d", globalId, localId)>;
+
+typedef struct
+{
+    ubyte localIdRange1Start;
+    ubyte localIdRange2Start;
+    ubyte count;
+} CounterpartRange;
+
+typedef struct
+{
+    Ref boneArrayRef;
+    if (CanSeekTo(boneArrayRef))
+    {
+        SeekToRef(boneArrayRef);
+        BoneArray boneArray <style=sHeading2>;
+        ReturnFromRef();
+    }
+    
+    ushort numAnimatedBones;
+    ubyte numCounterpartRanges;
+    FSkip(5);
+    
+    Ref counterpartRangesRef;
+    if (CanSeekTo(counterpartRangesRef))
+    {
+        SeekToRef(counterpartRangesRef);
+        CounterpartRange counterpartRanges[numCounterpartRanges];
+        ReturnFromRef();
+    }
+    
+    ubyte numIgnoreCounterpartBones;
+    FSkip(7);
+    Ref ignoreCounterpartBonesRef;
+    if (CanSeekTo(ignoreCounterpartBonesRef))
+    {
+        SeekToRef(ignoreCounterpartBonesRef);
+        ubyte ignoreCounterpartBoneIds[numIgnoreCounterpartBones];
+        ReturnFromRef();
+    }
+    
+    ubyte numBoneIdMappings;
+    FSkip(7);
+    Ref boneIdMappingsRef;
+    if (CanSeekTo(boneIdMappingsRef))
+    {
+        SeekToRef(boneIdMappingsRef);
+        IdMapping boneIdMappings[numBoneIdMappings] <style=sSection2>;
+        ReturnFromRef();
+    }
+    
+    ubyte numBlendShapeIdMappings;
+    FSkip(7);
+    Ref blendShapeIdMappingsRef;
+    if (CanSeekTo(blendShapeIdMappingsRef))
+    {
+        SeekToRef(blendShapeIdMappingsRef);
+        IdMapping blendShapeIdMappings[numBlendShapeIdMappings] <style=sSection2Accent>;
+        ReturnFromRef();
+    }
+} Skeleton;
+
+RefDefinitions refDefinitions;
+Skeleton skeleton <open=true>;

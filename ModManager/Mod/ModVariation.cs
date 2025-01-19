@@ -1,10 +1,10 @@
-﻿using SottrModManager.Shared.Cdc;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using TrRebootTools.Shared.Cdc;
 
-namespace SottrModManager.Mod
+namespace TrRebootTools.ModManager.Mod
 {
     internal abstract class ModVariation : IDisposable
     {

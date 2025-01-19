@@ -7,8 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using TrRebootTools.Shared.Controls.VirtualTreeView;
 
-namespace SottrModManager.Shared.Controls.VirtualTreeView
+namespace TrRebootTools.Shared.Controls.VirtualTreeView
 {
 
     public interface IEditor

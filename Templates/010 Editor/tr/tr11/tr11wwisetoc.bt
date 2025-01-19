@@ -1,0 +1,42 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11wwisetoc.bt
+//   Authors: arc_
+//   Purpose: Parse pcx64-w\wwise\toc.dat
+//  Category: SOTTR
+//------------------------------------------------
+
+typedef struct
+{
+    FSkip(4);
+    int numBanks;
+    int numIntsToEvents;
+    int numEvents;
+    FSkip(0x38 - 0x10);
+    int numIntsToNames;
+} Header;
+
+typedef struct
+{
+    uint id;
+    uint nameOffset <format=hex>;
+    
+    local string name = ReadString(0x3C + header.numIntsToNames*4 + nameOffset);
+} Bank <read=Str("%u - %s", id, name), optimize=false>;
+
+typedef struct
+{
+    uint id;
+    uint nameOffset <format=hex>;
+    uint numBanks;
+    if (numBanks > 0)
+        uint bankIds[numBanks];
+    
+    local string name = ReadString(0x3C + header.numIntsToNames*4 + nameOffset);
+} Event <read=Str("%u - %s", id, name), optimize=false>;
+
+Header header;
+Bank banks[header.numBanks];
+FSeek(0x3C + header.numIntsToEvents*4);
+Event events[header.numEvents];

@@ -1,0 +1,79 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11globalachievements.bt
+//   Authors: arc_
+//   Purpose: Parse the .tr11dtp file in globalachievements.drm
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+typedef struct
+{
+    FSkip(8);
+    uquad nameLocaleHash <format=hex>;
+    uquad descriptionLocaleHash <format=hex>;
+    
+    FSkip(0xF8 - 0x18);
+    Ref texture1Ref;
+    if (CanSeekTo(texture1Ref))
+    {
+        SeekToRef(texture1Ref);
+        string texture1;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x120 - 0x100);
+    Ref texture2Ref;
+    if (CanSeekTo(texture2Ref))
+    {
+        SeekToRef(texture2Ref);
+        string texture2;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x1A8 - 0x128);
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x238 - 0x1B0);
+    Ref descriptionRef;
+    if (CanSeekTo(descriptionRef))
+    {
+        SeekToRef(descriptionRef);
+        string description;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x280 - 0x240);
+} Trait <read=((exists(name) ? name : "") + (exists(description) ? " / " + description : "")), optimize=false>;
+
+typedef struct
+{
+    FSkip(0x10);
+    int numTraits;
+    FSkip(4);
+    Ref traitsRef;
+    if (CanSeekTo(traitsRef))
+    {
+        SeekToRef(traitsRef);
+        Trait traits[numTraits];
+        ReturnFromRef();
+    }
+} Root;
+
+RefDefinitions refDefinitions;
+Ref rootRef;
+if (CanSeekTo(rootRef))
+{
+    SeekToRef(rootRef);
+    Root root <open=true>;
+    ReturnFromRef();
+}

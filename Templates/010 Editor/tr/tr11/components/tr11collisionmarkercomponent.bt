@@ -1,0 +1,37 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11interactablecomponent.bt
+//   Authors: arc_
+//   Purpose: Parse .tr11dtp files storing COLLISIONMARKER components
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+typedef struct
+{
+    Vector4 position;
+    Quaternion rotation;
+    ushort boneId;
+    ushort index;
+    ushort indexInMarkerList;
+} Marker;
+
+RefDefinitions refDefinitions;
+Ref matrixRef;
+byte flags;
+byte enabledByDefault;
+byte type;
+FSkip(1);
+ushort boneId;
+FSkip(2);
+Ref markerRef;
+
+if (CanSeekTo(markerRef))
+{
+    SeekToRef(markerRef);
+    Marker marker <open=true>;
+    ReturnFromRef();
+}

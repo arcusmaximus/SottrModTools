@@ -1,37 +1,44 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using SottrExtractor.LogHook;
-using SottrModManager.Shared.Cdc;
+using TrRebootTools.Shared.Cdc;
 
-namespace SottrExtractor
+namespace TrRebootTools.Extractor
 {
     public partial class MainForm : FormWithProgress
     {
         private readonly ArchiveSet _archiveSet;
-        private readonly ResourceUsageCache _resourceUsages = new();
+        private readonly ResourceUsageCache _resourceUsages;
 
         public MainForm()
         {
             InitializeComponent();
         }
 
-        public MainForm(string gameFolderPath)
+        public MainForm(string gameFolderPath, CdcGame game)
             : this()
         {
             Version version = Assembly.GetEntryAssembly().GetName().Version;
-            Text += $" {version.Major}.{version.Minor}.{version.Build}";
+            Text = string.Format(Text, CdcGameInfo.Get(game).ShortName, $"{version.Major}.{version.Minor}.{version.Build} Beta 5");
 
-            _archiveSet = new ArchiveSet(gameFolderPath, true, false);
+            _archiveSet = ArchiveSet.Open(gameFolderPath, true, false, game);
+            _resourceUsages = new ResourceUsageCache();
+        }
+
+        public bool GameSelectionRequested
+        {
+            get;
+            private set;
         }
 
         private async void MainForm_Load(object sender, EventArgs e)
         {
+            await Task.Delay(100);
             _tvFiles.Populate(_archiveSet);
+            _lblLoading.Visible = false;
 
             if (!_resourceUsages.Load(_archiveSet.FolderPath))
             {
@@ -49,7 +56,7 @@ namespace SottrExtractor
         {
             try
             {
-                string folderPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+                string folderPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), CdcGameInfo.Get(_archiveSet.Game).ShortName);
                 Extractor extractor = new Extractor(_archiveSet);
                 await Task.Run(() => extractor.Extract(folderPath, _tvFiles.SelectedFiles, this, CancellationTokenSource.Token));
             }
@@ -63,44 +70,17 @@ namespace SottrExtractor
             }
         }
 
-        private void _btnLaunchWithLog_Click(object sender, EventArgs e)
+        private void _btnSwitchGame_Click(object sender, EventArgs e)
         {
-            string exePath = Path.Combine(_archiveSet.FolderPath, "SOTTR.exe");
-            if (!File.Exists(exePath))
-            {
-                MessageBox.Show($"Game not found at {exePath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
-            }
-
-            FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(exePath);
-            Version version = new Version(versionInfo.FileMajorPart, versionInfo.FileMinorPart, versionInfo.FileBuildPart);
-            if (version != Game.ExpectedVersion)
-            {
-                MessageBox.Show($"Logging only works with version {Game.ExpectedVersion} of the game (you have version {version} installed).",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
-            }
-
-            using Game game = new Game(exePath);
-            try
-            {
-                game.Start();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to launch game:\r\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
-            }
-
-            using LogForm form = new LogForm(game, _archiveSet, _resourceUsages);
-            form.ShowDialog();
+            GameSelectionRequested = true;
+            Close();
         }
 
         protected override void EnableUi(bool enable)
         {
             _tvFiles.Enabled = enable;
-            _btnExtract.Enabled = _tvFiles.SelectedFiles.Count > 0;
-            _btnLaunchWithLog.Enabled = enable;
+            _btnExtract.Enabled = enable && _tvFiles.SelectedFiles.Count > 0;
+            _btnSwitchGame.Enabled = enable;
         }
 
         protected override void Dispose(bool disposing)

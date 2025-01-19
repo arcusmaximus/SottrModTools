@@ -1,45 +1,51 @@
-﻿using SottrModManager.Shared.Util;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using TrRebootTools.Shared.Cdc.Rise;
+using TrRebootTools.Shared.Cdc.Shadow;
+using TrRebootTools.Shared.Cdc.Tr2013;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
-    public class ResourceRefDefinitions
+    public abstract class ResourceRefDefinitions
     {
         public record struct InternalRef(int RefPosition, int TargetPosition);
         public record struct ExternalRef(int RefPosition, ResourceKey ResourceKey);
 
-        public static int ReadHeaderAndGetSize(Stream stream)
+        public static int ReadHeaderAndGetSize(Stream stream, CdcGame game)
         {
-            BinaryReader reader = new BinaryReader(stream);
-            RefCounts counts = reader.ReadStruct<RefCounts>();
-            return GetSize(counts);
+            return Create(null, stream, true, game).Size;
         }
 
-        private static int GetSize(in RefCounts refCounts)
+        protected readonly ResourceReference _resourceRef;
+        protected readonly Stream _stream;
+        protected readonly BinaryReader _reader;
+        protected readonly BinaryWriter _writer;
+
+        protected readonly Dictionary<int, int> _internalRefDefinitionPosByRefPos = new();
+        protected readonly Dictionary<int, int> _packedExternalRefDefinitionPosByRefPos = new();
+
+        public static ResourceRefDefinitions Create(ResourceReference resourceRef, Stream stream, CdcGame game)
         {
-            return Marshal.SizeOf<RefCounts>() + refCounts.NumInternalRefs * 8 +
-                                                 refCounts.NumWideExternalRefs * 16 +
-                                                 refCounts.NumIntPatches * 4 +
-                                                 refCounts.NumShortPatches * 8 +
-                                                 refCounts.NumPackedExternalRefs * 4;
+            return Create(resourceRef, stream, false, game);
         }
 
-        private readonly Stream _stream;
-        private readonly BinaryReader _reader;
-        private readonly BinaryWriter _writer;
-
-        private readonly Dictionary<int, int> _internalRefDefinitionPosByRefPos = new();
-        private readonly Dictionary<int, int> _packedExternalRefDefinitionPosByRefPos = new();
-
-        public ResourceRefDefinitions(Stream stream)
+        private static ResourceRefDefinitions Create(ResourceReference resourceRef, Stream stream, bool readSizeOnly, CdcGame game)
         {
-            if (!stream.CanSeek)
-                throw new ArgumentException("Stream must be seekable", nameof(stream));
+            return game switch
+            {
+                CdcGame.Tr2013 => new Tr2013ResourceRefDefinitions(resourceRef, stream, readSizeOnly),
+                CdcGame.Rise => new RiseResourceRefDefinitions(resourceRef, stream, readSizeOnly),
+                CdcGame.Shadow => new ShadowResourceRefDefinitions(resourceRef, stream, readSizeOnly)
+            };
+        }
 
+        protected ResourceRefDefinitions(ResourceReference resourceRef, Stream stream, bool readSizeOnly)
+        {
             _stream = stream;
+            _resourceRef = resourceRef;
             _reader = new BinaryReader(stream);
             if (stream.CanWrite)
                 _writer = new BinaryWriter(stream);
@@ -47,6 +53,11 @@ namespace SottrModManager.Shared.Cdc
             RefCounts counts = _reader.ReadStruct<RefCounts>();
 
             Size = GetSize(counts);
+            if (readSizeOnly)
+                return;
+
+            if (!stream.CanSeek)
+                throw new ArgumentException("Stream must be seekable", nameof(stream));
 
             for (int i = 0; i < counts.NumInternalRefs; i++)
             {
@@ -56,14 +67,7 @@ namespace SottrModManager.Shared.Cdc
                 _internalRefDefinitionPosByRefPos[Size + refOffset] = refDefinitionPos;
             }
 
-            for (int i = 0; i < counts.NumWideExternalRefs; i++)
-            {
-                int refOffset = _reader.ReadInt32();
-                ResourceType resourceType = (ResourceType)_reader.ReadInt32();
-                int resourceId = _reader.ReadInt32();
-                int resourceOffset = _reader.ReadInt32();
-            }
-
+            stream.Position += counts.NumWideExternalRefs * WideExternalRefSize;
             stream.Position += counts.NumIntPatches * 4;
             stream.Position += counts.NumShortPatches * 8;
 
@@ -80,6 +84,17 @@ namespace SottrModManager.Shared.Cdc
         {
             get;
         }
+
+        private int GetSize(in RefCounts refCounts)
+        {
+            return Marshal.SizeOf<RefCounts>() + refCounts.NumInternalRefs * 8 +
+                                                 refCounts.NumWideExternalRefs * WideExternalRefSize +
+                                                 refCounts.NumIntPatches * 4 +
+                                                 refCounts.NumShortPatches * 8 +
+                                                 refCounts.NumPackedExternalRefs * 4;
+        }
+
+        protected abstract int WideExternalRefSize { get; }
 
         public IEnumerable<InternalRef> InternalRefs
         {
@@ -118,7 +133,7 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
-        public ResourceKey GetExternalRefTarget(int refPos)
+        public virtual ResourceKey GetExternalRefTarget(int refPos)
         {
             long prevPos = _stream.Position;
 
@@ -134,7 +149,7 @@ namespace SottrModManager.Shared.Cdc
             return new ResourceKey(resourceType, resourceId);
         }
 
-        public void SetExternalRefTarget(int refPos, ResourceKey resourceKey)
+        public virtual void SetExternalRefTarget(int refPos, ResourceKey resourceKey)
         {
             if (!_packedExternalRefDefinitionPosByRefPos.ContainsKey(refPos))
                 throw new ArgumentException();

@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Drawing;
 using System.ComponentModel;
+using TrRebootTools.Shared.Controls.VirtualTreeView;
 
-namespace SottrModManager.Shared.Controls.VirtualTreeView
+namespace TrRebootTools.Shared.Controls.VirtualTreeView
 {
     [Browsable(true)]
     [TypeConverter(typeof(ExpandableObjectConverter))]

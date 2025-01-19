@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using SottrModManager.Shared.Cdc;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Cdc;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Mod
+namespace TrRebootTools.ModManager.Mod
 {
     internal class TigerModPackage : ModPackage
     {
@@ -12,27 +12,44 @@ namespace SottrModManager.Mod
         private readonly Dictionary<ArchiveFileKey, ArchiveFileReference> _files = new();
         private readonly Dictionary<ResourceKey, ResourceReference> _resources = new();
 
-        public TigerModPackage(string nfoFilePath, List<string> archiveFilePaths)
+        public TigerModPackage(string nfoFilePath, List<string> archiveFilePaths, CdcGame game)
+            : this(LoadArchives(nfoFilePath, archiveFilePaths, game), game)
         {
-            ArchiveMetaData metaData = ArchiveMetaData.Load(nfoFilePath);
-            _archivesBySubId = archiveFilePaths.Select(p => Archive.Open(p, metaData))
-                                               .ToDictionary(a => a.SubId);
+        }
+
+        private static IEnumerable<Archive> LoadArchives(string nfoFilePath, IEnumerable<string> archiveFilePaths, CdcGame game)
+        {
+            ArchiveMetaData metaData = nfoFilePath != null ? ArchiveMetaData.Load(nfoFilePath) : null;
+            return archiveFilePaths.Select(p => Archive.Open(p, metaData, game));
+        }
+
+        public TigerModPackage(IEnumerable<Archive> archives, CdcGame game)
+        {
+            _archivesBySubId = archives.ToDictionary(a => a.SubId);
             Name = _archivesBySubId.Values.First().ModName;
 
+            ulong localePlatformMask = CdcGameInfo.Get(game).LocalePlatformMask;
             foreach (Archive archive in _archivesBySubId.Values)
             {
                 foreach (ArchiveFileReference fileRef in archive.Files)
                 {
-                    ResourceCollection collection = archive.GetResourceCollection(fileRef);
-                    if (collection == null)
+                    if (fileRef.ArchiveId != archive.Id)
+                        continue;
+
+                    string filePath = CdcHash.Lookup(fileRef.NameHash, game);
+                    if (filePath == null || !filePath.EndsWith(".drm"))
                     {
                         _files[fileRef] = fileRef;
                         continue;
                     }
 
+                    ResourceCollection collection = archive.GetResourceCollection(fileRef);
+                    if (collection == null)
+                        continue;
+
                     foreach (ResourceReference resourceRef in collection.ResourceReferences)
                     {
-                        if (resourceRef.ArchiveId == archive.Id)
+                        if (resourceRef.ArchiveId == archive.Id && (resourceRef.Locale & localePlatformMask) == localePlatformMask)
                             _resources[resourceRef] = resourceRef;
                     }
                 }

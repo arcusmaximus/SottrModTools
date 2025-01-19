@@ -1,0 +1,22 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr10contentref.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR global content reference
+//  Category: ROTTR
+// File Mask: *.tr10contentref
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../trcommon.bt"
+
+typedef struct
+{
+    Ref reference;
+    FSkip(0x10);
+    int globalContentId;
+} GlobalContentReference;
+
+RefDefinitions refDefinitions;
+GlobalContentReference reference <open=true>;

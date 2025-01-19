@@ -1,0 +1,206 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: tr10modeldata.bt
+//   Authors: arc_
+//   Purpose: Parse ROTTR model data files
+//  Category: ROTTR
+// File Mask: *.tr10modeldata
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../trcommon.bt"
+#include "../trmodelcommon.bt"
+
+local int gCurrentVertexBufferIndex;
+local int gCurrentMeshIndex = 0;
+
+typedef struct
+{
+    Ref modelDataRef;
+    Ref textureArrayRef;
+    Ref materialArrayRef;
+    Ref modelDataRef2;
+} ModelDataRefs;
+
+typedef struct
+{
+    int count;
+    FSkip(4);
+    Ref refs[count] <optimize=false>;
+} RefArray;
+
+typedef struct
+{
+    char name[0x40];
+} BlendShapeName <read=name>;
+
+typedef struct
+{
+    local int returnPos;
+    local int i;
+    
+    char magic[4];
+    int isSkinned : 1;
+    int flags_unknown1 : 13;
+    int hasBlendShapes : 1;
+    int totalDataSize <format=hex>;
+    int numIndices;
+    Vector4 boundingSphereCenter;
+    Vector4 boundingBoxMin;
+    Vector4 boundingBoxMax;
+    Vector4 positionScaleOffset;
+    float boundingSphereRadius;
+    float minLod;
+    float maxLod;
+    float maxShadowLod;
+    int modelType;
+    float sortBias;
+    int boneUsageMap[8] <format=hex>;
+    uquad meshPartsPos <format=hex>;
+    uquad meshesPos <format=hex>;
+    uquad boneMappingsPos <format=hex>;
+    uquad lodLevelsPos <format=hex>;
+    uquad indicesPos <format=hex>;
+    ushort numMeshParts;
+    ushort numMeshes;
+    ushort numBoneMappings;
+    ushort numLodLevels;
+    int preTesselationInfoPos <format=hex>;
+    FSkip(4);
+    
+    uquad namePos <format=hex>;
+    if (namePos > 0)
+    {
+        returnPos = FTell();
+        FSeek(startof(this) + namePos);
+        string name;
+        FSeek(returnPos);
+    }
+    
+    int numBlendShapes;
+    FSkip(4);
+    uquad blendShapeNamesPos <format=hex>;
+    if (blendShapeNamesPos > 0)
+    {
+        returnPos = FTell();
+        FSeek(startof(this) + blendShapeNamesPos);
+        BlendShapeName blendShapeNames[numBlendShapes];
+        FSeek(returnPos);
+    }
+    
+    float autoBumpScale;
+} ModelDataHeader <style=sHeading1>;
+
+typedef struct
+{
+    Vertex vertices[parentof(this).numVertices];
+} VertexBuffer <optimize=false>;
+
+typedef struct
+{
+    int numParts;
+    ushort numBones;
+    FSkip(2);
+    uquad boneIndicesPos <format=hex>;
+    uquad vertexData1Pos <format=hex>;
+    uquad vertexBuffer1Ptr;
+    uquad vertexData2Pos <format=hex>;
+    uquad vertexBuffer2Ptr;
+    uquad vertexFormatPos <format=hex>;
+    uquad blendShapesPos <format=hex>;
+    int numVertices;
+    int numNonPreTessellationVertices;
+    int firstIndexIdx;
+    int numTriangles;
+    
+    local int endPos = FTell();
+    
+    FSeek(startof(parentof(this)) + boneIndicesPos);
+    int boneIndices[numBones];
+    
+    FSeek(startof(parentof(this)) + vertexFormatPos);
+    VertexFormat vertexFormat;
+    
+    FSeek(startof(parentof(this)) + vertexData1Pos);
+    gCurrentVertexBufferIndex = 0;
+    VertexBuffer vertexBuffer1;
+    
+    FSeek(startof(parentof(this)) + vertexData2Pos);
+    gCurrentVertexBufferIndex = 1;
+    VertexBuffer vertexBuffer2;
+    
+    if (parentof(this).header.hasBlendShapes == 1)
+    {
+        FSeek(startof(parentof(this)) + blendShapesPos);
+        BlendShapes blendShapes;
+    }
+    
+    FSeek(endPos);
+    
+    gCurrentMeshIndex++;
+} Mesh <optimize=false, style=sHeading2>;
+
+typedef struct
+{
+    int value;
+    FSkip(4);
+} PaddedIndex <read=value, optimize=true>;
+
+typedef struct
+{
+    Vector4 center;
+    int firstIndexIdx;
+    int numTriangles;
+    int numVertices;
+    int flags_unk1 : 9;
+    int isHair : 1;
+    int drawGroupId;
+    int order;
+    int actualPG;
+    ushort lodPivot;
+    FSkip(2);
+    PaddedIndex materialIdx;
+    PaddedIndex textureIndices[5];
+} MeshPart <optimize=true, style=sHeading3>;
+
+typedef struct
+{
+    ModelDataHeader header;
+    
+    FSeek(startof(this) + header.boneMappingsPos);
+    int boneMappings[header.numBoneMappings] <style=sData>;
+    
+    FSeek(startof(this) + header.meshesPos);
+    Mesh meshes[header.numMeshes];
+    
+    FSeek(startof(this) + header.indicesPos);
+    ushort indices[header.numIndices] <style=sData>;
+    
+    FSeek(startof(this) + header.meshPartsPos);
+    MeshPart meshParts[header.numMeshParts];
+} ModelData;
+
+RefDefinitions refDefinitions;
+ModelDataRefs modelRefs;
+
+if (CanSeekTo(modelRefs.textureArrayRef))
+{
+    SeekToRef(modelRefs.textureArrayRef);
+    RefArray textureRefs;
+    ReturnFromRef();
+}
+
+if (CanSeekTo(modelRefs.materialArrayRef))
+{
+    SeekToRef(modelRefs.materialArrayRef);
+    RefArray materialRefs;
+    ReturnFromRef();
+}
+
+if (CanSeekTo(modelRefs.modelDataRef))
+{
+    SeekToRef(modelRefs.modelDataRef);
+    ModelData modelData;
+    ReturnFromRef();
+}

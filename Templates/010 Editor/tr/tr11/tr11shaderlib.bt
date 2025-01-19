@@ -1,0 +1,51 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11shaderlib.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR shader libraries
+//  Category: SOTTR
+// File Mask: *.tr11shaderlib
+//------------------------------------------------
+
+enum ShaderType
+{
+    PIXEL = 1,
+    VERTEX,
+    HULL,
+    DOMAIN,
+    COMPUTE,
+    GEOMETRY,
+    RT
+};
+
+typedef struct
+{
+    FSkip(4);
+    int size <format=hex, style=sSection1>;
+    quad nameHash <format=hex, style=sSection2>;
+    byte data[size - 0x10] <style=sData>;
+} Shader;
+
+typedef struct
+{
+    int positionMinus4 <format=hex, style=sHeading3>;
+    if (positionMinus4 == -1)
+        return;
+    
+    local int prevPos;
+    prevPos = FTell();
+    FSeek(positionMinus4 + 4);
+    Shader shader;
+    FSeek(prevPos);
+} ShaderOffset <read=Str("%x", positionMinus4 + 4), optimize=false>;
+
+struct ShaderLib
+{
+    ShaderType type <style=sHeading1>;
+    int numShadersTimes4 <style=sHeading2>;
+    FSkip(4);
+    ShaderOffset shaderOffsets[numShadersTimes4 / 4] <open=true>;
+};
+
+ShaderLib lib <open=true>;

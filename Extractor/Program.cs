@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Windows.Forms;
-using SottrModManager.Shared;
+using TrRebootTools.Shared;
+using TrRebootTools.Shared.Cdc;
+using TrRebootTools.Shared.Forms;
 
-namespace SottrExtractor
+namespace TrRebootTools.Extractor
 {
     public static class Program
     {
@@ -12,11 +14,24 @@ namespace SottrExtractor
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            string gameFolderPath = GameFolderFinder.Find();
-            if (gameFolderPath == null)
-                return;
+            bool forceGamePrompt = false;
+            while (true)
+            {
+                CdcGame? game = GameSelectionForm.GetGame(forceGamePrompt);
+                if (game == null)
+                    break;
 
-            Application.Run(new MainForm(gameFolderPath));
+                string gameFolderPath = GameFolderFinder.Find(game.Value);
+                if (gameFolderPath == null)
+                    break;
+
+                using MainForm form = new MainForm(gameFolderPath, game.Value);
+                Application.Run(form);
+                if (!form.GameSelectionRequested)
+                    break;
+
+                forceGamePrompt = true;
+            }
         }
     }
 }

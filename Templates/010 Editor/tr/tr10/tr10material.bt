@@ -1,0 +1,16 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr10material.bt
+//   Authors: arc_
+//   Purpose: Parse ROTTR material files
+//  Category: ROTTR
+// File Mask: *.tr10material
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../trcommon.bt"
+#include "../trmaterialcommon.bt"
+
+RefDefinitions refDefinitions;
+Material material <open=true>;

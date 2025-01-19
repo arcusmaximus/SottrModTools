@@ -1,0 +1,15 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr10objectref.bt
+//   Authors: arc_
+//   Purpose: Parse ROTTR object reference files
+//  Category: ROTTR
+// File Mask: *.tr10objectref
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../trcommon.bt"
+
+RefDefinitions refDefinitions;
+Ref objectRef;

@@ -1,0 +1,2375 @@
+#define TR_VERSION 9
+#include "../trcommon.bt"
+
+typedef struct
+{
+    uint dynamic : 1;
+    uint cldCamera : 1;
+    uint cldCameraBoom : 1;
+    uint cldgex : 1;
+    uint cldenemy : 1;
+    uint cldstat : 1;
+    uint clddyna : 1;
+    uint cldterr : 1;
+    uint cldTriggers : 1;
+    uint platform : 1;
+    uint dontDeactivate : 1;
+    uint dontPauseInPause : 1;
+    uint waitForCommand : 1;
+    uint noDump : 1;
+    uint animatedMiniInstance : 1;
+    uint hasLod : 1;
+    uint noDraw : 1;
+    uint dontStartFx : 1;
+    uint fxUseObject : 1;
+    uint noMesh : 1;
+    uint physicalObject : 1;
+    uint usedInGameForHasMovingMarkers : 1;
+    uint noSave : 1;
+    uint lookatme : 1;
+    uint stayInPlayerUnit : 1;
+    uint doesNotMoveToNewUnits : 1;
+    uint incrementalRemove : 1;
+    uint movedFromBirthUnit : 1;
+    uint notAnimated : 1;
+    uint useMiniInstance : 1;
+    uint boundsphereOnTNode : 1;
+    uint alwaysUseBoundingSphere : 1;
+    uint useAnimatedBoundingBox : 1;
+    uint closeCameraFadeable : 1;
+    uint debris : 1;
+    uint playerObject : 1;
+    uint enemyObject : 1;
+    uint vehicleObject : 1;
+    uint rigidbody : 1;
+    uint flammable : 1;
+    uint timelineonlyAnimation : 1;
+    uint aimTransparent : 1;
+    uint twoAnimprocessors : 1;
+    uint threeAnimprocessors : 1;
+    uint fiveAnimprocessors : 1;
+    uint disabledAtRuntime : 1;
+    uint skydome : 1;
+    uint modelviewOnly : 1;
+    uint localMotionBlur : 1;
+    uint applyWetLight : 1;
+    uint drawInSHCaptures : 1;
+    uint canDrawInReflections : 1;
+    uint noSaveUnlessMoved : 1;
+    uint purgeableSave : 1;
+    uint npcObject : 1;
+    uint gamerulesObject : 1;
+    uint useBoneUsageMap : 1;
+    uint activateReticle : 1;
+    uint duplicated : 1;
+    uint disallowAimTransparentForPlayers : 1;
+    uint interactiveTarget : 1;
+    uint noEdgeGrab : 1;
+    uint pushpullDisableAutoDetach : 1;
+    uint laraCanHurdle : 1;
+    uint laraUpdatesJumpVelWhenJumpingFrom : 1;
+    uint laraCanTrapeze : 1;
+    uint localFeedbackEffect : 1;
+    int _Bitfieldpadding64 : 29;
+} ObjectFlags <optimize=false>;
+
+typedef struct
+{
+    int vvRemoveDist;
+    int removeDist;
+    float lod1Dist;
+    float lod2Dist;
+    ubyte lod1Model;
+    ubyte lod2Model;
+    FSkip(2);
+    float skinThickness;
+    float motionBlurStrength;
+    ushort shSampleMarker;
+    byte sampleSHOnce;
+    FSkip(1);
+    float triggerVolumeOffset;
+    byte bUseOutfitManager;
+    FSkip(3);
+    float maxRad;
+} ObjectBaseData__ObjectHeader <optimize=false>;
+
+typedef struct
+{
+    Ref codeRef;
+    if (CanSeekTo(codeRef))
+    {
+        SeekToRef(codeRef);
+        unsigned int code;
+        ReturnFromRef();
+    }
+} Method <optimize=false>;
+
+typedef struct
+{
+    Ref virtualMethodTableRef;
+    if (CanSeekTo(virtualMethodTableRef))
+    {
+        SeekToRef(virtualMethodTableRef);
+        Method virtualMethodTable;
+        ReturnFromRef();
+    }
+} AnimScriptObject <optimize=false>;
+
+typedef struct
+{
+    Ref scriptObjRef;
+    if (CanSeekTo(scriptObjRef))
+    {
+        SeekToRef(scriptObjRef);
+        AnimScriptObject scriptObj;
+        ReturnFromRef();
+    }
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string debugName;
+        ReturnFromRef();
+    }
+} AnimPatternEntry <optimize=false>;
+
+typedef struct
+{
+    float time;
+} SoundPlex__Silence <optimize=false>;
+
+typedef struct
+{
+    int type;
+    Ref dataRef;
+    if (CanSeekTo(dataRef))
+    {
+        SeekToRef(dataRef);
+        SoundPlex__Silence data;
+        ReturnFromRef();
+    }
+    unsigned int ownerID;
+    byte clickPlay;
+} SoundPlex <optimize=false>;
+
+typedef struct
+{
+    unsigned int eSurfaceType;
+    unsigned int colFxa;
+} FXLib__FXSurfaceCol <optimize=false>;
+
+typedef struct
+{
+    int samplepoints[32];
+} MyColorBar <optimize=false>;
+
+typedef struct
+{
+    float x;
+    float y;
+} FXPointCurve__Point <optimize=false>;
+
+typedef struct
+{
+    unsigned int numPoints;
+    Ref pointsRef;
+    if (CanSeekTo(pointsRef))
+    {
+        SeekToRef(pointsRef);
+        FXPointCurve__Point points[numPoints];
+        ReturnFromRef();
+    }
+} FXPointCurve <optimize=false>;
+
+typedef struct
+{
+    unsigned int eSurfaceType;
+    char iProbeTile;
+    FSkip(3);
+    float fProbeRadius;
+    unsigned int probeFxa;
+} FXLib__FXSurface <optimize=false>;
+
+typedef struct
+{
+    int iProbeMarker;
+    float fProbeLength;
+    Ref probeSoundRef;
+    if (CanSeekTo(probeSoundRef))
+    {
+        SeekToRef(probeSoundRef);
+        SoundPlex probeSound;
+        ReturnFromRef();
+    }
+    ubyte bProbeEnabled : 1;
+    ubyte bProbeLocal : 1;
+    ubyte bProbeAlign : 1;
+    ubyte bDieOnImpact : 1;
+    ubyte bApplyDamage : 1;
+    ubyte bProbeTerrain : 1;
+    ubyte bProbeObjects : 1;
+    ubyte bProbePlayer : 1;
+    ubyte bProbeEnemy : 1;
+    ubyte bProbeFriendlyTeam : 1;
+    ubyte bParentCollision : 1;
+    ubyte bProbePrev : 1;
+    ubyte bDamageSpeed : 1;
+    byte _Bitfieldpadding11 : 3;
+    FSkip(2);
+    float vLastBirth[3];
+    ushort nSurfaces;
+    FSkip(2);
+    Ref aSurfaceRef;
+    if (CanSeekTo(aSurfaceRef))
+    {
+        SeekToRef(aSurfaceRef);
+        FXLib__FXSurface aSurface;
+        ReturnFromRef();
+    }
+} FXLib__FXProbe <optimize=false>;
+
+typedef struct
+{
+    ubyte key;
+    FSkip(3);
+    float value;
+} FXLib__FXGameDataKeyValuePair <optimize=false>;
+
+typedef struct
+{
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string debugName;
+        ReturnFromRef();
+    }
+    char sString[32];
+    ubyte bEnabled : 1;
+    ubyte bEnabledMulti : 1;
+    ubyte bDebugColor : 1;
+    ubyte bDebugInfo : 1;
+    ubyte bDebugShape : 1;
+    ubyte bDebugSphere : 1;
+    ubyte bDebugActivation : 1;
+    ubyte bDebugSleep : 1;
+    ubyte bDebugCollision : 1;
+    ubyte bDebugAvgVel : 1;
+    ubyte bDebugCenter : 1;
+    ubyte bDebugOutline : 1;
+    ubyte bDebugNormals : 1;
+    ubyte bDebugMaterial : 1;
+    ubyte bDebugAlphaBar : 1;
+    ubyte bCallbackBirth : 1;
+    ubyte bCallbackPost : 1;
+    ubyte bCallbackDraw : 1;
+    ubyte bRendBuf : 1;
+    ubyte bVertBuf : 1;
+    ubyte bRendPostScr : 1;
+    ubyte bRendBehindCamera : 1;
+    ubyte bEmitterStatic : 1;
+    ubyte bEmitterDynamic : 1;
+    ubyte bSingleCollide : 1;
+    ubyte bPrefab : 1;
+    ubyte bPostBirth : 1;
+    ubyte bAtRest : 1;
+    ubyte bAgeless : 1;
+    ubyte bLockRot : 1;
+    ubyte bWrapX : 1;
+    ubyte bWrapY : 1;
+    ubyte bWrapZ : 1;
+    ubyte bSegMigration : 1;
+    ubyte bDistributed : 1;
+    ubyte bShapeLocal : 1;
+    ubyte bGrounded : 1;
+    ubyte bAssertCreate : 1;
+    ubyte bAssertDestroy : 1;
+    ubyte bAssertKill : 1;
+    ubyte bAssertBaseFree : 1;
+    ubyte bCollideFirst : 1;
+    ubyte bCollideAll : 1;
+    ubyte bCollideTer : 1;
+    ubyte bCollideObj : 1;
+    ubyte bCollidePlayer : 1;
+    ubyte bCollideEnemy : 1;
+    ubyte bCollideFriendly : 1;
+    ubyte bCollideParent : 1;
+    ubyte bCollideParent2 : 1;
+    ubyte bEmitterLoop : 1;
+    ubyte bLocalVel : 1;
+    ubyte bRadialVel : 1;
+    ubyte bConicalVel : 1;
+    ubyte bPropDist : 1;
+    ubyte bFlockingBound : 1;
+    ubyte bFrameStartRand : 1;
+    ubyte bAnimOneShot : 1;
+    ubyte bSE1Parent : 1;
+    ubyte bSE2Parent : 1;
+    ubyte bWindAsVel : 1;
+    ubyte bInheritInitOnly : 1;
+    ubyte bFlareRoll : 1;
+    ubyte bFlareProbe : 1;
+    ubyte bCallbackDamage : 1;
+    byte _Bitfieldpadding66 : 7;
+    FSkip(3);
+    Ref collideSoundRef;
+    if (CanSeekTo(collideSoundRef))
+    {
+        SeekToRef(collideSoundRef);
+        SoundPlex collideSound;
+        ReturnFromRef();
+    }
+    ubyte eCollideReact : 3;
+    ubyte eFacing : 3;
+    ubyte eNormal : 1;
+    byte _Bitfieldpadding68 : 1;
+    ubyte eBirthShape : 3;
+    ubyte eBirthType : 4;
+    byte _Bitfieldpadding71 : 1;
+    ushort eParticleTargetarea;
+    ubyte eBirthMethod : 2;
+    ubyte eSortOrder : 2;
+    ubyte eBlendType : 2;
+    byte _Bitfieldpadding74 : 2;
+    FSkip(1);
+    ushort projectileType;
+    float fLifeEmitter;
+    float fLifeEmitterRand;
+    float fFadeTimeIn;
+    float fFadeTimeOut;
+    float fLifeParticle;
+    float fLifeParticleRand;
+    float fBirthDelay;
+    float fBirthDelayRand;
+    float fVortexAmp;
+    float fVortexFreq;
+    float fModelScale;
+    float fVortex;
+    float fGravityScale;
+    float fFlocking;
+    float fBounce;
+    float fWindFactor;
+    float fLightingScale;
+    float fDirectionalScale;
+    float fDisplacementX;
+    float fDisplacementY;
+    float fFrameRate;
+    float fUScrollRate;
+    float fVScrollRate;
+    float fUCount;
+    float fVCount;
+    float fStretch;
+    float fStretchRand;
+    float fFadeAngleStart;
+    float fFadeAngleEnd;
+    float fFadeSizeStart;
+    float fFadeSizeEnd;
+    float fSIFadeIn;
+    float fSIFadeOut;
+    float fDecalFov;
+    float fDecalNear;
+    float fDecalFar;
+    float fInheritScale;
+    float fTurbulence;
+    float fFlareLock;
+    float fFlareRadius;
+    float f3dLod;
+    float fZPushPart;
+    float fZPushGeom;
+    float fSphereBumper;
+    float fSphereCushion;
+    float fParticleSize;
+    float fParticleSizeRand;
+    float fActiveDist;
+    float fDistToCam;
+    float fFlockingSpeed;
+    float fMaxSpeed;
+    float fMaxRange;
+    float fFlockingAttract;
+    int iParticleCount;
+    int iParticleCountRand;
+    char iFrameX;
+    char iFrameY;
+    char iFrameStart;
+    char iFrameEnd;
+    char iMaxBounce;
+    char iNthCount;
+    FSkip(2);
+    float vShapePos[3];
+    float vShapeMin[3];
+    float vShapeMax[3];
+    float vVelInit[3];
+    float vVelRand[3];
+    float vRotInit[3];
+    float vRotRand[3];
+    float vRotVelInit[3];
+    float vRotVelRand[3];
+    float vShapeRot[3];
+    unsigned int cSIColor;
+    Ref aCurveAlphaInRef;
+    if (CanSeekTo(aCurveAlphaInRef))
+    {
+        SeekToRef(aCurveAlphaInRef);
+        ubyte aCurveAlphaIn;
+        ReturnFromRef();
+    }
+    Ref aCurveAlphaOutRef;
+    if (CanSeekTo(aCurveAlphaOutRef))
+    {
+        SeekToRef(aCurveAlphaOutRef);
+        ubyte aCurveAlphaOut;
+        ReturnFromRef();
+    }
+    Ref aCurveSizeELRef;
+    if (CanSeekTo(aCurveSizeELRef))
+    {
+        SeekToRef(aCurveSizeELRef);
+        ubyte aCurveSizeEL;
+        ReturnFromRef();
+    }
+    Ref aCurveSizePLRef;
+    if (CanSeekTo(aCurveSizePLRef))
+    {
+        SeekToRef(aCurveSizePLRef);
+        ubyte aCurveSizePL;
+        ReturnFromRef();
+    }
+    Ref aCurveSizeRandELRef;
+    if (CanSeekTo(aCurveSizeRandELRef))
+    {
+        SeekToRef(aCurveSizeRandELRef);
+        ubyte aCurveSizeRandEL;
+        ReturnFromRef();
+    }
+    Ref aCurveSizeRandPLRef;
+    if (CanSeekTo(aCurveSizeRandPLRef))
+    {
+        SeekToRef(aCurveSizeRandPLRef);
+        ubyte aCurveSizeRandPL;
+        ReturnFromRef();
+    }
+    Ref aCurveStretchPLRef;
+    if (CanSeekTo(aCurveStretchPLRef))
+    {
+        SeekToRef(aCurveStretchPLRef);
+        ubyte aCurveStretchPL;
+        ReturnFromRef();
+    }
+    Ref aCurveOffsetInitELRef;
+    if (CanSeekTo(aCurveOffsetInitELRef))
+    {
+        SeekToRef(aCurveOffsetInitELRef);
+        ubyte aCurveOffsetInitEL;
+        ReturnFromRef();
+    }
+    Ref aCurveVelInitELRef;
+    if (CanSeekTo(aCurveVelInitELRef))
+    {
+        SeekToRef(aCurveVelInitELRef);
+        ubyte aCurveVelInitEL;
+        ReturnFromRef();
+    }
+    Ref aCurveVelPLRef;
+    if (CanSeekTo(aCurveVelPLRef))
+    {
+        SeekToRef(aCurveVelPLRef);
+        ubyte aCurveVelPL;
+        ReturnFromRef();
+    }
+    Ref aCurveVelRandELRef;
+    if (CanSeekTo(aCurveVelRandELRef))
+    {
+        SeekToRef(aCurveVelRandELRef);
+        ubyte aCurveVelRandEL;
+        ReturnFromRef();
+    }
+    Ref aCurveTurbulenceRef;
+    if (CanSeekTo(aCurveTurbulenceRef))
+    {
+        SeekToRef(aCurveTurbulenceRef);
+        ubyte aCurveTurbulence;
+        ReturnFromRef();
+    }
+    Ref aCurveVelRandPLRef;
+    if (CanSeekTo(aCurveVelRandPLRef))
+    {
+        SeekToRef(aCurveVelRandPLRef);
+        ubyte aCurveVelRandPL;
+        ReturnFromRef();
+    }
+    Ref aCurveVelInheritPLRef;
+    if (CanSeekTo(aCurveVelInheritPLRef))
+    {
+        SeekToRef(aCurveVelInheritPLRef);
+        ubyte aCurveVelInheritPL;
+        ReturnFromRef();
+    }
+    Ref aCurveRotInitELRef;
+    if (CanSeekTo(aCurveRotInitELRef))
+    {
+        SeekToRef(aCurveRotInitELRef);
+        ubyte aCurveRotInitEL;
+        ReturnFromRef();
+    }
+    Ref aCurveRotRandELRef;
+    if (CanSeekTo(aCurveRotRandELRef))
+    {
+        SeekToRef(aCurveRotRandELRef);
+        ubyte aCurveRotRandEL;
+        ReturnFromRef();
+    }
+    Ref aCurveRotVelInitELRef;
+    if (CanSeekTo(aCurveRotVelInitELRef))
+    {
+        SeekToRef(aCurveRotVelInitELRef);
+        ubyte aCurveRotVelInitEL;
+        ReturnFromRef();
+    }
+    Ref aCurveRotVelRandELRef;
+    if (CanSeekTo(aCurveRotVelRandELRef))
+    {
+        SeekToRef(aCurveRotVelRandELRef);
+        ubyte aCurveRotVelRandEL;
+        ReturnFromRef();
+    }
+    Ref aCurveFadeRef;
+    if (CanSeekTo(aCurveFadeRef))
+    {
+        SeekToRef(aCurveFadeRef);
+        ubyte aCurveFade;
+        ReturnFromRef();
+    }
+    Ref aCurveVortexCoefRef;
+    if (CanSeekTo(aCurveVortexCoefRef))
+    {
+        SeekToRef(aCurveVortexCoefRef);
+        ubyte aCurveVortexCoef;
+        ReturnFromRef();
+    }
+    Ref aCurveVortexAmpRef;
+    if (CanSeekTo(aCurveVortexAmpRef))
+    {
+        SeekToRef(aCurveVortexAmpRef);
+        ubyte aCurveVortexAmp;
+        ReturnFromRef();
+    }
+    Ref aCurveVortexFreqRef;
+    if (CanSeekTo(aCurveVortexFreqRef))
+    {
+        SeekToRef(aCurveVortexFreqRef);
+        ubyte aCurveVortexFreq;
+        ReturnFromRef();
+    }
+    Ref aCurveFlareAngleAlphaRef;
+    if (CanSeekTo(aCurveFlareAngleAlphaRef))
+    {
+        SeekToRef(aCurveFlareAngleAlphaRef);
+        ubyte aCurveFlareAngleAlpha;
+        ReturnFromRef();
+    }
+    Ref aCurveFlareAngleSizeRef;
+    if (CanSeekTo(aCurveFlareAngleSizeRef))
+    {
+        SeekToRef(aCurveFlareAngleSizeRef);
+        ubyte aCurveFlareAngleSize;
+        ReturnFromRef();
+    }
+    Ref aSESpeed1Ref;
+    if (CanSeekTo(aSESpeed1Ref))
+    {
+        SeekToRef(aSESpeed1Ref);
+        ubyte aSESpeed1;
+        ReturnFromRef();
+    }
+    Ref aSESpeed2Ref;
+    if (CanSeekTo(aSESpeed2Ref))
+    {
+        SeekToRef(aSESpeed2Ref);
+        ubyte aSESpeed2;
+        ReturnFromRef();
+    }
+    Ref materialRef;
+    Ref renderMeshRef;
+    unsigned int sE1Fxa;
+    unsigned int sE2Fxa;
+    ushort nCollideSurfaces;
+    FSkip(2);
+    Ref aCollideSurfaceRef;
+    if (CanSeekTo(aCollideSurfaceRef))
+    {
+        SeekToRef(aCollideSurfaceRef);
+        FXLib__FXSurfaceCol aCollideSurface;
+        ReturnFromRef();
+    }
+    Ref emitterBaseRef;
+    if (CanSeekTo(emitterBaseRef))
+    {
+        SeekToRef(emitterBaseRef);
+        byte emitterBase;
+        ReturnFromRef();
+    }
+    Ref modifierNodeRef;
+    if (CanSeekTo(modifierNodeRef))
+    {
+        SeekToRef(modifierNodeRef);
+        byte modifierNode;
+        ReturnFromRef();
+    }
+    int birthId;
+    MyColorBar colorBarPL;
+    MyColorBar colorBarEL;
+    FXPointCurve aCurveFlare;
+    FXPointCurve aCurveSE1;
+    FXPointCurve aCurveSE2;
+    byte bCheckLighting;
+    byte bCheckSI;
+    byte bCheckCollision;
+    FSkip(1);
+    ushort nProbes;
+    FSkip(2);
+    Ref probeRef;
+    if (CanSeekTo(probeRef))
+    {
+        SeekToRef(probeRef);
+        FXLib__FXProbe probe;
+        ReturnFromRef();
+    }
+    ubyte nGameData;
+    FSkip(3);
+    Ref aGameDataRef;
+    if (CanSeekTo(aGameDataRef))
+    {
+        SeekToRef(aGameDataRef);
+        FXLib__FXGameDataKeyValuePair aGameData;
+        ReturnFromRef();
+    }
+} FXLib__emitterfx <optimize=false>;
+
+typedef struct
+{
+    ushort unit;
+    ubyte unitLightGroupIdx;
+} UnitLightGroup <optimize=false>;
+
+typedef struct
+{
+    byte scriptDisabled;
+    byte inExteriorCell;
+    ushort scriptLightGroup;
+    UnitLightGroup unitLightGroup;
+    byte enableLightCulling;
+    byte invertedLightCulling;
+    FSkip(3);
+    float cullLightDistance;
+    float cullLightFadeDistance;
+    byte activeInGameplay : 1;
+    byte activeInCinematics : 1;
+    byte activeForMainPass : 1;
+    byte activeForReflection : 1;
+    byte activeForCapturing : 1;
+    byte _Bitfieldpadding8 : 3;
+    FSkip(3);
+    float rangeScale;
+    float rangeScaleScripted;
+    int lightType;
+    int lightComplexity;
+    float range;
+    float lightIntensity;
+    float umbra;
+    float penumbra;
+    float nearRadius;
+    float boxLightStartX;
+    float boxLightFalloffX;
+    float boxLightStartY;
+    float boxLightFalloffY;
+    float boxLightStartZ;
+    float boxLightFalloffZ;
+    int fireLightFlameScale;
+    int fireLightMaskScale;
+    float fireLightBurnSpeed;
+    float fireLightCurrentBurn;
+    byte cheapWetLight;
+    FSkip(3);
+    Ref wetCubeMapTextureRef;
+    float wetCubeMapIntensity;
+    float wetDarkLightIntensity;
+    ubyte lightColorR;
+    ubyte lightColorG;
+    ubyte lightColorB;
+    ubyte attenuation[256];
+    FSkip(1);
+    float specularStrength;
+    float lambertWeight;
+    float halfLambertWeight;
+    float ambientWeight;
+    float minShadowSpecular;
+    byte enableVariation;
+    byte randomStartVariation;
+    FSkip(2);
+    float intensityVariationSpeed;
+    Ref intensityVariationRef;
+    if (CanSeekTo(intensityVariationRef))
+    {
+        SeekToRef(intensityVariationRef);
+        ubyte intensityVariation;
+        ReturnFromRef();
+    }
+    byte enableModulationTexture;
+    FSkip(3);
+    Ref modulationTextureRef;
+    float texScale;
+    float texRotation;
+    float texXScroll;
+    float texYScroll;
+    byte shadowEnabled;
+    byte enablePerInstanceShadowBias;
+    FSkip(2);
+    float shadowConstBias;
+    float shadowSlopeBias;
+    float shadowDistanceBias;
+    int shadowMapSize;
+    byte isReceiverFocus;
+    byte viewIndependentShadowCulling;
+    byte enableShadowLOD;
+    FSkip(1);
+    float shadowLODDist1;
+    float shadowLODDist2;
+    float shadowLODDist3;
+    float vsmBias;
+    float vsmDarken;
+    float vsmClamp;
+    int vsmBlur;
+    byte enableAutoLightConversion;
+    FSkip(3);
+    float conversionDistance;
+    byte enableShadowDistanceCulling;
+    FSkip(3);
+    float shadowFadeDistance;
+    float shadowCullDistance;
+    ushort lightGroup;
+    byte affectsPlayer : 1;
+    byte affectsIntros : 1;
+    byte affectsBGObjects : 1;
+    byte affectsTerrain : 1;
+    byte affectsGroup1 : 1;
+    byte affectsGroup2 : 1;
+    byte affectsGroup3 : 1;
+    byte affectsGroup4 : 1;
+    byte affectsCineGroup1 : 1;
+    byte affectsCineGroup2 : 1;
+    byte affectsCineGroup3 : 1;
+    byte affectsCineGroup4 : 1;
+    byte affectsCineGroup5 : 1;
+    byte affectsCineGroup6 : 1;
+    byte affectsCineGroup7 : 1;
+    byte affectsCineGroup8 : 1;
+    byte affectsWater : 1;
+    byte affectsFX : 1;
+    byte _Bitfieldpadding91 : 6;
+    char onlyAffects;
+    FSkip(2);
+    Ref affectsCellsRef;
+    unsigned int affectsCellsCount;
+    if (CanSeekTo(affectsCellsRef))
+    {
+        SeekToRef(affectsCellsRef);
+        short affectsCells[affectsCellsCount];
+        ReturnFromRef();
+    }
+    byte shadowAffectsPlayer : 1;
+    byte shadowAffectsIntros : 1;
+    byte shadowAffectsBGObjects : 1;
+    byte shadowAffectsTerrain : 1;
+    byte shadowAffectsGroup1 : 1;
+    byte shadowAffectsGroup2 : 1;
+    byte shadowAffectsGroup3 : 1;
+    byte shadowAffectsGroup4 : 1;
+    byte shadowAffectsCineGroup1 : 1;
+    byte shadowAffectsCineGroup2 : 1;
+    byte shadowAffectsCineGroup3 : 1;
+    byte shadowAffectsCineGroup4 : 1;
+    byte shadowAffectsCineGroup5 : 1;
+    byte shadowAffectsCineGroup6 : 1;
+    byte shadowAffectsCineGroup7 : 1;
+    byte shadowAffectsCineGroup8 : 1;
+    byte animEnabled;
+    FSkip(1);
+    float animParamsPosX[4];
+    float animParamsPosY[4];
+    float animParamsPosZ[4];
+    float animParamsDirX[4];
+    float animParamsDirY[4];
+    float animParamsDirZ[4];
+    float originalIntensity;
+    ubyte originalColorR;
+    ubyte originalColorG;
+    ubyte originalColorB;
+    FSkip(1);
+    float originalRangeScale;
+} LightTemplateData <optimize=false>;
+
+typedef struct
+{
+    char type;
+    FSkip(1);
+    short length;
+    char priority;
+    FSkip(1);
+    short startSegment;
+    short endSegment;
+    ubyte maxColorR;
+    ubyte maxColorG;
+    ubyte maxColorB;
+    ubyte startoninit : 1;
+    byte _Bitfieldpadding6 : 7;
+    ushort maxradius;
+    short lifeTime;
+    short fadeinTime;
+    short fadeoutTime;
+    char groupId;
+    LightTemplateData lightData;
+} FXLib__DynamicLightData <optimize=false>;
+
+typedef struct
+{
+    byte active;
+    byte dirRel;
+    ubyte iPad1;
+    ubyte iPad2;
+    float distMax;
+    float distMin;
+    float lifeMax;
+    float lifeMin;
+    float magMax;
+    float magMin;
+    float dirMax;
+    float dirMin;
+    float speed;
+    float uLength;
+    int bEnabledCurr;
+    int bDirRelCurr;
+    float fDistMaxCurr;
+    float fDistMinCurr;
+    float fLifeMaxCurr;
+    float fLifeMinCurr;
+    float fMagMaxCurr;
+    float fMagMinCurr;
+    float fDirMaxCurr;
+    float fDirMinCurr;
+    float fSpeedCurr;
+    int bEnabledSaved;
+    int bDirRelSaved;
+    float fDistMaxSaved;
+    float fDistMinSaved;
+    float fLifeMaxSaved;
+    float fLifeMinSaved;
+    float fMagMaxSaved;
+    float fMagMinSaved;
+    float fDirMaxSaved;
+    float fDirMinSaved;
+    float fSpeedSaved;
+    int bSaved;
+    int iFrames;
+    int iFramePrev;
+    int iLife;
+    float fMagCurrent;
+    float fMagDesired;
+    float fMagDelta;
+    float fDirCurrent;
+    float fDirDesired;
+    float fDirDelta;
+    float fSpeedCurrent;
+    float fULenCurrent;
+} WindData__WaveAttrib <optimize=false>;
+
+typedef struct
+{
+    byte ignoreUnitWind;
+    byte ignoreCellWind;
+    FSkip(2);
+    unsigned int waveCount;
+    Ref waveArrayRef;
+    if (CanSeekTo(waveArrayRef))
+    {
+        SeekToRef(waveArrayRef);
+        WindData__WaveAttrib waveArray;
+        ReturnFromRef();
+    }
+} WindData <optimize=false>;
+
+typedef struct
+{
+    char type;
+    ubyte startoninit : 1;
+    byte _Bitfieldpadding1 : 7;
+    short timeToColor;
+    unsigned int color;
+    char pad;
+    char groupId;
+    short timeFromColor;
+    short timeAtColor;
+    short maxFullscreenAlpha;
+    ushort falloffRadius;
+    short falloffT;
+    unsigned int fullscreenFXID;
+    float fsfxOnscreenAngle;
+    Ref materialRef;
+    ubyte postFXFS : 1;
+    byte _Bitfieldpadding14 : 7;
+    FSkip(3);
+    int birthId;
+} FXLib__flashfx <optimize=false>;
+
+typedef struct
+{
+    ubyte bWeatherObject : 1;
+    byte _Bitfieldpadding2 : 7;
+    FSkip(3);
+    unsigned int fxLibDTPID;
+    ushort emitterFXCount;
+    FSkip(2);
+    Ref emitterFXListRef;
+    if (CanSeekTo(emitterFXListRef))
+    {
+        SeekToRef(emitterFXListRef);
+        FXLib__emitterfx emitterFXList[emitterFXCount];
+        ReturnFromRef();
+    }
+    ushort dynamicLightCount;
+    FSkip(2);
+    Ref dynamicLightListRef;
+    if (CanSeekTo(dynamicLightListRef))
+    {
+        SeekToRef(dynamicLightListRef);
+        FXLib__DynamicLightData dynamicLightList[dynamicLightCount];
+        ReturnFromRef();
+    }
+    ushort windFXCount;
+    FSkip(2);
+    Ref windFXListRef;
+    if (CanSeekTo(windFXListRef))
+    {
+        SeekToRef(windFXListRef);
+        WindData windFXList[windFXCount];
+        ReturnFromRef();
+    }
+    ushort flashFXCount;
+    FSkip(2);
+    Ref flashFXListRef;
+    if (CanSeekTo(flashFXListRef))
+    {
+        SeekToRef(flashFXListRef);
+        FXLib__flashfx flashFXList[flashFXCount];
+        ReturnFromRef();
+    }
+} FXLib <optimize=false>;
+
+typedef struct
+{
+    ushort info;
+    short keyframeID;
+    ubyte fxID;
+    ubyte pad[3];
+} AnimFxHeader <optimize=false>;
+
+typedef struct
+{
+    Ref effectLibRef;
+    if (CanSeekTo(effectLibRef))
+    {
+        SeekToRef(effectLibRef);
+        FXLib effectLib;
+        ReturnFromRef();
+    }
+    Ref triggersRef;
+    if (CanSeekTo(triggersRef))
+    {
+        SeekToRef(triggersRef);
+        AnimFxHeader triggers;
+        ReturnFromRef();
+    }
+} AnimFxList <optimize=false>;
+
+typedef struct
+{
+    short nameAnimID;
+    short nameAnimNum;
+    Ref nameAnimFxRef;
+    if (CanSeekTo(nameAnimFxRef))
+    {
+        SeekToRef(nameAnimFxRef);
+        AnimFxList nameAnimFx;
+        ReturnFromRef();
+    }
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string debugName;
+        ReturnFromRef();
+    }
+} AnimEntry <optimize=false>;
+
+typedef struct
+{
+    ushort index;
+    byte playfx;
+} AnimBlendAnimIndex <optimize=false>;
+
+typedef struct
+{
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string debugName;
+        ReturnFromRef();
+    }
+    Ref animFragmentsRef;
+    unsigned int animFragmentCount;
+    if (CanSeekTo(animFragmentsRef))
+    {
+        SeekToRef(animFragmentsRef);
+        ushort animFragments[animFragmentCount];
+        ReturnFromRef();
+    }
+    Ref animFragmentsNewRef;
+    if (CanSeekTo(animFragmentsNewRef))
+    {
+        SeekToRef(animFragmentsNewRef);
+        AnimBlendAnimIndex animFragmentsNew;
+        ReturnFromRef();
+    }
+    unsigned int animFragmentNewCount;
+    short playSpeed;
+    char playMode;
+    char blendType;
+    char rootInterpMode;
+    char interpFrames;
+    char startFrame;
+    char interpFramesOverride;
+    char alphaTable;
+    char alphaTableOut;
+    char ragdollSection;
+    ubyte boneSet;
+    byte unusedFlags : 6;
+    byte asymmetricFromRun : 1;
+    byte mirror : 1;
+} AnimBlend <optimize=false>;
+
+typedef struct
+{
+    Ref animGraphDataRefRef;
+    if (CanSeekTo(animGraphDataRefRef))
+    {
+        SeekToRef(animGraphDataRefRef);
+        byte animGraphDataRef;
+        ReturnFromRef();
+    }
+} AnimGraphRootRef <optimize=false>;
+
+typedef struct
+{
+    float linearSoftness;
+    float angularSoftness;
+} SimpleSoftness <optimize=false>;
+
+typedef struct
+{
+    float linearSoftness[3];
+    float angularSoftness[3];
+} AdvancedSoftness <optimize=false>;
+
+typedef struct
+{
+    float linearDamping;
+    float linearFrequency;
+    float angularDamping;
+    float angularFrequency;
+} SimpleSpringSoftness <optimize=false>;
+
+typedef struct
+{
+    float linearDamping[3];
+    float linearFrequency[3];
+    float angularDamping[3];
+    float angularFrequency[3];
+} AdvancedSpringSoftness <optimize=false>;
+
+typedef union
+{
+    SimpleSoftness simple;
+    AdvancedSoftness advanced;
+    SimpleSpringSoftness simpleSpring;
+    AdvancedSpringSoftness advancedSpring;
+} SoftnessUnion;
+
+typedef struct
+{
+    Ref soundRef;
+    if (CanSeekTo(soundRef))
+    {
+        SeekToRef(soundRef);
+        SoundPlex sound;
+        ReturnFromRef();
+    }
+    int softnessType;
+    SoftnessUnion softness;
+    float relaxation;
+    char numIterations;
+    FSkip(3);
+    int soundSource;
+    byte collideConnectedBodies : 1;
+    byte smoothLimits : 1;
+    byte _Bitfieldpadding6 : 6;
+} CommonJointProp <optimize=false>;
+
+typedef struct
+{
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string debugName;
+        ReturnFromRef();
+    }
+    short modelBoneIndex;
+    short startBoneIdx;
+    float startOffset[3];
+    short endBoneIdx;
+    FSkip(2);
+    float endOffset[3];
+    unsigned int parentRDBoneIdx;
+    float mass;
+    float radius;
+    float buoyancy;
+    float mu;
+    int jointType;
+    float jointOffset[3];
+    float axis1[3];
+    float axis2[3];
+    float axis1LimitMin;
+    float axis1LimitMax;
+    float axis2LimitMin;
+    float axis2LimitMax;
+    float coneAngle;
+    float jointFriction;
+    float animMotorMaxForceScale;
+    float animMotorVelScale;
+    byte followAnim;
+    FSkip(3);
+    Ref soundRef;
+    if (CanSeekTo(soundRef))
+    {
+        SeekToRef(soundRef);
+        SoundPlex sound;
+        ReturnFromRef();
+    }
+    unsigned int surfaceMaterialOverrideID;
+    byte overrideSoftness;
+    FSkip(3);
+    CommonJointProp commonJointProp;
+} RagdollBoneTune <optimize=false>;
+
+typedef struct
+{
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    float totalMass;
+    int contactRank;
+    float radiusScale;
+    byte autoSleep;
+    FSkip(3);
+    float angularThreshold;
+    float linearThreshold;
+    float restitution;
+    float angularDamping;
+    float linearDamping;
+    float linearSoftness;
+    float angularSoftness;
+    float relaxation;
+    float globalJointFrictionMultiplier;
+    float globalMuMutiplier;
+    int iterations;
+    float inertiaScale;
+    float windScale;
+    float explosionFactor;
+    unsigned int surfaceMaterialID;
+    byte useBonePositions;
+    byte resetPhysicalComponent;
+    FSkip(2);
+    Ref ragdollBonesRef;
+    unsigned int numRagdollBones;
+    if (CanSeekTo(ragdollBonesRef))
+    {
+        SeekToRef(ragdollBonesRef);
+        RagdollBoneTune ragdollBones[numRagdollBones];
+        ReturnFromRef();
+    }
+} RagdollTune <optimize=false>;
+
+typedef union
+{
+    short byUserDefinedIndex;
+    ushort byBoneIndex;
+    ushort byMarkerIndex;
+} ModelBoneOrMarkerReference__ModelBoneOrMarkerRefData;
+
+typedef struct
+{
+    ubyte refType;
+    FSkip(1);
+    ModelBoneOrMarkerReference__ModelBoneOrMarkerRefData refData;
+} ModelBoneOrMarkerReference <optimize=false>;
+
+typedef struct
+{
+    unsigned int numClothConfigGroups;
+    Ref clothConfigGroupsRef;
+    if (CanSeekTo(clothConfigGroupsRef))
+    {
+        SeekToRef(clothConfigGroupsRef);
+        unsigned int clothConfigGroups[numClothConfigGroups];
+        ReturnFromRef();
+    }
+} ClothConfig <optimize=false>;
+
+typedef struct
+{
+    byte terrain : 1;
+    byte player : 1;
+    byte npc : 1;
+    byte enemy : 1;
+    byte object : 1;
+    byte shard : 1;
+    byte camera : 1;
+    byte cloth : 1;
+    byte incidental : 1;
+    byte gear : 1;
+    byte thrownProjectile : 1;
+    byte arrow : 1;
+    byte clutter : 1;
+    byte cameraLineOfSight : 1;
+    byte _Bitfieldpadding8 : 2;
+} CollisionTypesBitfield <optimize=false>;
+
+typedef struct
+{
+    CollisionTypesBitfield collideWith;
+    CollisionTypesBitfield collideNotWith;
+    CollisionTypesBitfield collideAs;
+    FSkip(3);
+    int collideGroup;
+} CollisionCategory <optimize=false>;
+
+typedef struct
+{
+    float gravity;
+    float drag;
+    int maxVelIterations;
+    int maxPosIterations;
+    int relaxationIterations;
+    int subStepCount;
+    float windResponse;
+    byte windOnConstraints;
+    FSkip(3);
+    float poseStr;
+    int matrixType;
+    int fixedToFreeSlop;
+    int freeToFreeSlop;
+    int rigidity;
+    float massScale;
+    float dtScale;
+    unsigned int numClothPieces;
+    Ref clothPiecesRef;
+    if (CanSeekTo(clothPiecesRef))
+    {
+        SeekToRef(clothPiecesRef);
+        ubyte clothPieces[numClothPieces];
+        ReturnFromRef();
+    }
+    unsigned int numCollisionGroups;
+    Ref collisionGroupsRef;
+    if (CanSeekTo(collisionGroupsRef))
+    {
+        SeekToRef(collisionGroupsRef);
+        unsigned int collisionGroups[numCollisionGroups];
+        ReturnFromRef();
+    }
+    byte collidesExternal;
+    FSkip(2);
+    CollisionCategory collisionCategory;
+} ClothGroup <optimize=false>;
+
+typedef union
+{
+    short byUserDefinedIndex;
+    ushort byBoneIndex;
+    ushort byMarkerIndex;
+} ModelBoneOrMarkerReferenceWithContext__ModelBoneOrMarkerRefData;
+
+typedef struct
+{
+    ubyte refType;
+    FSkip(1);
+    ModelBoneOrMarkerReferenceWithContext__ModelBoneOrMarkerRefData refData;
+} ModelBoneOrMarkerReferenceWithContext <optimize=false>;
+
+typedef struct
+{
+    int type;
+    int constraintType;
+    ModelBoneOrMarkerReferenceWithContext bone1;
+    ModelBoneOrMarkerReferenceWithContext bone2;
+    float radius;
+} CollisionPrim <optimize=false>;
+
+typedef struct
+{
+    unsigned int numCollisionPrims;
+    Ref collisionPrimsRef;
+    if (CanSeekTo(collisionPrimsRef))
+    {
+        SeekToRef(collisionPrimsRef);
+        CollisionPrim collisionPrims[numCollisionPrims];
+        ReturnFromRef();
+    }
+} CollisionGroup <optimize=false>;
+
+typedef struct
+{
+    float x;
+    float y;
+} ClothFireCurve__Point <optimize=false>;
+
+typedef struct
+{
+    unsigned int numPoints;
+    Ref pointsRef;
+    if (CanSeekTo(pointsRef))
+    {
+        SeekToRef(pointsRef);
+        ClothFireCurve__Point points[numPoints];
+        ReturnFromRef();
+    }
+} ClothFireCurve <optimize=false>;
+
+typedef struct
+{
+    unsigned int numFlammableGroups;
+    Ref flammableGroupsRef;
+    if (CanSeekTo(flammableGroupsRef))
+    {
+        SeekToRef(flammableGroupsRef);
+        unsigned int flammableGroups[numFlammableGroups];
+        ReturnFromRef();
+    }
+    float minTimeToBurn;
+    float maxTimeToBurn;
+    byte propagate;
+    FSkip(3);
+    float minPropagateTime;
+    float maxPropagateTime;
+    Ref clothFireCurveRef;
+    if (CanSeekTo(clothFireCurveRef))
+    {
+        SeekToRef(clothFireCurveRef);
+        ClothFireCurve clothFireCurve;
+        ReturnFromRef();
+    }
+    unsigned int burnFX;
+    unsigned int smolderFX;
+    unsigned int crumbleFX;
+} FlammableClothTune <optimize=false>;
+
+typedef struct
+{
+    int defaultClothConfig;
+    int wetClothConfig;
+    int lowCoverClothConfig;
+    int defaultFlammableConfig;
+    float innerDistance;
+    float outerDistance;
+    Ref clothConfigsRef;
+    unsigned int numClothConfigs;
+    if (CanSeekTo(clothConfigsRef))
+    {
+        SeekToRef(clothConfigsRef);
+        ClothConfig clothConfigs[numClothConfigs];
+        ReturnFromRef();
+    }
+    Ref clothGroupsRef;
+    unsigned int numClothGroups;
+    if (CanSeekTo(clothGroupsRef))
+    {
+        SeekToRef(clothGroupsRef);
+        ClothGroup clothGroups[numClothGroups];
+        ReturnFromRef();
+    }
+    Ref collisionGroupsRef;
+    unsigned int numCollisionGroups;
+    if (CanSeekTo(collisionGroupsRef))
+    {
+        SeekToRef(collisionGroupsRef);
+        CollisionGroup collisionGroups[numCollisionGroups];
+        ReturnFromRef();
+    }
+    byte flammable;
+    FSkip(3);
+    unsigned int numFlammableConfigs;
+    Ref flammableConfigsRef;
+    if (CanSeekTo(flammableConfigsRef))
+    {
+        SeekToRef(flammableConfigsRef);
+        FlammableClothTune flammableConfigs[numFlammableConfigs];
+        ReturnFromRef();
+    }
+} ClothTune <optimize=false>;
+
+typedef struct
+{
+    unsigned int numSoftBodies;
+    Ref softBodiesRef;
+    if (CanSeekTo(softBodiesRef))
+    {
+        SeekToRef(softBodiesRef);
+        unsigned int softBodies[numSoftBodies];
+        ReturnFromRef();
+    }
+    unsigned int numLinks;
+    Ref linksRef;
+    if (CanSeekTo(linksRef))
+    {
+        SeekToRef(linksRef);
+        unsigned int links[numLinks];
+        ReturnFromRef();
+    }
+} SoftBodyConfig <optimize=false>;
+
+typedef struct
+{
+    short boneRoot;
+    short boneEnd;
+    float mass;
+    float freq;
+    float damp;
+    float gravity;
+    float momentum;
+    float clampVel;
+    float clampPos;
+} SoftBodySpring <optimize=false>;
+
+typedef struct
+{
+    unsigned int numSoftBodySprings;
+    Ref softBodySpringListRef;
+    if (CanSeekTo(softBodySpringListRef))
+    {
+        SeekToRef(softBodySpringListRef);
+        SoftBodySpring softBodySpringList[numSoftBodySprings];
+        ReturnFromRef();
+    }
+} SoftBody <optimize=false>;
+
+typedef struct
+{
+    unsigned int softBody1;
+    unsigned int softBody1Spring;
+    unsigned int softBody2;
+    unsigned int softBody2Spring;
+    float freq;
+    float damp;
+} SoftBodyLink <optimize=false>;
+
+typedef struct
+{
+    unsigned int defaultSoftBodyConfig;
+    Ref softBodyConfigsRef;
+    unsigned int numSoftBodyConfigs;
+    if (CanSeekTo(softBodyConfigsRef))
+    {
+        SeekToRef(softBodyConfigsRef);
+        SoftBodyConfig softBodyConfigs[numSoftBodyConfigs];
+        ReturnFromRef();
+    }
+    Ref softBodiesRef;
+    unsigned int numSoftBodies;
+    if (CanSeekTo(softBodiesRef))
+    {
+        SeekToRef(softBodiesRef);
+        SoftBody softBodies[numSoftBodies];
+        ReturnFromRef();
+    }
+    Ref softBodyLinksRef;
+    unsigned int numSoftBodyLinks;
+    if (CanSeekTo(softBodyLinksRef))
+    {
+        SeekToRef(softBodyLinksRef);
+        SoftBodyLink softBodyLinks[numSoftBodyLinks];
+        ReturnFromRef();
+    }
+} SoftBodyTune <optimize=false>;
+
+typedef struct
+{
+    Ref plexRef;
+    if (CanSeekTo(plexRef))
+    {
+        SeekToRef(plexRef);
+        SoundPlex plex;
+        ReturnFromRef();
+    }
+    short segment;
+    ubyte restart;
+} ObjectBaseData__SoundHandle <optimize=false>;
+
+typedef struct
+{
+    Ref nameRef;
+    if (CanSeekTo(nameRef))
+    {
+        SeekToRef(nameRef);
+        string name;
+        ReturnFromRef();
+    }
+    Ref dRMFileNameRef;
+    if (CanSeekTo(dRMFileNameRef))
+    {
+        SeekToRef(dRMFileNameRef);
+        string dRMFileName;
+        ReturnFromRef();
+    }
+} ObjectBaseData__SoftAccessoryItem <optimize=false>;
+
+typedef struct
+{
+    float weight;
+    short start;
+    short end;
+} BoneSet__BoneWeightRange <optimize=false>;
+
+typedef struct
+{
+    ushort type;
+    FSkip(2);
+    unsigned int numRanges;
+    Ref rangeListRef;
+    if (CanSeekTo(rangeListRef))
+    {
+        SeekToRef(rangeListRef);
+        BoneSet__BoneWeightRange rangeList[numRanges];
+        ReturnFromRef();
+    }
+} BoneSet <optimize=false>;
+
+typedef struct
+{
+    unsigned int numBoneSets;
+    Ref boneSetListRef;
+    if (CanSeekTo(boneSetListRef))
+    {
+        SeekToRef(boneSetListRef);
+        BoneSet boneSetList[numBoneSets];
+        ReturnFromRef();
+    }
+} BoneSet_struct <optimize=false>;
+
+typedef struct
+{
+    Ref animRef;
+    if (CanSeekTo(animRef))
+    {
+        SeekToRef(animRef);
+        byte anim;
+        ReturnFromRef();
+    }
+    unsigned int animByteSize;
+} FaceFxData__FaceFxAnimStruct <optimize=false>;
+
+typedef struct
+{
+    Ref animRef;
+    if (CanSeekTo(animRef))
+    {
+        SeekToRef(animRef);
+        byte anim;
+        ReturnFromRef();
+    }
+    unsigned int animByteSize;
+} FaceFxData__HostedFaceFxAnimStruct <optimize=false>;
+
+typedef struct
+{
+    Ref groupRef;
+    if (CanSeekTo(groupRef))
+    {
+        SeekToRef(groupRef);
+        string group;
+        ReturnFromRef();
+    }
+    Ref animRef;
+    if (CanSeekTo(animRef))
+    {
+        SeekToRef(animRef);
+        string anim;
+        ReturnFromRef();
+    }
+} FaceFxData__FaceFxAnimation <optimize=false>;
+
+typedef struct
+{
+    Ref faceFxActorNameRef;
+    if (CanSeekTo(faceFxActorNameRef))
+    {
+        SeekToRef(faceFxActorNameRef);
+        string faceFxActorName;
+        ReturnFromRef();
+    }
+    Ref faceFxActorRef;
+    if (CanSeekTo(faceFxActorRef))
+    {
+        SeekToRef(faceFxActorRef);
+        byte faceFxActor;
+        ReturnFromRef();
+    }
+    unsigned int faceFxActorByteSize;
+    unsigned int faceFxStartBone;
+    unsigned int faceFxAnimSetsCount;
+    unsigned int hostedFxAnimSetsCount;
+    unsigned int faceFxAnimsCount;
+    Ref faceFxAnimSetsRef;
+    if (CanSeekTo(faceFxAnimSetsRef))
+    {
+        SeekToRef(faceFxAnimSetsRef);
+        FaceFxData__FaceFxAnimStruct faceFxAnimSets;
+        ReturnFromRef();
+    }
+    Ref hostedFaceFxAnimSetsRef;
+    if (CanSeekTo(hostedFaceFxAnimSetsRef))
+    {
+        SeekToRef(hostedFaceFxAnimSetsRef);
+        FaceFxData__HostedFaceFxAnimStruct hostedFaceFxAnimSets;
+        ReturnFromRef();
+    }
+    Ref faceFxAnimsRef;
+    if (CanSeekTo(faceFxAnimsRef))
+    {
+        SeekToRef(faceFxAnimsRef);
+        FaceFxData__FaceFxAnimation faceFxAnims;
+        ReturnFromRef();
+    }
+} FaceFxData <optimize=false>;
+
+typedef struct
+{
+    short pad1 : 7;
+    short collide : 1;
+    short slopeSlide : 1;
+    short flooring : 1;
+    short slowSlope : 1;
+    short noWallJump : 1;
+    short stairs : 1;
+    short noRappel : 1;
+    short wallCrawl : 1;
+    short noPlayerResponse : 1;
+} HPrimFlags <optimize=false>;
+
+typedef struct
+{
+    short x;
+    short y;
+    short z;
+} Position <optimize=false>;
+
+typedef struct
+{
+    ushort mass;
+    char buoyancyFactor;
+    ubyte waterCurrentFactor;
+    char explosionFactor;
+    char weaponhitFactor;
+} PhysCollideGameData <optimize=false>;
+
+typedef struct
+{
+    int iHitMaterialType;
+    short damage;
+    char subType;
+    char noAttach;
+    char nojumpcollision;
+    char noWeaponHit;
+    char ropeArrowAttach;
+    char toughRopePull;
+} GameplayGameData <optimize=false>;
+
+typedef struct
+{
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInSphereList;
+    FSkip(1);
+    ushort radius;
+    Position position;
+    unsigned int radiusSquared;
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+} HSphere <optimize=false>;
+
+typedef struct
+{
+    Vector4 width;
+    Vector4 pos;
+    Quaternion quat;
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInBoxList;
+    FSkip(1);
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+} HBox <optimize=false>;
+
+typedef struct
+{
+    int segment;
+    ushort index;
+    ushort indexInMarkerList;
+    float px;
+    float py;
+    float pz;
+    float rx;
+    float ry;
+    float rz;
+} HMarker <optimize=false>;
+
+typedef struct
+{
+    Vector4 pos;
+    Quaternion quat;
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInCapsuleList;
+    FSkip(1);
+    ushort radius;
+    ushort length;
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+} HCapsule <optimize=false>;
+
+typedef struct
+{
+    Ref gc1Ref;
+    Ref gc2Ref;
+    short type;
+    FSkip(2);
+    int numFloats;
+    Ref floatListRef;
+    if (CanSeekTo(floatListRef))
+    {
+        SeekToRef(floatListRef);
+        float floatList[numFloats];
+        ReturnFromRef();
+    }
+    float floatData[1];
+} HGeomCommand <optimize=false>;
+
+typedef struct
+{
+    Matrix rotationMatrixFwd;
+    Matrix rotationMatrixInv;
+} GeomSpeedCacheData <optimize=false>;
+
+typedef struct
+{
+    Ref cacheDataRef;
+    if (CanSeekTo(cacheDataRef))
+    {
+        SeekToRef(cacheDataRef);
+        GeomSpeedCacheData cacheData;
+        ReturnFromRef();
+    }
+    Ref debugMeshRef;
+    Vector4 position;
+    Quaternion rotation;
+} Geom <optimize=false>;
+
+typedef struct
+{
+    Vector4 pos;
+    Quaternion quat;
+    Vector4 centerOfMass;
+    float inertiaTensor[9];
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInGeomList;
+    FSkip(1);
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+    Ref geomCommandRef;
+    if (CanSeekTo(geomCommandRef))
+    {
+        SeekToRef(geomCommandRef);
+        HGeomCommand geomCommand;
+        ReturnFromRef();
+    }
+    Ref geomRef;
+    if (CanSeekTo(geomRef))
+    {
+        SeekToRef(geomRef);
+        Geom geom;
+        ReturnFromRef();
+    }
+} HGeom <optimize=false>;
+
+typedef struct
+{
+    int numHSpheres;
+    Ref hsphereListRef;
+    if (CanSeekTo(hsphereListRef))
+    {
+        SeekToRef(hsphereListRef);
+        HSphere hsphereList[numHSpheres];
+        ReturnFromRef();
+    }
+    int numHBoxes;
+    Ref hboxListRef;
+    if (CanSeekTo(hboxListRef))
+    {
+        SeekToRef(hboxListRef);
+        HBox hboxList[numHBoxes];
+        ReturnFromRef();
+    }
+    int numHMarkers;
+    Ref hmarkerListRef;
+    if (CanSeekTo(hmarkerListRef))
+    {
+        SeekToRef(hmarkerListRef);
+        HMarker hmarkerList[numHMarkers];
+        ReturnFromRef();
+    }
+    int numHCapsules;
+    Ref hcapsuleListRef;
+    if (CanSeekTo(hcapsuleListRef))
+    {
+        SeekToRef(hcapsuleListRef);
+        HCapsule hcapsuleList[numHCapsules];
+        ReturnFromRef();
+    }
+    int numHGeoms;
+    Ref hgeomListRef;
+    if (CanSeekTo(hgeomListRef))
+    {
+        SeekToRef(hgeomListRef);
+        HGeom hgeomList[numHGeoms];
+        ReturnFromRef();
+    }
+} HInfo <optimize=false>;
+
+typedef struct
+{
+    Vector4 min;
+    Vector4 max;
+    Vector4 pivot;
+    int flags;
+    short firstVertex;
+    short lastVertex;
+    int parent;
+    Ref hInfoRef;
+    if (CanSeekTo(hInfoRef))
+    {
+        SeekToRef(hInfoRef);
+        HInfo hInfo;
+        ReturnFromRef();
+    }
+} Segment <optimize=false>;
+
+typedef struct
+{
+    short x;
+    short y;
+    short z;
+} SKUVertex <optimize=false>;
+
+typedef struct
+{
+    SKUVertex vertex;
+    short normal;
+    short segment;
+} MVertex <optimize=false>;
+
+typedef struct
+{
+    ushort v0;
+    ushort v1;
+    ushort v2;
+} MFace___unnamed_type_face_ <optimize=false>;
+
+typedef struct
+{
+    MFace___unnamed_type_face_ face;
+    ushort sameVertBits;
+} MFace <optimize=false>;
+
+typedef struct
+{
+    Vector4 pos;
+    Vector4 rot;
+    int type;
+    int body1;
+    int body2;
+} MJoint <optimize=false>;
+
+typedef struct
+{
+    int count;
+} AnimatedListInfo <optimize=false>;
+
+typedef struct
+{
+    ubyte bone1;
+    ubyte bone2;
+    ubyte count;
+} BoneMirrorData <optimize=false>;
+
+typedef struct
+{
+    short x;
+    short y;
+    short z;
+    short pad;
+} SVector <optimize=false>;
+
+typedef struct
+{
+    int useAnticCamera;
+    int dTPCameraAnticDataID[6];
+} CameraAnticRemove <optimize=false>;
+
+typedef struct
+{
+    int numPoints;
+    int pad[3];
+    Vector4 point[1];
+} PolyLine <optimize=false>;
+
+typedef struct
+{
+    float renderRadius;
+    int texture;
+    Ref ropeMaterialRef;
+    unsigned int renderRopeColor;
+    float vLength;
+    float uWidth;
+    byte bSmoothRope;
+    byte bRenderHighlight;
+} RopeRenderData <optimize=false>;
+
+typedef struct
+{
+    int overrideMovementCamera;
+    int dTPCameraDataID;
+    int dTPMarkupDataID;
+    CameraAnticRemove cameraAntic;
+    unsigned int flags;
+    ushort introID;
+    short markupID;
+    short bone;
+    char cat;
+    char type;
+    uint shape : 3;
+    uint alwaysSavingGrab : 1;
+    uint neverSavingGrab : 1;
+    uint rescuePoint : 1;
+    uint renderPlayerCloser : 1;
+    uint neverRunOff : 1;
+    uint alwaysRunOff : 1;
+    uint alwaysRunGrab : 1;
+    uint neverRunGrab : 1;
+    uint allowSwing : 1;
+    uint trapeze : 1;
+    uint forceUnbracedLedge : 1;
+    uint allowHighAttach : 1;
+    uint allowJumpOff : 1;
+    uint automaticPullUp : 1;
+    uint neverPullUp : 1;
+    uint autoHurdle : 1;
+    uint neverHurdle : 1;
+    uint allowQuickHop : 1;
+    uint alwaysDeflect : 1;
+    uint neverDeflect : 1;
+    uint deflectInCombat : 1;
+    uint deflectInGround : 1;
+    uint deflectInCrawl : 1;
+    uint deflectInWallCrawl : 1;
+    uint generateNavHelper : 1;
+    uint orientZup : 1;
+    uint ledgeAsCover : 1;
+    uint erraticMovement : 1;
+    uint alternateControlScheme : 1;
+    uint ladder : 1;
+    uint leftShoulderAim : 1;
+    uint mantleOnly : 1;
+    uint noCoverTouch : 1;
+    uint debug1 : 4;
+    uint padding : 24;
+    float pos[3];
+    float bbox[6];
+    Ref polyLineRef;
+    if (CanSeekTo(polyLineRef))
+    {
+        SeekToRef(polyLineRef);
+        PolyLine polyLine;
+        ReturnFromRef();
+    }
+    Ref ropeRenderDataRef;
+    if (CanSeekTo(ropeRenderDataRef))
+    {
+        SeekToRef(ropeRenderDataRef);
+        RopeRenderData ropeRenderData;
+        ReturnFromRef();
+    }
+} MarkUp <optimize=false>;
+
+typedef struct
+{
+    ushort segment;
+    ushort flags;
+    float px;
+    float py;
+    float pz;
+    float rx;
+    float ry;
+    float rz;
+    unsigned int uniqueId;
+} ModelTarget <optimize=false>;
+
+typedef struct
+{
+    int numSegments;
+    Ref segmentListRef;
+    if (CanSeekTo(segmentListRef))
+    {
+        SeekToRef(segmentListRef);
+        Segment segmentList[numSegments];
+        ReturnFromRef();
+    }
+} SegmentList <optimize=false>;
+
+typedef struct
+{
+    uint bit00 : 1;
+    uint bit01 : 1;
+    uint bit02 : 1;
+    uint bit03 : 1;
+    uint bit04 : 1;
+    uint bit05 : 1;
+    uint bit06 : 1;
+    uint bit07 : 1;
+    uint bit08 : 1;
+    uint bit09 : 1;
+    uint bit10 : 1;
+    uint bit11 : 1;
+    uint bit12 : 1;
+    uint bit13 : 1;
+    uint bit14 : 1;
+    uint bit15 : 1;
+    uint bit16 : 1;
+    uint bit17 : 1;
+    uint bit18 : 1;
+    uint bit19 : 1;
+    uint bit20 : 1;
+    uint bit21 : 1;
+    uint bit22 : 1;
+    uint bit23 : 1;
+    uint bit24 : 1;
+    uint bit25 : 1;
+    uint bit26 : 1;
+    uint bit27 : 1;
+    uint bit28 : 1;
+    uint bit29 : 1;
+    uint bit30 : 1;
+    uint bit31 : 1;
+} TunableData__TuningBitfield <optimize=false>;
+
+typedef union
+{
+    int integer;
+    int integerDistanceCm;
+    float f;
+    float floatDistanceCm;
+    byte boolean;
+    TunableData__TuningBitfield bitfield;
+} TunableData__TunableDataValue;
+
+typedef struct
+{
+    int miDataType;
+    TunableData__TunableDataValue miDataValue;
+} TunableData__TuningValue <optimize=false>;
+
+typedef struct
+{
+    unsigned int miNumTunables;
+    Ref mpTunableRefListRef;
+    if (CanSeekTo(mpTunableRefListRef))
+    {
+        SeekToRef(mpTunableRefListRef);
+        TunableData__TuningValue mpTunableRefList;
+        ReturnFromRef();
+    }
+    Ref mpTunableListRef;
+    if (CanSeekTo(mpTunableListRef))
+    {
+        SeekToRef(mpTunableListRef);
+        TunableData__TuningValue mpTunableList;
+        ReturnFromRef();
+    }
+} TunableData <optimize=false>;
+
+typedef struct
+{
+    byte bSyncPos;
+    byte bSyncPosX;
+    byte bSyncPosY;
+    byte bSyncPosZ;
+    byte bAllowLocalPos;
+    byte bSyncRot;
+    byte bSyncRotX;
+    byte bSyncRotY;
+    byte bSyncRotZ;
+    byte bAllowLocalRot;
+    byte bSyncAnim;
+    FSkip(1);
+    float fSyncAnimTime;
+    float fSyncAnimCorrectionFactor;
+    byte bSyncPlatformAttach;
+} NetSectionData <optimize=false>;
+
+typedef struct
+{
+    int type;
+    ushort duplicaObjectID;
+    NetSectionData sync;
+} NetObjectData <optimize=false>;
+
+typedef struct
+{
+    ubyte channel0;
+    ubyte channel1;
+    ubyte channel2;
+    ubyte channel3;
+    byte overlayOn;
+} SkinOverlay <optimize=false>;
+
+typedef struct
+{
+    byte thorObject;
+    SkinOverlay skinOverlay;
+    FSkip(2);
+    int queryTargetMarker;
+} ObjectBaseData__GameObjectBaseData <optimize=false>;
+
+typedef union
+{
+    ushort fragment;
+    ushort blend;
+    ushort pattern;
+} AnimReference__AnimReferenceUnion;
+
+typedef struct
+{
+    ushort referenceType;
+    AnimReference__AnimReferenceUnion index;
+} AnimReference <optimize=false>;
+
+typedef struct
+{
+    AnimReference tR9ProtoSyncAnimHostAnimRef;
+    AnimReference tR9ProtoSyncAnimTargetAnimRef;
+    Ref tR9ProtoSyncAnimTargetAnimNameRef;
+    if (CanSeekTo(tR9ProtoSyncAnimTargetAnimNameRef))
+    {
+        SeekToRef(tR9ProtoSyncAnimTargetAnimNameRef);
+        string tR9ProtoSyncAnimTargetAnimName;
+        ReturnFromRef();
+    }
+    float tR9ProtoSyncAnimRange;
+    float tR9ProtoSyncAnimTargetTime;
+} SyncAnim <optimize=false>;
+
+typedef struct
+{
+    ObjectFlags objectFlags;
+    ObjectBaseData__ObjectHeader header;
+    unsigned int numAnimPatterns;
+    Ref animPatternsRef;
+    if (CanSeekTo(animPatternsRef))
+    {
+        SeekToRef(animPatternsRef);
+        AnimPatternEntry animPatterns;
+        ReturnFromRef();
+    }
+    unsigned int numAnimations;
+    Ref animationsRef;
+    if (CanSeekTo(animationsRef))
+    {
+        SeekToRef(animationsRef);
+        AnimEntry animations[numAnimations];
+        ReturnFromRef();
+    }
+    unsigned int numAnimBlends;
+    Ref animBlendsRef;
+    if (CanSeekTo(animBlendsRef))
+    {
+        SeekToRef(animBlendsRef);
+        AnimBlend animBlends;
+        ReturnFromRef();
+    }
+    unsigned int hasAnimGraph;
+    Ref animGraphRef;
+    if (CanSeekTo(animGraphRef))
+    {
+        SeekToRef(animGraphRef);
+        AnimGraphRootRef animGraph;
+        ReturnFromRef();
+    }
+    unsigned int numHostedAnimGraphs;
+    Ref hostedAnimGraphsRef;
+    if (CanSeekTo(hostedAnimGraphsRef))
+    {
+        SeekToRef(hostedAnimGraphsRef);
+        AnimGraphRootRef hostedAnimGraphs;
+        ReturnFromRef();
+    }
+    byte enableAnimComponentV2ForModelView;
+    FSkip(3);
+    unsigned int numRagdolls;
+    Ref ragdollsRef;
+    if (CanSeekTo(ragdollsRef))
+    {
+        SeekToRef(ragdollsRef);
+        RagdollTune ragdolls;
+        ReturnFromRef();
+    }
+    unsigned int numIKControllers;
+    Ref iKControllersRef;
+    unsigned int numIKBlends;
+    Ref iKBlendsRef;
+    unsigned int numCloth;
+    Ref clothRef;
+    if (CanSeekTo(clothRef))
+    {
+        SeekToRef(clothRef);
+        ClothTune cloth;
+        ReturnFromRef();
+    }
+    unsigned int numSoftBodies;
+    Ref softBodyRef;
+    if (CanSeekTo(softBodyRef))
+    {
+        SeekToRef(softBodyRef);
+        SoftBodyTune softBody;
+        ReturnFromRef();
+    }
+    unsigned int numSoundHandles;
+    Ref soundHandlesRef;
+    if (CanSeekTo(soundHandlesRef))
+    {
+        SeekToRef(soundHandlesRef);
+        ObjectBaseData__SoundHandle soundHandles;
+        ReturnFromRef();
+    }
+    unsigned int numSoftAccessories;
+    Ref softAccessoriesRef;
+    if (CanSeekTo(softAccessoriesRef))
+    {
+        SeekToRef(softAccessoriesRef);
+        ObjectBaseData__SoftAccessoryItem softAccessories[numSoftAccessories];
+        ReturnFromRef();
+    }
+    ushort startAnimation;
+    FSkip(2);
+    BoneSet_struct boneSets;
+    Ref faceFxDataRef;
+    if (CanSeekTo(faceFxDataRef))
+    {
+        SeekToRef(faceFxDataRef);
+        FaceFxData faceFxData;
+        ReturnFromRef();
+    }
+    Ref tuneDataPtrRef;
+    if (CanSeekTo(tuneDataPtrRef))
+    {
+        SeekToRef(tuneDataPtrRef);
+        byte tuneDataPtr;
+        ReturnFromRef();
+    }
+    unsigned int scriptTypeID;
+    unsigned int numChildObjects;
+    Ref childObjectsRef;
+    if (CanSeekTo(childObjectsRef))
+    {
+        SeekToRef(childObjectsRef);
+        ushort childObjects[numChildObjects];
+        ReturnFromRef();
+    }
+    Ref animListRef;
+    Ref animBlendListRef;
+    Ref animPatternListRef;
+    Ref ragdollListRef;
+    Ref iKControllerListRef;
+    Ref iKBlendListRef;
+    Ref clothListRef;
+    Ref softBodyListRef;
+    Ref soundHandleListRef;
+    unsigned int numModels;
+    Ref modelListRef;
+    if (CanSeekTo(modelListRef))
+    {
+        SeekToRef(modelListRef);
+        Ref modelList[numModels];
+        ReturnFromRef();
+    }
+    Ref softAccessoryListRef;
+    Ref animGraphListRef;
+    Ref hostedAnimGraphListRef;
+    Ref actiongraphDataRef;
+    Ref altActiongraphDataRef;
+    /*
+    AnimGraphLODInfo animGraphLODInfo;
+    TunableData tuningParameters;
+    NetObjectData netData;
+    ObjectBaseData__GameObjectBaseData gameObjectBaseData;
+    FSkip(1);
+    unsigned int numSyncAnims;
+    Ref syncAnimsRef;
+    if (CanSeekTo(syncAnimsRef))
+    {
+        SeekToRef(syncAnimsRef);
+        SyncAnim syncAnims[numSyncAnims];
+        ReturnFromRef();
+    }
+    SyncAnim syncAnimList[1];
+    if (CanSeekTo(syncAnimsRef))
+    {
+        SeekToRef(syncAnimsRef);
+        SyncAnim syncAnims[syncAnimList];
+        ReturnFromRef();
+    }
+    */
+} ObjectBaseData <optimize=false>;
+
+RefDefinitions refDefinitions;
+ObjectBaseData root <open=true>;

@@ -1,50 +1,31 @@
-﻿using SottrModManager.Shared.Util;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using TrRebootTools.Shared.Cdc.Rise;
+using TrRebootTools.Shared.Cdc.Shadow;
+using TrRebootTools.Shared.Cdc.Tr2013;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
-    public class ResourceCollection
+    public abstract class ResourceCollection
     {
-        private ResourceCollectionHeader _header;
-        private byte[] _name;
-        private readonly List<ResourceIdentification> _resourceIdentifications = new();
-        private readonly List<ResourceCollectionDependency> _dependencies = new();
-        private readonly List<ResourceLocation> _resourceLocations = new();
-        private List<ResourceReference> _resourceReferences;
+        public static ResourceCollection Open(ulong nameHash, ulong locale, Stream stream, CdcGame version)
+        {
+            return version switch
+            {
+                CdcGame.Tr2013 => new Tr2013ResourceCollection(nameHash, locale, stream),
+                CdcGame.Rise => new RiseResourceCollection(nameHash, locale, stream),
+                CdcGame.Shadow => new ShadowResourceCollection(nameHash, locale, stream)
+            };
+        }
 
-        public ResourceCollection(ulong nameHash, ulong locale, Stream stream)
+        protected ResourceCollection(ulong nameHash, ulong locale)
         {
             NameHash = nameHash;
             Locale = locale;
-
-            BinaryReader reader = new BinaryReader(stream);
-            _header = reader.ReadStruct<ResourceCollectionHeader>();
-            if (_header.Version != 23)
-                throw new NotSupportedException("Only version 23 .drm files are supported");
-
-            for (int i = 0; i < _header.NumResources; i++)
-            {
-                _resourceIdentifications.Add(reader.ReadStruct<ResourceIdentification>());
-            }
-
-            _name = reader.ReadBytes(_header.NameLength);
-
-            long dependenciesStart = stream.Position;
-            while (stream.Position < dependenciesStart + _header.DependenciesLength)
-            {
-                ulong dependencyLocale = reader.ReadUInt64();
-                string dependencyFilePath = reader.ReadZeroTerminatedString();
-                _dependencies.Add(new ResourceCollectionDependency(dependencyFilePath, dependencyLocale));
-            }
-
-            for (int i = 0; i < _header.NumResources; i++)
-            {
-                _resourceLocations.Add(reader.ReadStruct<ResourceLocation>());
-            }
         }
 
         public ulong NameHash
@@ -57,22 +38,64 @@ namespace SottrModManager.Shared.Cdc
             get;
         }
 
-        public IEnumerable<ResourceCollectionDependency> Dependencies
+        public abstract CdcGame Game
         {
-            get
-            {
-                foreach (ResourceCollectionDependency dependency in _dependencies)
-                {
-                    string filePath = "pcx64-w\\" + dependency.FilePath;
-                    if (!filePath.Contains('.'))
-                        filePath += ".drm";
+            get;
+        }
 
-                    yield return new ResourceCollectionDependency(filePath, dependency.Locale);
-                }
+        public abstract IReadOnlyList<ResourceReference> ResourceReferences { get; }
+
+        public abstract int AddResourceReference(ResourceCollection otherCollection, int otherResourceId);
+        public abstract int AddResourceReference(ResourceReference resourceRef);
+        public abstract void UpdateResourceReference(int resourceIdx, ResourceReference resourceRef);
+
+        public abstract IEnumerable<ResourceCollectionDependency> Dependencies { get; }
+
+        public abstract void Write(Stream stream);
+    }
+
+    public abstract class ResourceCollection<TResourceLocation, TLocale> : ResourceCollection
+        where TResourceLocation : unmanaged
+        where TLocale : unmanaged
+    {
+        private ResourceCollectionHeader _header;
+        private readonly ulong _headerLocale;
+        private readonly List<ResourceIdentification<TLocale>> _resourceIdentifications = new();
+        private readonly List<ResourceCollectionDependency> _dependencies;
+        private readonly List<ResourceCollectionDependency> _includes;
+        private readonly List<TResourceLocation> _resourceLocations = new();
+
+        private List<ResourceReference> _resourceReferences;
+
+        protected ResourceCollection(ulong nameHash, ulong locale, Stream stream)
+            : base(nameHash, locale)
+        {
+            BinaryReader reader = new BinaryReader(stream);
+            _header = reader.ReadStruct<ResourceCollectionHeader>();
+            if (_header.Version != HeaderVersion)
+                throw new NotSupportedException($"Only version {HeaderVersion} .drm files are supported");
+
+            _headerLocale = ReadLocale(reader, HeaderLocaleSize);
+
+            for (int i = 0; i < _header.NumResources; i++)
+            {
+                _resourceIdentifications.Add(reader.ReadStruct<ResourceIdentification<TLocale>>());
+            }
+
+            _dependencies = ReadDependencies(reader, _header.DependenciesLength);
+            _includes = ReadDependencies(reader, _header.IncludeLength);
+
+            for (int i = 0; i < _header.NumResources; i++)
+            {
+                _resourceLocations.Add(reader.ReadStruct<TResourceLocation>());
             }
         }
 
-        public IReadOnlyList<ResourceReference> ResourceReferences
+        protected abstract int HeaderVersion { get; }
+
+        protected abstract int HeaderLocaleSize { get; }
+
+        public override IReadOnlyList<ResourceReference> ResourceReferences
         {
             get
             {
@@ -81,57 +104,30 @@ namespace SottrModManager.Shared.Cdc
                     _resourceReferences = new List<ResourceReference>();
                     for (int i = 0; i < _resourceIdentifications.Count; i++)
                     {
-                        ResourceIdentification identification = _resourceIdentifications[i];
-                        ResourceLocation location = _resourceLocations[i];
-                        _resourceReferences.Add(
-                            new ResourceReference(
-                                identification.Id,
-                                (ResourceType)identification.Type,
-                                (ResourceSubType)identification.SubType,
-                                location.ArchiveId,
-                                location.ArchiveSubId,
-                                location.ArchivePart,
-                                location.OffsetInArchive,
-                                location.SizeInArchive,
-                                location.OffsetInBatch,
-                                identification.RefDefinitionsSize,
-                                identification.BodySize
-                            )
-                        );
+                        var identification = _resourceIdentifications[i];
+                        var location = _resourceLocations[i];
+                        _resourceReferences.Add(MakeResourceReference(identification, location));
                     }
                 }
                 return _resourceReferences;
             }
         }
 
-        public int AddResourceReference(ResourceCollection otherCollection, int otherResourceId)
+        public override int AddResourceReference(ResourceCollection otherCollection, int otherResourceId)
         {
+            var otherSpecificCollection = (ResourceCollection<TResourceLocation, TLocale>)otherCollection;
             int resourceIdx = _resourceIdentifications.Count;
-            _resourceIdentifications.Add(otherCollection._resourceIdentifications[otherResourceId]);
-            _resourceLocations.Add(otherCollection._resourceLocations[otherResourceId]);
+            _resourceIdentifications.Add(otherSpecificCollection._resourceIdentifications[otherResourceId]);
+            _resourceLocations.Add(otherSpecificCollection._resourceLocations[otherResourceId]);
             _resourceReferences = null;
             return resourceIdx;
         }
 
-        public int AddResourceReference(ResourceReference resourceRef)
+        public override int AddResourceReference(ResourceReference resourceRef)
         {
             int resourceIdx = _resourceIdentifications.Count;
-            _resourceIdentifications.Add(
-                new ResourceIdentification
-                {
-                    Type = (byte)resourceRef.Type,
-                    SubType = (int)resourceRef.SubType,
-                    Id = resourceRef.Id,
-                    Locale = 0xFFFFFFFFFFFFFFFF
-                }
-            );
-            _resourceLocations.Add(
-                new ResourceLocation
-                {
-                    Type = (int)resourceRef.Type,
-                    Id = resourceRef.Id
-                }
-            );
+            _resourceIdentifications.Add(MakeResourceIdentification(resourceRef));
+            _resourceLocations.Add(MakeResourceLocation(resourceRef));
             if (_resourceReferences != null)
                 _resourceReferences.Add(resourceRef);
 
@@ -139,9 +135,9 @@ namespace SottrModManager.Shared.Cdc
             return resourceIdx;
         }
 
-        public void UpdateResourceReference(int resourceIdx, ResourceReference resourceRef)
+        public override void UpdateResourceReference(int resourceIdx, ResourceReference resourceRef)
         {
-            ResourceIdentification identification = _resourceIdentifications[resourceIdx];
+            ResourceIdentification<TLocale> identification = _resourceIdentifications[resourceIdx];
             if (resourceRef.RefDefinitionsSize != null)
             {
                 identification.RefDefinitionsSize = resourceRef.RefDefinitionsSize.Value;
@@ -153,40 +149,48 @@ namespace SottrModManager.Shared.Cdc
             }
             _resourceIdentifications[resourceIdx] = identification;
 
-            ResourceLocation location = _resourceLocations[resourceIdx];
-            location.ArchiveId = (byte)resourceRef.ArchiveId;
-            location.ArchiveSubId = (byte)resourceRef.ArchiveSubId;
-            location.ArchivePart = (short)resourceRef.ArchivePart;
-            location.OffsetInArchive = resourceRef.Offset;
-            location.SizeInArchive = resourceRef.Length;
-            location.OffsetInBatch = resourceRef.OffsetInBatch;
+            TResourceLocation location = _resourceLocations[resourceIdx];
+            UpdateResourceLocation(ref location, resourceRef);
             _resourceLocations[resourceIdx] = location;
 
             if (_resourceReferences != null)
                 _resourceReferences[resourceIdx] = resourceRef;
         }
 
-        public void Write(Stream stream)
+        public override IEnumerable<ResourceCollectionDependency> Dependencies
+        {
+            get
+            {
+                string platform = CdcGameInfo.Get(Game).ArchivePlatform; 
+                foreach (ResourceCollectionDependency dependency in _dependencies.Concat(_includes))
+                {
+                    string filePath = $"{platform}\\{dependency.FilePath}";
+                    if (!filePath.Contains('.'))
+                        filePath += ".drm";
+
+                    yield return new ResourceCollectionDependency(filePath, dependency.Locale);
+                }
+            }
+        }
+
+        public override void Write(Stream stream)
         {
             BinaryWriter writer = new BinaryWriter(stream);
 
             _header.NumResources = _resourceIdentifications.Count;
-            _header.NameLength = _name.Length;
-            _header.DependenciesLength = _dependencies.Sum(d => 8 + d.FilePath.Length + 1);
+            _header.DependenciesLength = _dependencies.Sum(d => DependencyLocaleSize + d.FilePath.Length + 1);
+            _header.IncludeLength = _includes.Sum(d => DependencyLocaleSize + d.FilePath.Length + 1);
             writer.WriteStruct(_header);
+
+            WriteLocale(writer, _headerLocale, HeaderLocaleSize);
 
             for (int i = 0; i < _header.NumResources; i++)
             {
                 writer.WriteStruct(_resourceIdentifications[i]);
             }
 
-            writer.Write(_name);
-
-            foreach (ResourceCollectionDependency dependency in _dependencies)
-            {
-                writer.Write(dependency.Locale);
-                writer.WriteZeroTerminatedString(dependency.FilePath);
-            }
+            WriteDependencies(writer, _dependencies);
+            WriteDependencies(writer, _includes);
 
             for (int i = 0; i < _header.NumResources; i++)
             {
@@ -194,22 +198,75 @@ namespace SottrModManager.Shared.Cdc
             }
         }
 
+        protected abstract ResourceReference MakeResourceReference(ResourceIdentification<TLocale> identification, TResourceLocation location);
+        protected abstract ResourceIdentification<TLocale> MakeResourceIdentification(ResourceReference resourceRef);
+        protected abstract TResourceLocation MakeResourceLocation(ResourceReference resourceRef);
+        protected abstract void UpdateResourceLocation(ref TResourceLocation location, ResourceReference resourceRef);
+
+        protected abstract int DependencyLocaleSize { get; }
+
+        private List<ResourceCollectionDependency> ReadDependencies(BinaryReader reader, int length)
+        {
+            long startPos = reader.BaseStream.Position;
+            List<ResourceCollectionDependency> dependencies = new();
+            while (reader.BaseStream.Position < startPos + length)
+            {
+                ulong locale = ReadLocale(reader, DependencyLocaleSize);
+                string filePath = reader.ReadZeroTerminatedString();
+                dependencies.Add(new ResourceCollectionDependency(filePath, locale));
+            }
+            return dependencies;
+        }
+
+        private void WriteDependencies(BinaryWriter writer, List<ResourceCollectionDependency> dependencies)
+        {
+            foreach (ResourceCollectionDependency dependency in dependencies)
+            {
+                WriteLocale(writer, dependency.Locale, DependencyLocaleSize);
+                writer.WriteZeroTerminatedString(dependency.FilePath);
+            }
+        }
+
+        private static ulong ReadLocale(BinaryReader reader, int size)
+        {
+            return size switch
+            {
+                0 => 0xFFFFFFFFFFFFFFFF,
+                4 => 0xFFFFFFFF00000000 | reader.ReadUInt32(),
+                8 => reader.ReadUInt64()
+            };
+        }
+
+        private static void WriteLocale(BinaryWriter writer, ulong locale, int size)
+        {
+            switch (size)
+            {
+                case 4:
+                    writer.Write((uint)locale);
+                    break;
+
+                case 8:
+                    writer.Write(locale);
+                    break;
+            }
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         private struct ResourceCollectionHeader
         {
             public int Version;
+            public int IncludeLength;
             public int DependenciesLength;
-            public int NameLength;
             public int PaddingLength;
             public int Size;
             public int Flags;
             public int NumResources;
             public int MainResourceIndex;
-            public ulong Locale;
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct ResourceIdentification
+        protected struct ResourceIdentification<TLocale>
+            where TLocale : unmanaged
         {
             public int BodySize;
             public byte Type;
@@ -217,7 +274,7 @@ namespace SottrModManager.Shared.Cdc
             public short Padding;
             public int SubTypeAndRefDefinitionsSize;
             public int Id;
-            public ulong Locale;
+            public TLocale Locale;
 
             public int SubType
             {
@@ -229,31 +286,6 @@ namespace SottrModManager.Shared.Cdc
             {
                 get { return SubTypeAndRefDefinitionsSize >> 8; }
                 set { SubTypeAndRefDefinitionsSize = (SubTypeAndRefDefinitionsSize & 0xFF) | (value << 8); }
-            }
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct ResourceLocation
-        {
-            public int ResourceKey;
-            public int Padding;
-            public short ArchivePart;
-            public byte ArchiveId;
-            public byte ArchiveSubId;
-            public int OffsetInArchive;
-            public int SizeInArchive;
-            public int OffsetInBatch;
-
-            public int Type
-            {
-                get { return ResourceKey >> 24; }
-                set { ResourceKey = (value << 24) | (ResourceKey & 0x00FFFFFF); }
-            }
-
-            public int Id
-            {
-                get { return ResourceKey & 0x00FFFFFF; }
-                set { ResourceKey = (int)(ResourceKey & 0xFF000000) | value; }
             }
         }
     }

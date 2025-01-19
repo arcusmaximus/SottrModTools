@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace SottrModManager.Controls
+namespace TrRebootTools.ModManager.Controls
 {
     internal class BindableListView : ListView
     {

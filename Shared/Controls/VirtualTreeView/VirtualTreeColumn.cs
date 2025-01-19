@@ -7,7 +7,7 @@ using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Reflection;
 
-namespace SottrModManager.Shared.Controls.VirtualTreeView
+namespace TrRebootTools.Shared.Controls.VirtualTreeView
 {
     [Browsable(true)]
     [Serializable]

@@ -1,0 +1,99 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11globaluiinfo.bt
+//   Authors: arc_
+//   Purpose: Parse the .tr11dtp file in globaluiinfo.drm
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+typedef struct
+{
+    Ref name1Ref;
+    if (CanSeekTo(name1Ref))
+    {
+        SeekToRef(name1Ref);
+        string name1;
+        ReturnFromRef();
+    }
+    FSkip(0x10 - 8);
+    
+    Ref name2Ref;
+    if (CanSeekTo(name2Ref))
+    {
+        SeekToRef(name2Ref);
+        string name2;
+        ReturnFromRef();
+    }
+    FSkip(0x20 - 0x18);
+    
+    Ref schematicsPathRef;
+    if (CanSeekTo(schematicsPathRef))
+    {
+        SeekToRef(schematicsPathRef);
+        string schematicsPath;
+        ReturnFromRef();
+    }
+    FSkip(0x30 - 0x28);
+    
+    Ref skillPathRef;
+    if (CanSeekTo(skillPathRef))
+    {
+        SeekToRef(skillPathRef);
+        string skillPath;
+        ReturnFromRef();
+    }
+    
+    ushort zoneId;
+    FSkip(0x40 - 0x3A);
+    
+    Ref zoneNameRef;
+    if (CanSeekTo(zoneNameRef))
+    {
+        SeekToRef(zoneNameRef);
+        string zoneName;
+        ReturnFromRef();
+    }
+    
+    FSkip(0x50 - 0x48);
+    Ref nullNameRef;
+    if (CanSeekTo(nullNameRef))
+    {
+        SeekToRef(nullNameRef);
+        string nullName;
+        ReturnFromRef();
+    }
+    
+    FSkip(0xA8 - 0x58);
+    Ref defaultRef;
+    if (CanSeekTo(defaultRef))
+    {
+        SeekToRef(defaultRef);
+        string default_;
+        ReturnFromRef();
+    }
+} Player <read=name1, optimize=false>;
+
+typedef struct
+{
+    Ref playersRef;
+    byte numPlayers;
+    if (CanSeekTo(playersRef))
+    {
+        SeekToRef(playersRef);
+        Player players[numPlayers];
+        ReturnFromRef();
+    }
+} Root;
+
+RefDefinitions refDefinitions;
+Ref rootRef;
+if (CanSeekTo(rootRef))
+{
+    SeekToRef(rootRef);
+    Root root <open=true>;
+    ReturnFromRef();
+}

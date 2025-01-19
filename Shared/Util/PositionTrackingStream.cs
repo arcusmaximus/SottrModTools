@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace SottrModManager.Shared.Util
+namespace TrRebootTools.Shared.Util
 {
     public class PositionTrackingStream : Stream
     {

@@ -1,5 +1,5 @@
 ﻿
-namespace SottrModManager
+namespace TrRebootTools.ModManager
 {
     partial class TaskProgressForm
     {

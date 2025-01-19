@@ -1,4 +1,4 @@
-﻿namespace SottrModManager
+﻿namespace TrRebootTools.ModManager
 {
     partial class VariationSelectionForm
     {

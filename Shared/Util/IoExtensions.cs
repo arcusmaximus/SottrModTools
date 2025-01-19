@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace SottrModManager.Shared.Util
+namespace TrRebootTools.Shared.Util
 {
     public static class IoExtensions
     {
@@ -30,17 +30,23 @@ namespace SottrModManager.Shared.Util
             writer.Write(TempBuffer, 0, length);
         }
 
-        public static void Align16(this BinaryReader reader)
+        public static void Align(this BinaryReader reader, int alignment)
         {
-            while (reader.BaseStream.Position % 16 != 0)
+            if (alignment <= 1)
+                return;
+
+            while (reader.BaseStream.Position % alignment != 0)
             {
                 reader.ReadByte();
             }
         }
 
-        public static void Align16(this BinaryWriter writer)
+        public static void Align(this BinaryWriter writer, int alignment)
         {
-            while (writer.BaseStream.Position % 16 != 0)
+            if (alignment <= 1)
+                return;
+
+            while (writer.BaseStream.Position % alignment != 0)
             {
                 writer.Write((byte)0);
             }

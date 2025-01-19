@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using SottrModManager.Shared.Cdc;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Cdc;
+using TrRebootTools.Shared.Util;
 
-namespace SottrExtractor.Controls
+namespace TrRebootTools.Extractor.Controls
 {
     internal class ArchiveFileTreeViewBase : FileTreeView<ArchiveFileReference>
     {
@@ -30,9 +28,10 @@ namespace SottrExtractor.Controls
         private static FileTreeNode CreateFileNodes(ArchiveSet archiveSet)
         {
             FileTreeNode rootNode = new FileTreeNode(null);
+            CdcGameInfo gameInfo = CdcGameInfo.Get(archiveSet.Game);
             foreach (ArchiveFileReference file in archiveSet.Files)
             {
-                string name = CdcHash.Lookup(file.NameHash);
+                string name = CdcHash.Lookup(file.NameHash, archiveSet.Game);
                 if (name == null)
                     continue;
 
@@ -47,7 +46,7 @@ namespace SottrExtractor.Controls
                     }
                     else
                     {
-                        FileTreeNode prevLocaleNode = new FileTreeNode(GetLocaleFileName(fileNode.File.Locale))
+                        FileTreeNode prevLocaleNode = new FileTreeNode(gameInfo.LocaleToLanguageCode(fileNode.File.Locale))
                         {
                             File = fileNode.File,
                             Type = FileTreeNodeType.Locale,
@@ -55,7 +54,7 @@ namespace SottrExtractor.Controls
                         };
                         fileNode.Add(prevLocaleNode);
 
-                        FileTreeNode localeNode = new FileTreeNode(GetLocaleFileName(file.Locale))
+                        FileTreeNode localeNode = new FileTreeNode(gameInfo.LocaleToLanguageCode(file.Locale))
                         {
                             File = file,
                             Type = FileTreeNodeType.Locale,
@@ -68,7 +67,7 @@ namespace SottrExtractor.Controls
                 }
                 else
                 {
-                    FileTreeNode localeNode = new FileTreeNode(GetLocaleFileName(file.Locale))
+                    FileTreeNode localeNode = new FileTreeNode(gameInfo.LocaleToLanguageCode(file.Locale))
                     {
                         File = file,
                         Type = FileTreeNodeType.Locale,
@@ -79,17 +78,6 @@ namespace SottrExtractor.Controls
             }
             archiveSet.CloseStreams();
             return rootNode;
-        }
-
-        private static string GetLocaleFileName(ulong locale)
-        {
-            return string.Join(
-                ".",
-                Enum.GetValues(typeof(LocaleLanguage))
-                    .Cast<LocaleLanguage>()
-                    .Where(l => (locale & (uint)l) != 0)
-                    .Select(l => l.ToString().ToLower())
-            );
         }
     }
 }

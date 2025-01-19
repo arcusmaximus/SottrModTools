@@ -1,6 +1,7 @@
 ﻿using System;
+using TrRebootTools.Shared.Cdc;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
     public record struct ArchiveFileKey(ulong NameHash, ulong Locale) : IComparable<ArchiveFileKey>
     {

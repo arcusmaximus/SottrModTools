@@ -1,4 +1,4 @@
-﻿namespace SottrExtractor
+﻿namespace TrRebootTools.Extractor
 {
     internal enum FileTreeNodeType
     {

@@ -1,0 +1,12 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11object.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR object files
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+#include "../trobjectcommon.bt"

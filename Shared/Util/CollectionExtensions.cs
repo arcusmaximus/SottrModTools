@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 
-namespace SottrModManager.Shared.Util
+namespace TrRebootTools.Shared.Util
 {
     public static class CollectionExtensions
     {
@@ -45,6 +45,16 @@ namespace SottrModManager.Shared.Util
             if (!dict.TryGetValue(key, out TValue value))
             {
                 value = createValue();
+                dict.Add(key, value);
+            }
+            return value;
+        }
+
+        public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, Func<TKey, TValue> createValue)
+        {
+            if (!dict.TryGetValue(key, out TValue value))
+            {
+                value = createValue(key);
                 dict.Add(key, value);
             }
             return value;

@@ -1,0 +1,15 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11objectref.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR object reference files
+//  Category: SOTTR
+// File Mask: *.tr11objectref
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+RefDefinitions refDefinitions;
+Ref objectRef;

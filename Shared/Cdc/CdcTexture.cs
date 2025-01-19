@@ -1,9 +1,9 @@
-﻿using SottrModManager.Shared.Util;
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using TrRebootTools.Shared.Util;
 
-namespace SottrModManager.Shared.Cdc
+namespace TrRebootTools.Shared.Cdc
 {
     public class CdcTexture
     {
@@ -15,15 +15,15 @@ namespace SottrModManager.Shared.Cdc
             public uint Magic;
             public uint Format;
             public uint Size;
-            public uint IsUltraQuality;
+            public uint HighResMipMapLevels;
             public ushort Width;
             public ushort Height;
-            public ushort Depth;
-            public byte Unk1;
+            public ushort VolumeDepth;
+            public byte Depth;
             public byte MipMapLevels;
             public ushort Flags;
-            public byte Unk2;
-            public byte Unk3;
+            public byte Class;
+            public byte TileMode;
         }
 
         private const uint DDS_MAGIC = 0x20534444;
@@ -119,6 +119,10 @@ namespace SottrModManager.Shared.Cdc
         public const uint DXGI_FORMAT_BC7_UNORM = 98;
         public const uint DXGI_FORMAT_BC7_UNORM_SRGB = 99;
 
+        private const uint FOURCC_FORMAT_DXT1 = 0x31545844;
+        private const uint FOURCC_FORMAT_DXT3 = 0x33545844;
+        private const uint FOURCC_FORMAT_DXT5 = 0x35545844;
+
         private CdcTexture()
         {
         }
@@ -135,11 +139,14 @@ namespace SottrModManager.Shared.Cdc
             if (texture.Header.Magic != CdcTextureMagic)
                 throw new InvalidDataException();
 
+            if ((texture.Header.Flags & 0x2000) != 0)
+                reader.ReadBytes(0x100);
+
             texture.Data = reader.ReadBytes((int)texture.Header.Size);
             return texture;
         }
 
-        public static CdcTexture ReadFromDds(Stream stream)
+        public static CdcTexture ReadFromDds(Stream stream, CdcGame game)
         {
             BinaryReader reader = new BinaryReader(stream);
 
@@ -149,10 +156,21 @@ namespace SottrModManager.Shared.Cdc
 
             DDS_HEADER ddsHeader = reader.ReadStruct<DDS_HEADER>();
             uint format;
-            if ((ddsHeader.ddspf.flags & DDS_FOURCC) != 0 && ddsHeader.ddspf.fourCC == MakeFourCC("DX10"))
+            if ((ddsHeader.ddspf.flags & DDS_FOURCC) != 0)
             {
-                DDS_HEADER_DXT10 dx10 = reader.ReadStruct<DDS_HEADER_DXT10>();
-                format = dx10.dxgiFormat;
+                if (ddsHeader.ddspf.fourCC == MakeFourCC("DX10"))
+                {
+                    DDS_HEADER_DXT10 dx10 = reader.ReadStruct<DDS_HEADER_DXT10>();
+                    format = dx10.dxgiFormat;
+                }
+                else if (CdcGameInfo.Get(game).UsesFourccTextureFormat)
+                {
+                    format = ddsHeader.ddspf.fourCC;
+                }
+                else
+                {
+                    format = GetDxgiFormat(ddsHeader.ddspf);
+                }
             }
             else
             {
@@ -163,22 +181,22 @@ namespace SottrModManager.Shared.Cdc
 
             byte[] data = reader.ReadBytes((int)(stream.Length - stream.Position));
             return new CdcTexture
-                   {
-                       Header = new CdcTextureHeader
-                                 {
-                                     Magic = CdcTextureMagic,
-                                     Format = format,
-                                     Size = (uint)data.Length,
-                                     IsUltraQuality = 0,
-                                     Width = (ushort)ddsHeader.width,
-                                     Height = (ushort)ddsHeader.height,
-                                     Depth = 1,
-                                     MipMapLevels = (byte)ddsHeader.mipMapCount,
-                                     Flags = 0x27,
-                                     Unk2 = 1
-                                 },
-                       Data = data
-                   };
+            {
+                Header = new CdcTextureHeader
+                {
+                    Magic = CdcTextureMagic,
+                    Format = format,
+                    Size = (uint)data.Length,
+                    HighResMipMapLevels = 0,
+                    Width = (ushort)ddsHeader.width,
+                    Height = (ushort)ddsHeader.height,
+                    VolumeDepth = 1,
+                    MipMapLevels = (byte)ddsHeader.mipMapCount,
+                    Flags = 0x27,
+                    Class = 1
+                },
+                Data = data
+            };
         }
 
         public void Write(Stream stream)
@@ -202,7 +220,7 @@ namespace SottrModManager.Shared.Cdc
                     flags = DDS_HEADER_FLAGS_TEXTURE | (Header.MipMapLevels > 1 ? DDS_HEADER_FLAGS_MIPMAP : 0),
                     height = Header.Height,
                     width = Header.Width,
-                    depth = Header.Depth,
+                    depth = Header.VolumeDepth,
                     mipMapCount = isCubeMap ? 1u : Header.MipMapLevels,
                     caps = DDS_SURFACE_FLAGS_TEXTURE
                                 | (Header.MipMapLevels > 1 ? DDS_SURFACE_FLAGS_MIPMAP : 0)
@@ -287,7 +305,6 @@ namespace SottrModManager.Shared.Cdc
                     default:
                         throw new NotSupportedException($"DDS format \"{fourCC}\" not recognized.");
                 }
-                
             }
             return DXGI_FORMAT_UNKNOWN;
         }
@@ -331,6 +348,7 @@ namespace SottrModManager.Shared.Cdc
 
                 case DXGI_FORMAT_BC1_UNORM:
                 case DXGI_FORMAT_BC1_UNORM_SRGB:
+                case FOURCC_FORMAT_DXT1:
                     return new DDS_PIXELFORMAT
                     {
                         size = (uint)Marshal.SizeOf<DDS_PIXELFORMAT>(),
@@ -340,6 +358,7 @@ namespace SottrModManager.Shared.Cdc
 
                 case DXGI_FORMAT_BC2_UNORM:
                 case DXGI_FORMAT_BC2_UNORM_SRGB:
+                case FOURCC_FORMAT_DXT3:
                     return new DDS_PIXELFORMAT
                     {
                         size = (uint)Marshal.SizeOf<DDS_PIXELFORMAT>(),
@@ -349,6 +368,7 @@ namespace SottrModManager.Shared.Cdc
 
                 case DXGI_FORMAT_BC3_UNORM:
                 case DXGI_FORMAT_BC3_UNORM_SRGB:
+                case FOURCC_FORMAT_DXT5:
                     return new DDS_PIXELFORMAT
                     {
                         size = (uint)Marshal.SizeOf<DDS_PIXELFORMAT>(),

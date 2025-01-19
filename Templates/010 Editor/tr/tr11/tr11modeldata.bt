@@ -1,0 +1,180 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11modeldata.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR model data files
+//  Category: SOTTR
+// File Mask: *.tr11modeldata
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+#include "../trmodelcommon.bt"
+
+typedef struct
+{
+    char magic[4];
+    int flags_unknown1 : 14;
+    int hasBlendShapes : 1;
+    int flags_unknown2 : 17;
+    int totalDataSize <format=hex>;
+    int numIndices;
+    Vector4 boundingSphereCenter;
+    Vector4 boundingBoxMin;
+    Vector4 boundingBoxMax;
+    Vector4 positionScaleOffset;
+    float boundingSphereRadius;
+    float minLod;
+    float maxLod;
+    float maxShadowLod;
+    float minScreenSizeLod;
+    float maxScreenSizeLod;
+    float minShadowScreenSizeLod;
+    int lodMode;
+    int modelType;
+    float sortBias;
+    uint boneUsageMap[32] <format=hex>;
+    quad meshPartsPos <format=hex>;
+    quad meshHeadersPos <format=hex>;
+    quad boneMappingsPos <format=hex>;
+    quad lodLevelsPos <format=hex>;
+    quad indicesPos <format=hex>;
+    ushort numMeshParts;
+    ushort numMeshes;
+    ushort numBoneMappings;
+    ushort numLodLevels;
+    quad platformDataPos <format=hex>;
+    int nameLength;
+    FSkip(4);
+    quad namePos <format=hex>;
+    int numBlendShapes;
+    FSkip(4);
+    quad blendShapeNameTablePos <format=hex>;
+    float autoBumpScale;
+    int field_154;
+    int field_158;
+    int field_15C;
+} ModelDataHeader;
+
+typedef struct
+{
+    Vector3 relativePivot;
+    int numChildren;
+    int subTreeSize;
+    ubyte lodMode;
+    FSkip(3);
+    float min;
+    float max;
+    float minFade;
+    float maxFade;
+    float maxScreenSize;
+    float maxOpaqueScreenSize;
+    float minOpaqueScreenSize;
+    float minScreenSize;
+    ubyte m_flags;
+    ubyte m_lodStart;
+    ubyte m_lodEnd;
+    FSkip(5);
+} ModelLodLevel <optimize=true>;
+
+typedef struct
+{
+    int numParts;
+    ushort numBones;
+    ushort field_6;
+    quad boneIndicesPos;
+    quad vertexData1Pos;
+    quad vertexBuffer1Ptr;
+    quad vertexData2Pos;
+    quad vertexBuffer2Ptr;
+    int vertexFormatSize;
+    int field_34;
+    quad vertexFormatPos;
+    quad blendShapesHeaderPos;
+    int numVertices;
+    int field_4C;
+    int field_50;
+    int field_54;
+    int field_58;
+    int field_5C;
+} MeshHeader;
+
+local int gCurrentMeshIndex = 0;
+
+typedef struct
+{
+    int boneIndices[parentof(this).meshHeaders[gCurrentMeshIndex].numBones];
+    FAlign(0x20);
+    gCurrentMeshIndex += 1;
+} MeshBoneIndices <optimize=false>;
+
+typedef struct
+{
+    Vertex vertices[parentof(parentof(this)).meshHeaders[gCurrentMeshIndex].numVertices];
+    FAlign(0x20);
+    gCurrentVertexBufferIndex++;
+} VertexBuffer <optimize=false>;
+
+local int gCurrentVertexBufferIndex = 0;
+
+typedef struct
+{
+    VertexFormat vertexFormat;
+    FAlign(0x20);
+    
+    gCurrentVertexBufferIndex = 0;
+    VertexBuffer vertexBuffers[2];
+    
+    if (parentof(this).header.hasBlendShapes == 1)
+        BlendShapes blendShapes;
+    
+    gCurrentMeshIndex++;
+} MeshContent <optimize=false>;
+
+typedef struct
+{
+    Vector4 center;
+    int firstIndexIdx;
+    int numTriangles;
+    int field_18;
+    int flags <format=hex>;
+    int field_20;
+    int field_24;
+    int field_28;
+    short lodLevel;
+    short field_2E;
+    quad materialIdx;
+    quad textureIndices[5] <format=hex>;
+} MeshPart;
+
+typedef struct
+{
+    ModelDataHeader header;
+    
+    char name[header.nameLength];
+    FAlign(0x20);
+    
+    ModelLodLevel lodLevels[header.numLodLevels];
+    
+    int boneMappings[header.numBoneMappings];
+    FAlign(0x20);
+    
+    MeshHeader meshHeaders[header.numMeshes];
+    
+    gCurrentMeshIndex = 0;
+    MeshBoneIndices meshBoneIndices[header.numMeshes];
+    
+    gCurrentMeshIndex = 0;
+    MeshContent meshContents[header.numMeshes];
+    
+    if (header.blendShapeNameTablePos != 0)
+        FSkip(header.numBlendShapes * 0x40);
+    
+    ushort indices[header.numIndices];
+    FAlign(0x20);
+    
+    MeshPart meshParts[header.numMeshParts];
+} ModelData;
+
+ModelData modelData <open=true>;

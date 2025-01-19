@@ -1,0 +1,162 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11clothcomponent.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR cloth component files
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../../trcommon.bt"
+
+typedef struct
+{
+    int numStripGroups;
+    FSkip(4);
+    Ref stripGroupIndicesRef;
+    if (CanSeekTo(stripGroupIndicesRef))
+    {
+        SeekToRef(stripGroupIndicesRef);
+        int stripGroupIndices[numStripGroups];
+        ReturnFromRef();
+    }
+} Config <optimize=false>;
+
+typedef struct
+{
+    float gravityFactor;
+    float buoyancy;
+    float drag;
+    int maxVelocityUpdateIterations;
+    int maxPositionUpdateIterations;
+    int relaxationIterations;
+    int subStepCount;
+    float windFactor;
+    byte windOnConstraints;
+    FSkip(3);
+    float maxMassBounceBackStrength;
+    float poseFollowFactor;
+    int transformType <comment="0, 1, or 2">;
+    int springStretchinessDefaultPercentage;
+    int springStretchinessLowerPercentage;
+    int springStretchinessUpperPercentage;
+    int rigidityPercentage;
+    float accelerationDivider;
+    float timeDeltaScale;
+    float blendToBindTime;
+    FSkip(0x58 - 0x4C);
+    
+    int numStripIds;
+    FSkip(4);
+    Ref stripIdsRef;
+    if (CanSeekTo(stripIdsRef))
+    {
+        SeekToRef(stripIdsRef);
+        ushort stripIds[numStripIds];
+        ReturnFromRef();
+    }
+    
+    int numCollisionSetIndices;
+    FSkip(4);
+    Ref collisionSetIndicesRef;
+    if (CanSeekTo(collisionSetIndicesRef))
+    {
+        SeekToRef(collisionSetIndicesRef);
+        int collisionSetIndices[numCollisionSetIndices];
+        ReturnFromRef();
+    }
+    FSkip(0x90 - 0x78);
+} StripGroup <optimize=false>;
+
+enum <ubyte> CollisionType
+{
+    SPHERE,
+    CAPSULE,
+    TYPE2,
+    TYPE3,
+    BOX,
+    DOUBLERADIICAPSULE = 6
+};
+
+typedef struct
+{
+    CollisionType type;
+    FSkip(0x14 - 1);
+    int state <comment="Invalid if -2">;
+    uquad hashData1 <format=hex>;
+    uquad hashData2 <format=hex>;
+    Ref hashData3Ref;
+    if (CanSeekTo(hashData3Ref))
+    {
+        SeekToRef(hashData3Ref);
+        while (true)
+        {
+            uquad hashData3 <format=hex>;
+            if (hashData3 == 0)
+                break;
+        }
+        ReturnFromRef();
+    }
+} Collision <optimize=false>;
+
+typedef struct
+{
+    int count;
+    FSkip(4);
+    Ref collisionsRef;
+    if (CanSeekTo(collisionsRef))
+    {
+        SeekToRef(collisionsRef);
+        Collision collisions[count];
+        ReturnFromRef();
+    }
+} CollisionSet <optimize=false>;
+
+typedef struct
+{
+    ubyte enabled;
+    FSkip(7);
+    int defaultConfigIdx;
+    int wetConfigIdx;
+    int lowCoverConfigIdx;
+    int flammableConfigIdx;
+    float innerDistance;
+    float outerDistance;
+    
+    Ref configsRef;
+    int numConfigs;
+    FSkip(4);
+    if (CanSeekTo(configsRef))
+    {
+        SeekToRef(configsRef);
+        Config configs[numConfigs];
+        ReturnFromRef();
+    }
+    
+    Ref stripGroupsRef;
+    int numStripGroups;
+    FSkip(4);
+    if (CanSeekTo(stripGroupsRef))
+    {
+        SeekToRef(stripGroupsRef);
+        StripGroup stripGroups[numStripGroups];
+        ReturnFromRef();
+    }
+    
+    Ref collisionSetsRef;
+    int numCollisionSets;
+    FSkip(4);
+    if (CanSeekTo(collisionSetsRef))
+    {
+        SeekToRef(collisionSetsRef);
+        CollisionSet collisionSets[numCollisionSets];
+        ReturnFromRef();
+    }
+    
+    FSkip(8);
+    Ref unknownItemsRef;
+} ClothComponent <style=sSection1>;
+
+RefDefinitions refDefinitions;
+ClothComponent clothComponent <open=true>;

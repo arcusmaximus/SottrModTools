@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using SottrModManager.Shared.Cdc;
+using TrRebootTools.Shared.Cdc;
 
-namespace SottrModManager.Mod
+namespace TrRebootTools.ModManager.Mod
 {
     internal abstract class ModPackage : IDisposable
     {

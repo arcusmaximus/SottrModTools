@@ -5,10 +5,11 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using SottrModManager.Shared.Cdc;
-using SottrModManager.Shared.Util;
+using TrRebootTools.Shared.Cdc;
+using TrRebootTools.Shared.Util;
+using System.Text.RegularExpressions;
 
-namespace SottrModManager.Mod
+namespace TrRebootTools.ModManager.Mod
 {
     internal class FolderModPackage : ModPackage
     {
@@ -65,7 +66,7 @@ namespace SottrModManager.Mod
 
         private void ScanFolder(string baseFolderPath, string folderPath)
         {
-            AddFilesAndResourcesFromFolder(baseFolderPath, folderPath, _files, _physicalResources, false, _gameFileLocales);
+            AddFilesAndResourcesFromFolder(baseFolderPath, folderPath, _files, _physicalResources, false, _gameFileLocales, _resourceUsageCache, _archiveSet.Game);
 
             foreach (string subFolderPath in Directory.EnumerateDirectories(folderPath))
             {
@@ -87,36 +88,92 @@ namespace SottrModManager.Mod
             Dictionary<ArchiveFileKey, string> files,
             Dictionary<ResourceKey, string> resources,
             bool recursive,
-            Dictionary<ulong, ulong?> gameFileLocales)
+            Dictionary<ulong, ulong?> gameFileLocales,
+            ResourceUsageCache usageCache,
+            CdcGame game)
         {
             if (!baseFolderPath.EndsWith("\\"))
                 baseFolderPath += "\\";
 
             foreach (string filePath in Directory.EnumerateFiles(folderPath, "*", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
             {
-                (ResourceType type, ResourceSubType subType) = ResourceNaming.GetType(filePath);
-                if (type != ResourceType.Unknown && int.TryParse(Path.GetFileNameWithoutExtension(filePath), out int id))
+                if (TryGetResourceKey(baseFolderPath, filePath, out ResourceKey resourceKey, usageCache, game))
                 {
-                    resources[new ResourceKey(type, subType, id)] = filePath;
+                    resources[resourceKey] = filePath;
                     continue;
                 }
 
                 string extension = Path.GetExtension(filePath);
-                if (extension is ".txt" or ".png")
+                if (extension is ".txt" or ".png" or ".drm")
                     continue;
 
                 string filePathToHash = filePath.Substring(baseFolderPath.Length);
-                ulong locale = 0xFFFFFFFFFFFFFFFF;
-                if (Enum.TryParse(Path.GetFileNameWithoutExtension(filePath), true, out LocaleLanguage localeLang) && Enum.IsDefined(typeof(LocaleLanguage), localeLang))
-                {
+                ulong locale = CdcGameInfo.Get(game).LanguageCodeToLocale(Path.GetFileNameWithoutExtension(filePathToHash));
+                if (locale != 0xFFFFFFFFFFFFFFFF)
                     filePathToHash = Path.GetDirectoryName(filePathToHash);
-                    locale = 0xFFFFFFFFFFFF0400 | (ulong)localeLang;
-                }
 
-                ulong nameHash = CdcHash.Calculate(filePathToHash);
+                ulong nameHash = CdcHash.Calculate(filePathToHash, game);
                 locale = gameFileLocales.GetOrDefault(nameHash) ?? locale;
                 files[new ArchiveFileKey(nameHash, locale)] = filePath;
             }
+        }
+
+        private static bool TryGetResourceKey(string baseFolderPath, string filePath, out ResourceKey resourceKey, ResourceUsageCache usageCache, CdcGame game)
+        {
+            return ResourceNaming.TryGetResourceKey(filePath, out resourceKey, game) || 
+                   TryGetResourceKeyByOriginalFilePath(filePath, out resourceKey, usageCache, game) ||
+                   TryGetResourceKeyFromIndex(baseFolderPath, filePath, out resourceKey, game);
+        }
+
+        private static bool TryGetResourceKeyByOriginalFilePath(string filePath, out ResourceKey resourceKey, ResourceUsageCache usageCache, CdcGame game)
+        {
+            (ResourceType type, _) = ResourceNaming.GetType(filePath, game);
+            if (type == ResourceType.Unknown)
+            {
+                resourceKey = new();
+                return false;
+            }
+
+            using Stream stream = File.OpenRead(filePath);
+            string origFilePath = ResourceNaming.ReadOriginalFilePath(stream, type, game);
+            if (origFilePath == null)
+            {
+                resourceKey = new();
+                return false;
+            }
+
+            return usageCache.TryGetResourceKeyByOriginalFilePath(origFilePath, out resourceKey);
+        }
+
+        private static bool TryGetResourceKeyFromIndex(string baseFolderPath, string resourceFilePath, out ResourceKey resourceKey, CdcGame game)
+        {
+            Match match = Regex.Match(Path.GetFileNameWithoutExtension(resourceFilePath), @"^(?:Section|Replace)\s+(\d+)$");
+            if (!match.Success)
+            {
+                resourceKey = new();
+                return false;
+            }
+
+            string collectionFilePath = null;
+            string folderPath = resourceFilePath;
+            do
+            {
+                folderPath = Path.GetDirectoryName(folderPath);
+                collectionFilePath = Directory.EnumerateFiles(folderPath, "*.drm").FirstOrDefault();
+                if (collectionFilePath != null)
+                    break;
+            } while (folderPath.TrimEnd('\\') != baseFolderPath.TrimEnd('\\'));
+
+            if (collectionFilePath == null)
+            {
+                resourceKey = new();
+                return false;
+            }
+
+            using Stream stream = File.OpenRead(collectionFilePath);
+            ResourceCollection collection = ResourceCollection.Open(0, 0, stream, game);
+            resourceKey = collection.ResourceReferences[int.Parse(match.Groups[1].Value) - 1];
+            return true;
         }
 
         private static void AddVirtualResources(
@@ -265,7 +322,7 @@ namespace SottrModManager.Mod
             LocalsBin locals;
             using (Stream origStream = archiveSet.OpenFile(fileRef))
             {
-                locals = new LocalsBin(origStream);
+                locals = LocalsBin.Open(origStream, archiveSet.Game);
             }
 
             JObject json;
@@ -307,14 +364,15 @@ namespace SottrModManager.Mod
                 return null;
 
             Stream stream = File.OpenRead(filePath);
+            string extension = Path.GetExtension(filePath);
             switch (resourceKey.Type)
             {
-                case ResourceType.Texture:
+                case ResourceType.Texture when extension == ".dds":
                     Stream textureStream = ConvertTexture(stream, resourceKey, archiveSet, resourceUsageCache);
                     stream.Close();
                     return textureStream;
 
-                case ResourceType.SoundBank:
+                case ResourceType.SoundBank when extension == ".bnk":
                     Stream dtpStream = ConvertSoundBank(stream);
                     stream.Close();
                     return dtpStream;
@@ -326,7 +384,7 @@ namespace SottrModManager.Mod
 
         private static Stream ConvertTexture(Stream ddsStream, ResourceKey resourceKey, ArchiveSet archiveSet, ResourceUsageCache resourceUsageCache)
         {
-            CdcTexture texture = CdcTexture.ReadFromDds(ddsStream);
+            CdcTexture texture = CdcTexture.ReadFromDds(ddsStream, archiveSet.Game);
 
             uint originalFormat = GetOriginalTextureFormat(resourceKey, archiveSet, resourceUsageCache);
             if (CdcTexture.IsSrgbFormat(originalFormat))
@@ -383,7 +441,7 @@ namespace SottrModManager.Mod
                 FolderPath = folderPath;
                 _archiveSet = archiveSet;
                 _resourceUsageCache = resourceUsageCache;
-                AddFilesAndResourcesFromFolder(FolderPath, FolderPath, _files, _physicalResources, true, gameFileLocales);
+                AddFilesAndResourcesFromFolder(FolderPath, FolderPath, _files, _physicalResources, true, gameFileLocales, _resourceUsageCache, _archiveSet.Game);
                 AddVirtualResources(_virtualResources, _physicalResources, _files, _archiveSet, _resourceUsageCache);
             }
 

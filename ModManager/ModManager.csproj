@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{2CE18D23-5ED3-472F-986F-A3E957DB4A7C}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>SottrModManager</RootNamespace>
-    <AssemblyName>SottrModManager</AssemblyName>
+    <RootNamespace>TrRebootTools.ModManager</RootNamespace>
+    <AssemblyName>TrRebootTools.ModManager</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -75,6 +75,7 @@
     <Compile Include="Mod\ModInstaller.cs" />
     <Compile Include="Mod\ModPackage.cs" />
     <Compile Include="Mod\ModVariation.cs" />
+    <Compile Include="Mod\MultiTigerModPackage.cs" />
     <Compile Include="Mod\TigerModPackage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -120,6 +121,7 @@
     <Content Include="Resources\AddZip.png" />
     <Content Include="Resources\Reinstall.png" />
     <Content Include="Resources\Remove.png" />
+    <None Include="Resources\SelectGame.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj">

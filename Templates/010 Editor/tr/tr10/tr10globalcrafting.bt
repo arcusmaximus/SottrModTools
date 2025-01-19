@@ -1,0 +1,333 @@
+#define TR_VERSION 10
+#include "../trcommon.bt"
+
+typedef union
+{
+    byte b;
+    int i;
+    float f;
+} PersistentDataValueUnionRedirect;
+
+typedef struct
+{
+    ushort name;
+    FSkip(2);
+    int type;
+    Ref commentRef;
+    if (CanSeekTo(commentRef))
+    {
+        SeekToRef(commentRef);
+        string comment;
+        ReturnFromRef();
+    }
+    PersistentDataValueUnionRedirect defaultValue;
+} PersistentDataGlobalStruct <optimize=false>;
+
+typedef struct
+{
+    unsigned int ammoType <format=hex>;
+    int amount;
+    byte isdiff;
+    FSkip(3);
+    int difficulty;
+} CraftingResourceAmount <optimize=false>;
+
+typedef struct
+{
+    ushort traitRequired;
+    FSkip(2);
+    float craftingDuration;
+} CraftDuration <optimize=false>;
+
+typedef struct
+{
+    unsigned int hash <format=hex>;
+} EventEnum <optimize=false>;
+
+typedef struct
+{
+    short name;
+    short description;
+    short extraString;
+    FSkip(2);
+    Ref recipeTagRef;
+    if (CanSeekTo(recipeTagRef))
+    {
+        SeekToRef(recipeTagRef);
+        string recipeTag;
+        ReturnFromRef();
+    }
+    Ref iconTypeRef;
+    if (CanSeekTo(iconTypeRef))
+    {
+        SeekToRef(iconTypeRef);
+        string iconType;
+        ReturnFromRef();
+    }
+    Ref iconTypeCraftRef;
+    if (CanSeekTo(iconTypeCraftRef))
+    {
+        SeekToRef(iconTypeCraftRef);
+        string iconTypeCraft;
+        ReturnFromRef();
+    }
+    PersistentDataGlobalStruct xpRewardELII;
+    int sortOrderIndex;
+    float animationNamedValue;
+    FSkip(4);
+    unsigned int numResourceRequirements;
+    FSkip(4);
+    Ref resourceRequirementsRef;
+    if (CanSeekTo(resourceRequirementsRef))
+    {
+        SeekToRef(resourceRequirementsRef);
+        CraftingResourceAmount resourceRequirements[numResourceRequirements];
+        ReturnFromRef();
+    }
+    ushort recipeKnownTraitRequirement;
+    ushort toolTraitRequirement;
+    unsigned int numOtherTraitRequirements;
+    Ref otherTraitRequirementsRef;
+    if (CanSeekTo(otherTraitRequirementsRef))
+    {
+        SeekToRef(otherTraitRequirementsRef);
+        ushort otherTraitRequirements[numOtherTraitRequirements];
+        ReturnFromRef();
+    }
+    int type;
+    float craftingDuration;
+    FSkip(36);
+    unsigned int numCraftingDurations;
+    Ref craftingDurationsRef;
+    if (CanSeekTo(craftingDurationsRef))
+    {
+        SeekToRef(craftingDurationsRef);
+        CraftDuration craftingDurations[numCraftingDurations];
+        ReturnFromRef();
+    }
+    unsigned int craftingFailSound;
+    unsigned int craftingInProgressSound;
+    unsigned int craftingCancelSound;
+    unsigned int craftingSuccessSound;
+    ushort craftedTrait;
+    FSkip(2);
+    FSkip(4);
+    EventEnum craftedEventEnum;
+    int craftedEventArgument;
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string debugName;
+        ReturnFromRef();
+    }
+} CraftingRecipe <optimize=false, read=debugName>;
+
+typedef struct
+{
+    unsigned int imageRes;
+    FSkip(4);
+    Ref filepathRef;
+    if (CanSeekTo(filepathRef))
+    {
+        SeekToRef(filepathRef);
+        string filepath;
+        ReturnFromRef();
+    }
+    int offSetX;
+    int offSetY;
+    int width;
+    int height;
+    Ref actionRef;
+    if (CanSeekTo(actionRef))
+    {
+        SeekToRef(actionRef);
+        string action;
+        ReturnFromRef();
+    }
+    unsigned int imageResVR;
+    FSkip(4);
+    Ref filepathVRRef;
+    if (CanSeekTo(filepathVRRef))
+    {
+        SeekToRef(filepathVRRef);
+        string filepathVR;
+        ReturnFromRef();
+    }
+    int offSetXVR;
+    int offSetYVR;
+    int widthVR;
+    int heightVR;
+} ImagePath <optimize=false>;
+
+typedef struct
+{
+    unsigned int ammoType <format=hex>;
+    int type;
+    int collectedToSpendable;
+    byte nonCraftingUse;
+    byte freeCraftingUse;
+    byte showInMapResourceSummary;
+    FSkip(1);
+    short name;
+    short description;
+    FSkip(4);
+    ImagePath imagePath;
+} CraftingResource <optimize=false, read=imagePath.filepath>;
+
+typedef struct
+{
+    unsigned int ammoType;
+    unsigned int numberOfParts;
+    ushort ownershipTrait;
+    ushort associatedItem;
+    int campsiteCategory;
+    Ref iconTypeRef;
+    if (CanSeekTo(iconTypeRef))
+    {
+        SeekToRef(iconTypeRef);
+        string iconType;
+        ReturnFromRef();
+    }
+    short itemName;
+    short itemDesc;
+    ImagePath imagePath;
+} BrokenPartsData <optimize=false, read=iconType>;
+
+typedef struct
+{
+    unsigned int dlcHash;
+} DLCFeatureRef <optimize=false>;
+
+typedef struct
+{
+    short name;
+    short description;
+    ushort playerObject;
+    FSkip(2);
+    unsigned int parent <format=hex>;
+    FSkip(4);
+    Ref flashIconRef;
+    if (CanSeekTo(flashIconRef))
+    {
+        SeekToRef(flashIconRef);
+        string flashIcon;
+        ReturnFromRef();
+    }
+    int outfitType;
+    unsigned int craftingRecipe <format=hex>;
+    unsigned int ammoType <format=hex>;
+    ushort traitToUnlock;
+    byte importFromProfile;
+    FSkip(1);
+    DLCFeatureRef dlcRef;
+    int globalProgressionPriority;
+    unsigned int communityEventHash <format=hex>;
+    ushort sortOrder;
+    FSkip(2);
+    ImagePath previewImage;
+    Ref debugNameRef;
+    if (CanSeekTo(debugNameRef))
+    {
+        SeekToRef(debugNameRef);
+        string debugName;
+        ReturnFromRef();
+    }
+    Ref dlcLicenseXB1ProductIDRef;
+    if (CanSeekTo(dlcLicenseXB1ProductIDRef))
+    {
+        SeekToRef(dlcLicenseXB1ProductIDRef);
+        string dlcLicenseXB1ProductID;
+        ReturnFromRef();
+    }
+    Ref dlcLicenseX360OfferIDRef;
+    if (CanSeekTo(dlcLicenseX360OfferIDRef))
+    {
+        SeekToRef(dlcLicenseX360OfferIDRef);
+        string dlcLicenseX360OfferID;
+        ReturnFromRef();
+    }
+    Ref dlcLicenseUWPProductIDRef;
+    if (CanSeekTo(dlcLicenseUWPProductIDRef))
+    {
+        SeekToRef(dlcLicenseUWPProductIDRef);
+        string dlcLicenseUWPProductID;
+        ReturnFromRef();
+    }
+    int dlcLicenseSteamAppID;
+    FSkip(4);
+} OutfitsData <optimize=false, read=Str("%s (name %d, zone %d)", debugName, name, playerObject)>;
+
+typedef struct
+{
+    unsigned int numRecipe;
+    FSkip(4);
+    Ref craftingRecipeListRef;
+    if (CanSeekTo(craftingRecipeListRef))
+    {
+        SeekToRef(craftingRecipeListRef);
+        CraftingRecipe craftingRecipeList[numRecipe];
+        ReturnFromRef();
+    }
+    unsigned int numResource;
+    FSkip(4);
+    Ref craftingResourceListRef;
+    if (CanSeekTo(craftingResourceListRef))
+    {
+        SeekToRef(craftingResourceListRef);
+        CraftingResource craftingResourceList[numResource];
+        ReturnFromRef();
+    }
+    unsigned int numBrokenPartsItems;
+    FSkip(4);
+    Ref brokenPartsListRef;
+    if (CanSeekTo(brokenPartsListRef))
+    {
+        SeekToRef(brokenPartsListRef);
+        BrokenPartsData brokenPartsList[numBrokenPartsItems];
+        ReturnFromRef();
+    }
+    unsigned int numOutfits;
+    FSkip(4);
+    Ref outfitsListRef;
+    if (CanSeekTo(outfitsListRef))
+    {
+        SeekToRef(outfitsListRef);
+        OutfitsData outfitsList[numOutfits];
+        ReturnFromRef();
+    }
+    Ref brokenOutfitIconRef;
+    if (CanSeekTo(brokenOutfitIconRef))
+    {
+        SeekToRef(brokenOutfitIconRef);
+        string brokenOutfitIcon;
+        ReturnFromRef();
+    }
+    Ref unknownOutfitIconRef;
+    if (CanSeekTo(unknownOutfitIconRef))
+    {
+        SeekToRef(unknownOutfitIconRef);
+        string unknownOutfitIcon;
+        ReturnFromRef();
+    }
+    unsigned int numHealingRecipies;
+    FSkip(4);
+    Ref healingRecipiesRef;
+    if (CanSeekTo(healingRecipiesRef))
+    {
+        SeekToRef(healingRecipiesRef);
+        unsigned int healingRecipies[numHealingRecipies];
+        ReturnFromRef();
+    }
+    unsigned int healingRecipe;
+    unsigned int mysteryRecipe;
+} GlobalCrafting <optimize=false>;
+
+RefDefinitions refDefinitions;
+Ref rootRef;
+if (CanSeekTo(rootRef))
+{
+    SeekToRef(rootRef);
+    GlobalCrafting root <open=true>;
+    ReturnFromRef();
+}

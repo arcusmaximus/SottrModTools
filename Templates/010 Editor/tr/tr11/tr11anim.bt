@@ -1,0 +1,433 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11anim.bt
+//   Authors: arc_
+//   Purpose: Parse SOTTR animations
+//  Category: SOTTR
+// File Mask: *.tr11anim
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+BitfieldLeftToRight();
+
+local ubyte gBoneAnimatedVectorElementSizes[16];
+gBoneAnimatedVectorElementSizes[0]  = 0;
+gBoneAnimatedVectorElementSizes[1]  = 3;
+gBoneAnimatedVectorElementSizes[2]  = 4;
+gBoneAnimatedVectorElementSizes[3]  = 5;
+gBoneAnimatedVectorElementSizes[4]  = 6;
+gBoneAnimatedVectorElementSizes[5]  = 7;
+gBoneAnimatedVectorElementSizes[6]  = 8;
+gBoneAnimatedVectorElementSizes[7]  = 9;
+gBoneAnimatedVectorElementSizes[8]  = 10;
+gBoneAnimatedVectorElementSizes[9]  = 11;
+gBoneAnimatedVectorElementSizes[10] = 12;
+gBoneAnimatedVectorElementSizes[11] = 13;
+gBoneAnimatedVectorElementSizes[12] = 14;
+gBoneAnimatedVectorElementSizes[13] = 15;
+gBoneAnimatedVectorElementSizes[14] = 16;
+gBoneAnimatedVectorElementSizes[15] = 23;
+
+local ubyte gBlendShapeAnimatedValueSizes[16];
+gBlendShapeAnimatedValueSizes[0]  = 0;
+gBlendShapeAnimatedValueSizes[1]  = 1;
+gBlendShapeAnimatedValueSizes[2]  = 2;
+gBlendShapeAnimatedValueSizes[3]  = 3;
+gBlendShapeAnimatedValueSizes[4]  = 4;
+gBlendShapeAnimatedValueSizes[5]  = 5;
+gBlendShapeAnimatedValueSizes[6]  = 6;
+gBlendShapeAnimatedValueSizes[7]  = 7;
+gBlendShapeAnimatedValueSizes[8]  = 8;
+gBlendShapeAnimatedValueSizes[9]  = 9;
+gBlendShapeAnimatedValueSizes[10] = 10;
+gBlendShapeAnimatedValueSizes[11] = 11;
+gBlendShapeAnimatedValueSizes[12] = 12;
+gBlendShapeAnimatedValueSizes[13] = 14;
+gBlendShapeAnimatedValueSizes[14] = 16;
+gBlendShapeAnimatedValueSizes[15] = 23;
+
+local ubyte gNumOneBitsInByte[256];
+
+void InitNumOneBits()
+{
+    local int b;
+    local ubyte numOneBits;
+    local int i;
+    for (b = 0; b <= 0xFF; b++)
+    {
+        numOneBits = 0;
+        for (i = 0; i < 8; i++)
+        {
+            if (b & (1 << i))
+                numOneBits++;
+        }
+        gNumOneBitsInByte[b] = numOneBits;
+    }
+}
+InitNumOneBits();
+
+int CountOneBits(int pos, int length)
+{
+    local int offset;
+    local int numOneBits = 0;
+    for (offset = 0; offset < length; offset++)
+    {
+        numOneBits += gNumOneBitsInByte[ReadUByte(pos + offset)];
+    }
+    return numOneBits;
+}
+
+typedef struct (int numBones, byte includeScale)
+{
+    local int i;
+    for (i = 0; i < numBones; i++)
+    {
+        uint rotationAbsent : 1;
+        uint positionAbsent : 1;
+        if (includeScale)
+            uint scaleAbsent : 1;
+    }
+} BoneVectorAbsenceFlags;
+
+typedef struct (int numBones, byte includeScale)
+{
+    local int i;
+    for (i = 0; i < numBones; i++)
+    {
+        uint rotationFixed : 1;
+        uint positionFixed : 1;
+        if (includeScale)
+            uint scaleFixed : 1;
+    }
+} BoneVectorFixationFlags;
+
+typedef struct (int numAnimatedVectors)
+{
+    local int i;
+    for (i = 0; i < numAnimatedVectors; i++)
+    {
+        uint encodedSize : 4;
+    }
+} BoneAnimatedVectorElementSizes;
+
+typedef struct
+{
+    Vector3 offset;
+    Vector3 scale;
+} BoneAnimatedVectorAdjustmentFloats;
+
+typedef struct
+{
+    ubyte offsetX;
+    ubyte scaleX;
+    ubyte offsetY;
+    ubyte scaleY;
+    ubyte offsetZ;
+    ubyte scaleZ;
+} BoneAnimatedVectorAdjustmentBytes;
+
+typedef struct (int numFrames, int numAnimatedVectorsPerFrame, BoneAnimatedVectorElementSizes& elemSizes)
+{
+    BigEndian();
+    BitfieldDisablePadding();
+    local int frameIdx;
+    local int vectorIdx;
+    local int elemSize;
+    for (frameIdx = 0; frameIdx < numFrames; frameIdx++)
+    {
+        for (vectorIdx = 0; vectorIdx < numAnimatedVectorsPerFrame; vectorIdx++)
+        {
+            elemSize = gBoneAnimatedVectorElementSizes[elemSizes.encodedSize[vectorIdx]];
+            uint64 x : elemSize;
+            uint64 y : elemSize;
+            uint64 z : elemSize;
+        }
+    }
+    BitfieldEnablePadding();
+    LittleEndian();
+} BoneAnimatedVectors;
+
+typedef struct (int numFrames, int numAnimatedVectorsPerFrame, int numBones)
+{
+    BoneAnimatedVectorElementSizes vectorElemSizes(numAnimatedVectorsPerFrame) <style=sSection1>;
+    
+    BoneAnimatedVectorAdjustmentBytes animatedVectorAdjustmentBytes[numAnimatedVectorsPerFrame] <style=sSection1Accent>;
+    FAlign(4);
+    
+    BoneAnimatedVectors animatedVectors(numFrames, numAnimatedVectorsPerFrame, vectorElemSizes) <style=sSection3>;
+} BoneFrameBatch;
+
+typedef struct (int numBones, int numFrames, byte includeScale)
+{
+    local int numAnimatedVectorsPerFrame = numBones * (includeScale ? 3 : 2);
+    local int numFixedVectors = 0;
+    local int numFrameBatches = (numFrames + 15) / 16;
+    
+    Ref vectorAbsenceFlagsRef;
+    if (CanSeekTo(vectorAbsenceFlagsRef))
+    {
+        SeekToRef(vectorAbsenceFlagsRef);
+        BoneVectorAbsenceFlags vectorAbsenceFlags(numBones, includeScale) <style=sSection3>;
+        numAnimatedVectorsPerFrame -= CountOneBits(startof(vectorAbsenceFlagsRef.target), FTell() - startof(vectorAbsenceFlagsRef.target));
+        ReturnFromRef();
+    }
+    
+    Ref vectorFixationFlagsRef;
+    if (CanSeekTo(vectorFixationFlagsRef))
+    {
+        SeekToRef(vectorFixationFlagsRef);
+        BoneVectorFixationFlags vectorFixationFlags(numBones, includeScale) <style=sSection3Accent>;
+        numFixedVectors = CountOneBits(startof(vectorFixationFlagsRef.target), FTell() - startof(vectorFixationFlagsRef.target));
+        numAnimatedVectorsPerFrame -= numFixedVectors;
+        ReturnFromRef();
+    }
+    
+    Ref fixedVectorsRef;
+    if (CanSeekTo(fixedVectorsRef))
+    {
+        SeekToRef(fixedVectorsRef);
+        Vector3 fixedVectors[numFixedVectors] <style=sHeading3>;
+        ReturnFromRef();
+    }
+    
+    Ref animatedVectorAdjustmentFloatsRef;
+    if (CanSeekTo(animatedVectorAdjustmentFloatsRef) && numFrames > 0)
+    {
+        SeekToRef(animatedVectorAdjustmentFloatsRef);
+        BoneAnimatedVectorAdjustmentFloats animatedVectorAdjustmentFloats[numAnimatedVectorsPerFrame] <style=sHeading3Accent>;
+        ReturnFromRef();
+    }
+    
+    Ref frameBatchSizesRef;
+    if (CanSeekTo(frameBatchSizesRef) && numFrames > 0)
+    {
+        SeekToRef(frameBatchSizesRef);
+        ushort frameBatchSizes[numFrameBatches] <style=sHeading4>;        // In ints
+        ReturnFromRef();
+    }
+    
+    Ref frameBatchesRef;
+    if (CanSeekTo(frameBatchesRef) && numFrames > 0)
+    {
+        SeekToRef(frameBatchesRef);
+        
+        local int frameBatchPos = FTell();
+        local int frameBatchIdx;
+        for (frameBatchIdx = 0; frameBatchIdx < numFrameBatches; frameBatchIdx++)
+        {
+            FSeek(frameBatchPos);
+            BoneFrameBatch frameBatch(frameBatchIdx < numFrameBatches - 1 ? 16 : numFrames % 16, numAnimatedVectorsPerFrame, numBones);
+            frameBatchPos += frameBatchSizes[frameBatchIdx] * 4;
+        }
+        ReturnFromRef();
+    }
+} BoneAnimation;
+
+typedef struct (int numBlendShapes)
+{
+    local int i;
+    for (i = 0; i < numBlendShapes; i++)
+    {
+        uint isAbsent : 1;
+    }
+} BlendShapeValueAbsenceFlags;
+
+typedef struct (int numBlendShapes)
+{
+    local int i;
+    for (i = 0; i < numBlendShapes; i++)
+    {
+        uint isFixed : 1;
+    }
+} BlendShapeValueFixationFlags;
+
+typedef struct (int numAnimatedValues)
+{
+    local int i;
+    for (i = 0; i < numAnimatedValues; i++)
+    {
+        uint encodedSize : 4;
+    }
+} BlendShapeAnimatedValueSizes;
+
+typedef struct
+{
+    float offset;
+    float scale;
+} BlendShapeAnimatedValueAdjustmentFloats;
+
+typedef struct
+{
+    ubyte offset;
+    ubyte scale;
+} BlendShapeAnimatedValueAdjustmentBytes;
+
+typedef struct (int numFrames, int numAnimatedValuesPerFrame, BlendShapeAnimatedValueSizes& valueSizes)
+{
+    BigEndian();
+    BitfieldDisablePadding();
+    local int frameIdx;
+    local int valueIdx;
+    local int elemSize;
+    for (frameIdx = 0; frameIdx < numFrames; frameIdx++)
+    {
+        for (valueIdx = 0; valueIdx < numAnimatedValuesPerFrame; valueIdx++)
+        {
+            elemSize = gBlendShapeAnimatedValueSizes[valueSizes.encodedSize[valueIdx]];
+            uint64 value : elemSize;
+        }
+    }
+    BitfieldEnablePadding();
+    LittleEndian();
+} BlendShapeAnimatedValues;
+
+typedef struct (int numFrames, int numAnimatedValuesPerFrame, int numBlendShapes)
+{
+    BlendShapeAnimatedValueSizes valueSizes(numAnimatedValuesPerFrame) <style=sSection1>;
+    
+    BlendShapeAnimatedValueAdjustmentBytes animatedValueAdjustmentBytes[numAnimatedValuesPerFrame] <style=sSection1Accent>;
+    FAlign(4);
+    
+    BlendShapeAnimatedValues animatedValues(numFrames, numAnimatedValuesPerFrame, valueSizes) <style=sSection3>;
+} BlendShapeFrameBatch;
+
+typedef struct (int numBlendShapes, int numFrames)
+{
+    local int numAnimatedValuesPerFrame = numBlendShapes;
+    local int numFixedValues = 0;
+    local int numFrameBatches = (numFrames + 15) / 16;
+    
+    Ref valueAbsenceFlagsRef;
+    if (CanSeekTo(valueAbsenceFlagsRef))
+    {
+        SeekToRef(valueAbsenceFlagsRef);
+        BlendShapeValueAbsenceFlags valueAbsenceFlags(numBlendShapes) <style=sSection3>;
+        numAnimatedValuesPerFrame -= CountOneBits(startof(valueAbsenceFlagsRef.target), FTell() - startof(valueAbsenceFlagsRef.target));
+        ReturnFromRef();
+    }
+    
+    Ref valueFixationFlagsRef;
+    if (CanSeekTo(valueFixationFlagsRef))
+    {
+        SeekToRef(valueFixationFlagsRef);
+        BlendShapeValueFixationFlags valueFixationFlags(numBlendShapes) <style=sSection3Accent>;
+        numFixedValues = CountOneBits(startof(valueFixationFlagsRef.target), FTell() - startof(valueFixationFlagsRef.target));
+        numAnimatedValuesPerFrame -= numFixedValues;
+        ReturnFromRef();
+    }
+    
+    Ref fixedValuesRef;
+    if (CanSeekTo(fixedValuesRef))
+    {
+        SeekToRef(fixedValuesRef);
+        float fixedValues[numFixedValues] <style=sHeading3>;
+        ReturnFromRef();
+    }
+    
+    Ref animatedValueAdjustmentFloatsRef;
+    if (CanSeekTo(animatedValueAdjustmentFloatsRef) && numFrames > 0)
+    {
+        SeekToRef(animatedValueAdjustmentFloatsRef);
+        BlendShapeAnimatedValueAdjustmentFloats animatedValueAdjustmentFloats[numAnimatedValuesPerFrame] <style=sHeading3Accent>;
+        ReturnFromRef();
+    }
+    
+    Ref frameBatchSizesRef;
+    if (CanSeekTo(frameBatchSizesRef) && numFrames > 0)
+    {
+        SeekToRef(frameBatchSizesRef);
+        ushort frameBatchSizes[numFrameBatches] <style=sHeading4>;        // In ints
+        ReturnFromRef();
+    }
+    
+    Ref frameBatchesRef;
+    if (CanSeekTo(frameBatchesRef) && numFrames > 0)
+    {
+        SeekToRef(frameBatchesRef);
+        
+        local int frameBatchPos = FTell();
+        local int frameBatchIdx;
+        for (frameBatchIdx = 0; frameBatchIdx < numFrameBatches; frameBatchIdx++)
+        {
+            FSeek(frameBatchPos);
+            BlendShapeFrameBatch frameBatch(frameBatchIdx < numFrameBatches - 1 ? 16 : numFrames % 16, numAnimatedValuesPerFrame, numBlendShapes);
+            frameBatchPos += frameBatchSizes[frameBatchIdx] * 4;
+        }
+        ReturnFromRef();
+    }
+} BlendShapeAnimation;
+
+
+typedef struct
+{
+    FSkip(0x18);
+    Vector3 basePosition;
+    FSkip(0x30 - 0x24);
+    Vector3 baseRotation;
+    FSkip(2);
+    ushort numFrames                    <style=sHeading2>;
+    ushort timePerFrame                 <style=sHeading2>;
+    ushort numBones                     <style=sHeading2>;
+    FSkip(0x4A - 0x44);
+    ubyte numBlendShapes                <style=sHeading2>;
+    FSkip(1);
+    ushort flags : 6                    <style=sHeading2>;
+    ushort includeBoneScale : 1         <style=sHeading2>;
+    ushort numBoneFrameBatches          <style=sHeading2>;         // Expected to be ceil(numFrames / 16)
+    ushort numBlendShapeFrameBatches    <style=sHeading2>;
+    FSkip(0x68 - 0x52);
+    
+    Ref boneDistancesFromParentsRef;
+    if (CanSeekTo(boneDistancesFromParentsRef))
+    {
+        SeekToRef(boneDistancesFromParentsRef);
+        float boneDistancesFromParents[numBones] <style=sSection2>;
+        ReturnFromRef();
+    }
+    
+    FSkip(8);
+    Ref boneHeldFrameNumbersRef;
+    if (CanSeekTo(boneHeldFrameNumbersRef))
+    {
+        SeekToRef(boneHeldFrameNumbersRef);
+        while (true)
+        {
+            // Values at these frames are held constant until the next frame (no interpolation)
+            int boneHeldFrameNums;
+            if (boneHeldFrameNums == 0)
+                break;
+        }
+        ReturnFromRef();
+    }
+    
+    Ref globalBoneIdsRef;
+    if (CanSeekTo(globalBoneIdsRef))
+    {
+        SeekToRef(globalBoneIdsRef);
+        ushort globalBoneIds[numBones] <style=sSection2Accent>;
+        ReturnFromRef();
+    }
+    
+    FSkip(0xA0 - 0x88);
+    Ref globalBlendShapeIdsRef;
+    if (CanSeekTo(globalBlendShapeIdsRef))
+    {
+        SeekToRef(globalBlendShapeIdsRef);
+        ushort globalBlendShapeIds[numBlendShapes] <style=sSection2Accent>;
+        ReturnFromRef();
+    }
+    
+    FSkip(0xB8 - 0xA8);
+    
+    BoneAnimation boneAnimation(numBones, numBoneFrameBatches > 0 ? numFrames : 0, includeBoneScale);
+    BlendShapeAnimation blendShapeAnimation(numBlendShapes, numBlendShapeFrameBatches > 0 ? numFrames : 0);
+    
+    FSkip(0x128 - 0x118);
+    Ref unknownRef;
+} Animation <open=true>;
+
+RefDefinitions refDefinitions;
+Animation animation;

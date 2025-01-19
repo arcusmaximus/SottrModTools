@@ -1,4 +1,4 @@
-﻿namespace SottrExtractor
+﻿namespace TrRebootTools.Extractor
 {
     partial class FormWithProgress
     {

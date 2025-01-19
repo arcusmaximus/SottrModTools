@@ -1,0 +1,289 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr11skeleton.bt
+//   Authors: arc_
+//   Version: 0.1
+//   Purpose: Parse SOTTR skeletons
+//  Category: SOTTR
+//------------------------------------------------
+
+#define TR_VERSION 11
+#include "../trcommon.bt"
+
+typedef struct
+{
+    Vector4 position;
+    Quaternion orientation;
+    float distanceFromParent;
+    int flags <format=hex>;
+    int parentBoneId;
+    int field_2C;
+    int field_30;
+    int field_34;
+    int field_38;
+    int field_3C;
+} Bone;
+
+typedef struct
+{
+    quad numBones;
+    Ref bonesRef;
+    if (exists(bonesRef.target))
+    {
+        local int prevPos = FTell();
+        FSeek(startof(bonesRef.target));
+        Bone bones[numBones] <style=sData>;
+        FSeek(prevPos);
+    }
+} BoneArray;
+
+typedef struct
+{
+    ushort globalId;
+    ushort localId;
+} IdMapping <read=Str("%d -> %d", globalId, localId)>;
+
+typedef struct
+{
+    ushort localIdRange1Start;
+    ushort localIdRange2Start;
+    ushort count;
+} CounterpartRange;
+
+typedef struct
+{
+    while (true)
+    {
+        CounterpartRange range;
+        if (range.count == 0)
+            break;
+    }
+} CounterpartRanges;
+
+typedef struct
+{
+    Quaternion quat1;
+    Quaternion quat2;
+    Vector3 vec1;
+    FSkip(4);
+    Vector3 vec2;
+    FSkip(4);
+    Vector3 referencePos;
+    FSkip(4);
+    Quaternion referenceRot;
+    ushort referenceLocalBoneId;
+    ubyte referenceType;
+} BoneConstraint0;
+
+typedef struct
+{
+    Vector4 offset;
+} BoneConstraint1;
+
+typedef struct
+{
+    Quaternion offset;
+} BoneConstraint2;
+
+typedef struct
+{
+    Ref sourceVectors1Ref;
+    if (CanSeekTo(sourceVectors1Ref))
+    {
+        SeekToRef(sourceVectors1Ref);
+        Vector4 sourceVectors1[parentof(this).numSourceBones];
+        ReturnFromRef();
+    }
+    
+    Ref sourceVectors2Ref;
+    if (CanSeekTo(sourceVectors2Ref))
+    {
+        SeekToRef(sourceVectors2Ref);
+        Vector4 sourceVectors2[parentof(this).numSourceBones];
+        ReturnFromRef();
+    }
+    
+    Ref sourceBlendShapeIdsRef;
+    if (CanSeekTo(sourceBlendShapeIdsRef))
+    {
+        SeekToRef(sourceBlendShapeIdsRef);
+        ushort sourceBlendShapeIds[parentof(this).numSourceBones];
+        ReturnFromRef();
+    }
+    
+    ubyte useSourceVectors1;
+    ubyte useSourceVectors2;
+} BoneConstraint3;
+
+typedef struct
+{
+    ubyte type;
+    FSkip(1);
+    ushort targetLocalBoneId;
+    ushort numSourceBones;
+    FSkip(2);
+    
+    Ref sourceLocalBoneIdsRef;
+    if (CanSeekTo(sourceLocalBoneIdsRef))
+    {
+        SeekToRef(sourceLocalBoneIdsRef);
+        ushort sourceLocalBoneIds[numSourceBones];
+        ReturnFromRef();
+    }
+    
+    Ref sourceBoneWeightsRef;
+    if (CanSeekTo(sourceBoneWeightsRef))
+    {
+        SeekToRef(sourceBoneWeightsRef);
+        float sourceBoneWeights[numSourceBones];
+        ReturnFromRef();
+    }
+    
+    Ref extraDataRef;
+    if (CanSeekTo(extraDataRef))
+    {
+        SeekToRef(extraDataRef);
+        switch (type)
+        {
+            case 0:
+            {
+                BoneConstraint0 extraData;
+                break;
+            }
+            case 1:
+            {
+                BoneConstraint1 extraData;
+                break;
+            }
+            case 2:
+            {
+                BoneConstraint2 extraData;
+                break;
+            }
+            case 3:
+            {
+                BoneConstraint3 extraData;
+                break;
+            }
+        }
+        ReturnFromRef();
+    }
+} BoneConstraint <read=Str("Bone %d Type %d", targetLocalBoneId, type)>;
+
+typedef struct
+{
+    local int i;
+    for (i = 0; i < parentof(this).numBoneConstraints; i++)
+    {
+        if (CanSeekTo(parentof(this).boneConstraintRefs[i]))
+        {
+            SeekToRef(parentof(this).boneConstraintRefs[i]);
+            BoneConstraint constraint;
+            ReturnFromRef();
+        }
+    }
+} BoneConstraints;
+
+typedef struct
+{
+    Ref boneArrayRef;
+    if (CanSeekTo(boneArrayRef))
+    {
+        SeekToRef(boneArrayRef);
+        BoneArray boneArray <style=sHeading2>;
+        ReturnFromRef();
+    }
+    
+    short numAnimIdMappings;
+    FSkip(6);
+    
+    Ref counterpartRangesRef;
+    if (CanSeekTo(counterpartRangesRef))
+    {
+        SeekToRef(counterpartRangesRef);
+        CounterpartRanges counterpartRanges;
+        ReturnFromRef();
+    }
+    
+    short numUnusedWords1;
+    FSkip(6);
+    Ref unusedWords1Ref;
+    if (CanSeekTo(unusedWords1Ref))
+    {
+        SeekToRef(unusedWords1Ref);
+        ushort unusedWords1[numUnusedWords1] <style=sSection1>;
+        ReturnFromRef();
+    }
+    
+    short numBoneIdMappings;
+    FSkip(6);
+    Ref boneIdMappingsRef;
+    if (CanSeekTo(boneIdMappingsRef))
+    {
+        SeekToRef(boneIdMappingsRef);
+        IdMapping boneIdMappings[numBoneIdMappings] <style=sSection2>;
+        ReturnFromRef();
+    }
+    
+    ubyte numBlendShapeIdMappings;
+    FSkip(7);
+    Ref blendShapeIdMappingsRef;
+    if (CanSeekTo(blendShapeIdMappingsRef))
+    {
+        SeekToRef(blendShapeIdMappingsRef);
+        IdMapping blendShapeIdMappings[numBlendShapeIdMappings] <style=sSection2Accent>;
+        ReturnFromRef();
+    }
+    
+    ubyte numBoneConstraints;
+    FSkip(7);
+    Ref boneConstraintRefsRef;
+    if (CanSeekTo(boneConstraintRefsRef))
+    {
+        SeekToRef(boneConstraintRefsRef);
+        Ref boneConstraintRefs[numBoneConstraints];
+        ReturnFromRef();
+        
+        BoneConstraints boneConstraints;
+    }
+    
+    ubyte numUnusedWords2;
+    FSkip(7);
+    Ref unusedWords2Ref;
+    if (CanSeekTo(unusedWords2Ref))
+    {
+        SeekToRef(unusedWords2Ref);
+        ushort unusedWords2[numUnusedWords2] <style=sSection3>;
+        ReturnFromRef();
+    }
+    
+    Ref unusedBytesRef;
+    if (CanSeekTo(unusedBytesRef))
+    {
+        SeekToRef(unusedBytesRef);
+        byte unusedBytes[boneArray.numBones] <style=sDataAccent>;
+        ReturnFromRef();
+    }
+    
+    Ref localBoneIdsByAnimIdRef;
+    if (CanSeekTo(localBoneIdsByAnimIdRef))
+    {
+        SeekToRef(localBoneIdsByAnimIdRef);
+        ushort localBoneIdsByAnimId[numAnimIdMappings] <style=sSection4>;
+        ReturnFromRef();
+    }
+    
+    Ref animBoneIdsByLocalIdRef;
+    if (CanSeekTo(animBoneIdsByLocalIdRef))
+    {
+        SeekToRef(animBoneIdsByLocalIdRef);
+        ushort animBoneIdsByLocalId[numAnimIdMappings] <style=sSection4Accent>;
+        ReturnFromRef();
+    }
+    
+    short unknownCounts[4];
+} Skeleton;
+
+RefDefinitions refDefinitions;
+Skeleton skeleton <open=true>;

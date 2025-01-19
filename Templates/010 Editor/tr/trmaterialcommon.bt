@@ -1,0 +1,159 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: trmaterialcommon.bt
+//   Authors: arc_
+//   Purpose: Common structures for parsing materials
+//------------------------------------------------
+
+typedef struct
+{
+    Ref textureRef;
+    float mipLodBias;
+    if (TR_VERSION == 9)
+    {
+        int category;
+        ubyte type : 5;
+        ubyte class : 3;
+        ubyte slot;
+        ushort filter;
+    }
+    else
+    {
+        short category : 3;
+        short type : 5;
+        short class : 3;
+        short slot : 5;
+        ubyte filter;
+        FSkip(1);
+    }
+} ShaderTexture <optimize=false, read=Str("%s -> slot %d", ReadRef(textureRef), slot)>;
+
+typedef struct
+{
+    float x;
+    float y;
+    float z;
+    float w;
+} ShaderConstant <read=Str("(%f, %f, %f, %f)", x, y, z, w)>;
+
+typedef struct
+{
+    Ref pixelOrHullShader;
+    Ref vertexOrDomainShader;
+    int flags <format=hex>;
+    
+    byte numPsTextures_;
+    byte numPsTextureRanges;
+    byte numPsTextures;
+    byte psTextureRangeStartIdx;
+    Ref psTexturesRef;
+    if (CanSeekTo(psTexturesRef))
+    {
+        SeekToRef(psTexturesRef);
+        ShaderTexture psTextures[numPsTextures];
+        ReturnFromRef();
+    }
+    int numPsConstants;
+    if (TR_VERSION > 9)
+    {
+        FSkip(4);
+    }
+    Ref psConstantsRef;
+    if (CanSeekTo(psConstantsRef))
+    {
+        SeekToRef(psConstantsRef);
+        ShaderConstant psConstants[numPsConstants];
+        ReturnFromRef();
+    }
+    
+    byte numVsTextures_;
+    byte numVsTextureRanges;
+    byte numVsTextures;
+    byte vsTextureRangeStartIdx;
+    if (TR_VERSION > 9)
+    {
+        FSkip(4);
+    }
+    Ref vsTexturesRef;
+    if (CanSeekTo(vsTexturesRef))
+    {
+        SeekToRef(vsTexturesRef);
+        ShaderTexture vsTextures[numVsTextures];
+        ReturnFromRef();
+    }
+    int numVsConstants;
+    if (TR_VERSION > 9)
+    {
+        FSkip(4);
+    }
+    Ref vsConstantsRef;
+    if (CanSeekTo(vsConstantsRef))
+    {
+        SeekToRef(vsConstantsRef);
+        ShaderConstant vsConstants[numVsConstants];
+        ReturnFromRef();
+    }
+    FSkip(8);
+    
+    Ref tesselationShaderRef;
+    Ref extraRefs[3];
+} Pass <style=sHeading2>;
+
+typedef struct
+{
+    Ref reference;
+    if (CanSeekTo(reference))
+    {
+        SeekToRef(reference);
+        Pass pass;
+        ReturnFromRef();
+    }
+} PassRef <optimize=false>;
+
+typedef struct
+{
+    ushort version;
+    FSkip(2);
+    int id;
+    uint colorWriteMask <format=hex>;
+    uint blendMode <format=hex>;
+    uint blendFactor;
+    ushort fogType;
+    ushort fadeMode;
+    uint flags <format=hex>;
+    uint combinedNodeFlags <format=hex>;
+    uint debugColor <format=hex>;
+    uint alphaBloomBlendMode <format=hex>;
+    ubyte alphaTestRef;
+    ubyte depthWriteAlphaThreshold;
+    ubyte maxLights;
+    ubyte maxShadowLights;
+    uint frontParams <format=hex>;
+    uint backParams <format=hex>;
+    uint writeMasks <format=hex>;
+    uint hiStencil <format=hex>;
+    if (TR_VERSION > 9)
+    {
+        FSkip(4);
+        Ref typeNameRef;
+        if (CanSeekTo(typeNameRef))
+        {
+            SeekToRef(typeNameRef);
+            string typeName;
+            ReturnFromRef();
+        }
+    }
+    
+    Ref materialNameRef;
+    if (CanSeekTo(materialNameRef))
+    {
+        SeekToRef(materialNameRef);
+        string materialName;
+        ReturnFromRef();
+    }
+    
+    uint resourceBaseNameOffset;
+    char magic[4];
+    PassRef passRefs[TR_VERSION < 11 ? 10 : 9] <open=true>;
+} Material;

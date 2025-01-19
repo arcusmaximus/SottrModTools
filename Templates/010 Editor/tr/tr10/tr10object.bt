@@ -1,0 +1,12 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File: tr10object.bt
+//   Authors: arc_
+//   Purpose: Parse ROTTR object files
+//  Category: ROTTR
+//------------------------------------------------
+
+#define TR_VERSION 10
+#include "../trcommon.bt"
+#include "../trobjectcommon.bt"

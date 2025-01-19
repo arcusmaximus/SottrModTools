@@ -1,8 +1,9 @@
-﻿using SottrModManager.Mod;
-using System;
+﻿using System;
 using System.Windows.Forms;
+using TrRebootTools.ModManager;
+using TrRebootTools.ModManager.Mod;
 
-namespace SottrModManager
+namespace TrRebootTools.ModManager
 {
     internal partial class VariationSelectionForm : Form
     {
