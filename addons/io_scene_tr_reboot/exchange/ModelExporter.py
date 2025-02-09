@@ -11,7 +11,7 @@ from io_scene_tr_reboot.operator.OperatorContext import OperatorContext
 from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties
 from io_scene_tr_reboot.tr.BlendShape import BlendShape
 from io_scene_tr_reboot.tr.Enumerations import CdcGame, ResourceType
-from io_scene_tr_reboot.tr.FactoryFactory import FactoryFactory
+from io_scene_tr_reboot.tr.FactoryFactory import Factories
 from io_scene_tr_reboot.tr.Hashes import Hashes
 from io_scene_tr_reboot.tr.IFactory import IFactory
 from io_scene_tr_reboot.tr.Mesh import IMesh
@@ -48,12 +48,14 @@ class ModelExporter(SlotsBase):
     def __init__(self, scale_factor: float, game: CdcGame) -> None:
         self.scale_factor = scale_factor
         self.game = game
-        self.factory = FactoryFactory.get(game)
+        self.factory = Factories.get(game)
         self.bl_context = bpy.context
 
     def export_model(self, folder_path: str, ids: BlenderModelIdSet, bl_objs: list[bpy.types.Object]) -> None:
         if self.bl_context.object is not None:
             bpy.ops.object.mode_set(mode = "OBJECT")
+
+        self.validate_blender_objects(bl_objs)
 
         tr_model = self.create_model(ids.model_id, ids.model_data_id, bl_objs)
 
@@ -64,6 +66,13 @@ class ModelExporter(SlotsBase):
             model_data_file.write(resource_builder.build())
 
         self.export_extra_files(folder_path, ids.object_id, tr_model)
+
+    def validate_blender_objects(self, bl_objs: list[bpy.types.Object]) -> None:
+        pass
+
+    @property
+    def should_export_binormals_and_tangents(self) -> bool:
+        return True
 
     def export_extra_files(self, folder_path: str, object_id: int, tr_model: IModel) -> None:
         pass
@@ -80,7 +89,9 @@ class ModelExporter(SlotsBase):
                                                               .cast(ResourceKey | None)                                          \
                                                               .to_list()
 
+        tr_model.header.max_lod = 3.402823e+38
         tr_model.header.has_vertex_weights = Enumerable(bl_objs).any(lambda o: len(o.vertex_groups) > 0)
+        self.apply_bone_usage_map(tr_model, bl_objs)
 
         bl_shape_keys = Enumerable(bl_objs).select(lambda o: o.data)        \
                                            .cast(bpy.types.Mesh)            \
@@ -103,6 +114,12 @@ class ModelExporter(SlotsBase):
             self.transfer_blend_shape_normals(tr_model, blend_shape_normals_source_file_path)
 
         return tr_model
+
+    def apply_bone_usage_map(self, tr_model: IModel, bl_mesh_objs: list[bpy.types.Object]) -> None:
+        for bl_vertex_group in Enumerable(bl_mesh_objs).select_many(lambda o: o.vertex_groups):
+            local_id = BlenderNaming.parse_bone_name(bl_vertex_group.name).local_id
+            if local_id is not None:
+                tr_model.header.bone_usage_map[local_id // 32] |= 1 << (local_id & 0x1F)
 
     def create_mesh(self, tr_model: IModel, bl_obj: bpy.types.Object) -> IMesh:
         with BlenderHelper.prepare_for_model_export(bl_obj):
@@ -167,8 +184,10 @@ class ModelExporter(SlotsBase):
         tr_vertex_format.hash = random.randint(0, 0xFFFFFFFFFFFFFFFF)
         tr_vertex_format.add_attribute(Hashes.position, tr_vertex_format.types.float3, 0)
         tr_vertex_format.add_attribute(Hashes.normal,   tr_vertex_format.types.vectorc32, 0)
-        tr_vertex_format.add_attribute(Hashes.binormal, tr_vertex_format.types.vectorc32, 0)
-        tr_vertex_format.add_attribute(Hashes.tangent,  tr_vertex_format.types.vectorc32, 0)
+
+        if self.should_export_binormals_and_tangents:
+            tr_vertex_format.add_attribute(Hashes.binormal, tr_vertex_format.types.vectorc32, 0)
+            tr_vertex_format.add_attribute(Hashes.tangent,  tr_vertex_format.types.vectorc32, 0)
 
         for attr_name_hash in bl_mesh_maps.color_maps.keys():
             tr_vertex_format.add_attribute(attr_name_hash, tr_vertex_format.types.color32, 0)
@@ -225,8 +244,9 @@ class ModelExporter(SlotsBase):
         tr_vertex = Vertex()
         tr_vertex.attributes[Hashes.position] = cast(tuple[float, ...], bl_vertex.co / self.scale_factor)
         tr_vertex.attributes[Hashes.normal]   = cast(tuple[float, ...], bl_corner.normal.copy())
-        tr_vertex.attributes[Hashes.tangent]  = cast(tuple[float, ...], bl_corner.tangent.copy())
-        tr_vertex.attributes[Hashes.binormal] = cast(tuple[float, ...], bl_corner.bitangent.copy())
+        if self.should_export_binormals_and_tangents:
+            tr_vertex.attributes[Hashes.binormal] = cast(tuple[float, ...], bl_corner.bitangent.copy())
+            tr_vertex.attributes[Hashes.tangent]  = cast(tuple[float, ...], bl_corner.tangent.copy())
 
         for attr_name_hash, bl_color_map in bl_mesh_maps.color_maps.items():
             tr_vertex.attributes[attr_name_hash] = tuple(cast(Sequence[float], bl_color_map.data[bl_vertex_idx].color))
@@ -286,7 +306,7 @@ class ModelExporter(SlotsBase):
             tr_mesh_part = self.factory.create_mesh_part()
             tr_mesh_part.center = Vector()
             tr_mesh_part.draw_group_id = props.draw_group_id
-            tr_mesh_part.flags = props.draw_group_id
+            tr_mesh_part.flags = props.flags
             tr_mesh_part.has_8_weights_per_vertex = use_8_weights_per_vertex
             tr_mesh_part.has_16bit_skin_indices = not use_8_weights_per_vertex
 
@@ -389,11 +409,14 @@ class ModelExporter(SlotsBase):
         for tr_mesh in tr_model.meshes:
             for tr_vertex in tr_mesh.vertices:
                 self.unsign_vector(tr_vertex, Hashes.normal)
-                self.unsign_vector(tr_vertex, Hashes.tangent)
                 self.unsign_vector(tr_vertex, Hashes.binormal)
+                self.unsign_vector(tr_vertex, Hashes.tangent)
 
     def unsign_vector(self, tr_vertex: Vertex, attr_name_hash: int) -> None:
-        vector = tr_vertex.attributes[attr_name_hash]
+        vector = tr_vertex.attributes.get(attr_name_hash)
+        if vector is None:
+            return
+
         tr_vertex.attributes[attr_name_hash] = (
                                                    min(max((vector[0] + 1.0) / 2.0, 0.0), 1.0),
                                                    min(max((vector[1] + 1.0) / 2.0, 0.0), 1.0),
@@ -512,7 +535,7 @@ class ModelExporter(SlotsBase):
 
         game = CdcGame(game)
 
-        tr_model = FactoryFactory.get(game).create_model(0, 0)
+        tr_model = Factories.get(game).create_model(0, 0)
         with open(file_path, "rb") as source_file:
             has_references = game != CdcGame.SOTTR
             tr_model.read(ResourceReader(ResourceKey(ResourceType.MODEL, 0), source_file.read(), has_references, self.game))

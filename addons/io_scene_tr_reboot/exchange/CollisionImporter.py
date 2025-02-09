@@ -22,8 +22,12 @@ class CollisionImporter(SlotsBase):
         bl_collision_empty = BlenderHelper.create_object(None, BlenderNaming.make_collision_empty_name(tr_collection.name))
         bl_collision_empty.parent = bl_armature_obj
 
+        tr_cloth = tr_collection.get_cloth()
+        if tr_cloth is None:
+            return []
+
         bl_collision_objs: list[bpy.types.Object] = []
-        for tr_collision in tr_collection.get_collisions():
+        for tr_collision in Enumerable(tr_collection.get_collisions()).concat(Enumerable(tr_cloth.strips).select_many(lambda s: s.collisions)).distinct():
             bl_collision_obj = self.import_collision(tr_collection, tr_collision, bl_armature_obj)
             if bl_collision_obj is None:
                 continue
@@ -67,7 +71,13 @@ class CollisionImporter(SlotsBase):
 
         if bl_armature_obj is not None and bl_bone is not None:
             if tr_collision.transform is None:
-                transform = Matrix.Translation(bl_bone.matrix_local.translation)
+                if bl_target_bone is not None:
+                    transform = Vector((0, 0, 1)).rotation_difference(bl_target_bone.matrix_local.translation - bl_bone.matrix_local.translation).to_matrix()
+                else:
+                    transform = Matrix.Identity(3)
+
+                transform = transform.to_4x4()
+                transform.translation = bl_bone.matrix_local.translation
                 bl_collision_obj.matrix_local = transform
 
             self.add_armature_modifier(bl_collision_obj, bl_armature_obj, bl_bone)
@@ -144,6 +154,9 @@ class CollisionImporter(SlotsBase):
         )
 
         bmesh.ops.remove_doubles(bm_mesh, dist = 0.0001, verts = list(cast(Iterable[bmesh.types.BMVert], bm_mesh.verts)))
+
+        if tr_collision.transform is None:
+            bmesh.ops.translate(bm_mesh, vec = Vector((0, 0, length / 2)), verts = list(bm_mesh.verts))
 
         bl_mesh = bpy.data.meshes.new("_")
         bm_mesh.to_mesh(bl_mesh)

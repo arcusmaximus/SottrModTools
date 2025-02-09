@@ -42,8 +42,8 @@ class ShadowCollection(RiseCollection):
     def _create_skeleton(self, id: int) -> ISkeleton:
         return ShadowSkeleton(id)
 
-    def _read_collision(self, type: CollisionType, hash: int, reader: ResourceReader, transform: Matrix, skeleton: ISkeleton):
-        return ShadowCollision.read(type, hash, reader, transform, skeleton)
+    def _read_collision(self, type: CollisionType, hash: int, reader: ResourceReader, transform: Matrix, global_bone_ids: list[int | None]):
+        return ShadowCollision.read(type, hash, reader, transform, global_bone_ids)
 
     def _create_cloth(self, definition_id: int, component_id: int) -> Cloth:
         return ShadowCloth(definition_id, component_id)

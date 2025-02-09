@@ -21,8 +21,10 @@ namespace TrRebootTools.Extractor
         public MainForm(string gameFolderPath, CdcGame game)
             : this()
         {
+            CdcGameInfo gameInfo = CdcGameInfo.Get(game);
             Version version = Assembly.GetEntryAssembly().GetName().Version;
-            Text = string.Format(Text, CdcGameInfo.Get(game).ShortName, $"{version.Major}.{version.Minor}.{version.Build} Beta 5");
+            Text = string.Format(Text, gameInfo.ShortName, $"{version.Major}.{version.Minor}.{version.Build} Beta 6");
+            _btnSwitchGame.BackgroundImage = gameInfo.Icon;
 
             _archiveSet = ArchiveSet.Open(gameFolderPath, true, false, game);
             _resourceUsages = new ResourceUsageCache();

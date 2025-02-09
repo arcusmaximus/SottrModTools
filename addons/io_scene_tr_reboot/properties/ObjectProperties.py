@@ -1,6 +1,6 @@
 from typing import Annotated
 import bpy
-from io_scene_tr_reboot.properties.BlenderPropertyGroup import BlenderAttachedPropertyGroup, BlenderPropertyGroup, Prop, PropSubType
+from io_scene_tr_reboot.properties.BlenderPropertyGroup import BlenderAttachedPropertyGroup, BlenderPropertyGroup, Prop
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 def search_bones(self: BlenderPropertyGroup, context: bpy.types.Context, edit_text: str) -> list[str]:
@@ -22,10 +22,11 @@ def search_bones(self: BlenderPropertyGroup, context: bpy.types.Context, edit_te
 class ObjectClothProperties(BlenderPropertyGroup):
     parent_bone_name: Annotated[str, Prop("Parent", search = search_bones)]
     gravity_factor: Annotated[float, Prop("Gravity Factor", min = -2, max = 2, default = 1)]
-    wind_factor: Annotated[float, Prop("Wind Factor", min = 0, max = 1, subtype = PropSubType.FACTOR)]
-    stiffness: Annotated[float, Prop("Pose Follow Factor", min = 0, max = 1, subtype = PropSubType.FACTOR)]
-    rigidity: Annotated[float, Prop("Rigidity", min = 0, max = 1, default = 0.6, subtype = PropSubType.FACTOR)]
-    dampening: Annotated[float, Prop("Drag", min = 0, max = 1, default = 0.2, subtype = PropSubType.FACTOR)]
+    wind_factor: Annotated[float, Prop("Wind Factor", min = 0, max = 1, subtype = "FACTOR")]
+    stiffness: Annotated[float, Prop("Pose Follow Factor", min = 0, max = 1, subtype = "FACTOR")]
+    rigidity: Annotated[float, Prop("Rigidity", min = 0, max = 1, default = 0.6, subtype = "FACTOR")]
+    bounceback_factor: Annotated[float, Prop("Bounceback Strength", min = 0, max = 1, subtype = "FACTOR")]
+    dampening: Annotated[float, Prop("Drag", min = 0, max = 1, default = 0.2, subtype = "FACTOR")]
 
 class ObjectCollisionProperties(BlenderPropertyGroup):
     data: Annotated[str, Prop("Data")]

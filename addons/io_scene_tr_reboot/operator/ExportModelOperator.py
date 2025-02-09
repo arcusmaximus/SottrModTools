@@ -1,4 +1,3 @@
-from abc import abstractmethod
 import os
 from typing import TYPE_CHECKING, Annotated, Iterable, Protocol
 import bpy
@@ -10,11 +9,13 @@ from io_scene_tr_reboot.ModelSplitter import ModelSplitter
 from io_scene_tr_reboot.exchange.SkeletonExporter import SkeletonExporter
 from io_scene_tr_reboot.exchange.shadow.ShadowModelExporter import ShadowModelExporter
 from io_scene_tr_reboot.exchange.tr2013.Tr2013ClothExporter import Tr2013ClothExporter
+from io_scene_tr_reboot.exchange.tr2013.Tr2013ModelExporter import Tr2013ModelExporter
 from io_scene_tr_reboot.exchange.tr2013.Tr2013SkeletonExporter import Tr2013SkeletonExporter
 from io_scene_tr_reboot.operator.BlenderOperatorBase import ExportOperatorBase, ExportOperatorProperties
 from io_scene_tr_reboot.operator.OperatorCommon import OperatorCommon
 from io_scene_tr_reboot.operator.OperatorContext import OperatorContext
 from io_scene_tr_reboot.properties.BlenderPropertyGroup import Prop
+from io_scene_tr_reboot.properties.SceneProperties import SceneProperties
 from io_scene_tr_reboot.tr.Enumerations import CdcGame
 from io_scene_tr_reboot.util.DictionaryExtensions import DictionaryExtensions
 from io_scene_tr_reboot.util.Enumerable import Enumerable
@@ -28,18 +29,18 @@ class _Properties(ExportOperatorProperties, Protocol):
     export_skeleton: Annotated[bool, Prop("Export skeleton")]
     export_cloth: Annotated[bool, Prop("Export cloth")]
 
-class ExportModelOperatorBase(ExportOperatorBase[_Properties]):
-    bl_idname = ""
-    bl_menu_item_name = ""
+class ExportModelOperator(ExportOperatorBase[_Properties]):
+    bl_idname = "export_scene.trmodel"
+    bl_menu_item_name = "Tomb Raider Reboot model (.trXmodeldata)"
     filename_ext = ""
-
-    @property
-    @abstractmethod
-    def game(self) -> CdcGame: ...
 
     def invoke(self, context: Context | None, event: Event) -> set[OperatorReturnItems]:
         if context is None:
             return { "CANCELLED" }
+
+        game = SceneProperties.get_game()
+        ExportModelOperator.filename_ext = f".tr{game}modeldata"
+        self.properties.filter_glob = "*" + ExportModelOperator.filename_ext
 
         with OperatorContext.begin(self):
             bl_mesh_objs = self.get_mesh_objects_to_export(context, False)
@@ -55,14 +56,24 @@ class ExportModelOperatorBase(ExportOperatorBase[_Properties]):
             else:
                 folder_path = ""
 
-            model_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs).first().name).model_id
-            self.properties.filepath = os.path.join(folder_path, str(model_id) + self.filename_ext)
+            model_data_id = BlenderNaming.parse_mesh_name(Enumerable(bl_mesh_objs).first().name).model_data_id
+            self.properties.filepath = os.path.join(folder_path, str(model_data_id) + self.filename_ext)
             context.window_manager.fileselect_add(self)
             return { "RUNNING_MODAL" }
+
+    def draw(self, context: Context) -> None:
+        game = SceneProperties.get_game()
+        if not self.requires_skeleton_export(game):
+            self.layout.prop(self, "export_skeleton")
+
+        if not self.requires_cloth_export(game):
+            self.layout.prop(self, "export_cloth")
 
     def execute(self, context: Context | None) -> set[OperatorReturnItems]:
         if context is None:
             return { "CANCELLED" }
+
+        game = SceneProperties.get_game()
 
         with OperatorContext.begin(self):
             bl_local_collection = context.view_layer.layer_collection.children.get(BlenderNaming.local_collection_name)
@@ -73,25 +84,25 @@ class ExportModelOperatorBase(ExportOperatorBase[_Properties]):
 
             bl_mesh_objs = self.get_mesh_objects_to_export(context, True)
 
-            model_exporter = self.create_model_exporter(OperatorCommon.scale_factor)
+            model_exporter = self.create_model_exporter(OperatorCommon.scale_factor, game)
             folder_path = os.path.split(self.properties.filepath)[0]
             for model_id_set, bl_mesh_objs_of_model in Enumerable(bl_mesh_objs).group_by(lambda o: BlenderNaming.parse_model_name(o.name)).items():
                 model_exporter.export_model(folder_path, model_id_set, bl_mesh_objs_of_model)
 
-            if self.properties.export_skeleton or self.requires_skeleton_export:
-                skeleton_exporter = self.create_skeleton_exporter(OperatorCommon.scale_factor)
+            if self.properties.export_cloth or self.requires_cloth_export(game):
+                bl_unsplit_mesh_objs = self.get_mesh_objects_to_export(context, False)
+                bl_armature_obj = Enumerable(bl_unsplit_mesh_objs).select(lambda o: o.parent).first_or_none(lambda o: o is not None and isinstance(o.data, bpy.types.Armature))
+                if bl_armature_obj is not None:
+                    cloth_exporter = self.create_cloth_exporter(OperatorCommon.scale_factor, game)
+                    cloth_exporter.export_cloths(folder_path, bl_armature_obj, self.get_local_armatures(context))
+
+            if self.properties.export_skeleton or self.requires_skeleton_export(game):
+                skeleton_exporter = self.create_skeleton_exporter(OperatorCommon.scale_factor, game)
                 for bl_armature_obj in Enumerable(bl_mesh_objs).select(lambda o: o.parent) \
                                                                .of_type(bpy.types.Object) \
                                                                .where(lambda o: isinstance(o.data, bpy.types.Armature)) \
                                                                .distinct():
                     skeleton_exporter.export(folder_path, bl_armature_obj)
-
-            if self.properties.export_cloth or self.requires_cloth_export:
-                bl_unsplit_mesh_objs = self.get_mesh_objects_to_export(context, False)
-                bl_armature_obj = Enumerable(bl_unsplit_mesh_objs).select(lambda o: o.parent).first_or_none(lambda o: o is not None and isinstance(o.data, bpy.types.Armature))
-                if bl_armature_obj is not None:
-                    cloth_exporter = self.create_cloth_exporter(OperatorCommon.scale_factor)
-                    cloth_exporter.export_cloths(folder_path, bl_armature_obj, self.get_local_armatures(context))
 
             if bl_local_collection is not None:
                 bl_local_collection.exclude = was_local_collection_excluded
@@ -152,63 +163,31 @@ class ExportModelOperatorBase(ExportOperatorBase[_Properties]):
         return Enumerable(context.scene.objects).where(lambda o: isinstance(o.data, bpy.types.Armature) and self.is_in_local_collection(o)) \
                                                 .to_dict(lambda o: BlenderNaming.parse_local_armature_name(o.name))
 
-    def create_model_exporter(self, scale_factor: float) -> ModelExporter:
-        return ModelExporter(scale_factor, self.game)
+    def create_model_exporter(self, scale_factor: float, game: CdcGame) -> ModelExporter:
+        match game:
+            case CdcGame.TR2013:
+                return Tr2013ModelExporter(scale_factor)
+            case CdcGame.SOTTR:
+                return ShadowModelExporter(scale_factor)
+            case _:
+                return ModelExporter(scale_factor, game)
 
-    @property
-    def requires_skeleton_export(self) -> bool:
-        return False
+    def requires_skeleton_export(self, game: CdcGame) -> bool:
+        return game == CdcGame.TR2013
 
-    def create_skeleton_exporter(self, scale_factor: float) -> SkeletonExporter:
-        return SkeletonExporter(scale_factor, self.game)
+    def create_skeleton_exporter(self, scale_factor: float, game: CdcGame) -> SkeletonExporter:
+        match game:
+            case CdcGame.TR2013:
+                return Tr2013SkeletonExporter(scale_factor)
+            case _:
+                return SkeletonExporter(scale_factor, game)
 
-    @property
-    def requires_cloth_export(self) -> bool:
-        return False
+    def requires_cloth_export(self, game: CdcGame) -> bool:
+        return game == CdcGame.TR2013
 
-    def create_cloth_exporter(self, scale_factor: float) -> ClothExporter:
-        return ClothExporter(scale_factor, self.game)
-
-class ExportTr2013ModelOperator(ExportModelOperatorBase):
-    bl_idname = "export_scene.tr9model"
-    bl_menu_item_name = "TR2013 model (.tr9model)"
-    filename_ext = ".tr9model"
-
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.TR2013
-
-    def create_skeleton_exporter(self, scale_factor: float) -> SkeletonExporter:
-        return Tr2013SkeletonExporter(scale_factor)
-
-    def create_cloth_exporter(self, scale_factor: float) -> ClothExporter:
-        return Tr2013ClothExporter(scale_factor)
-
-    @property
-    def requires_skeleton_export(self) -> bool:
-        return True
-
-    @property
-    def requires_cloth_export(self) -> bool:
-        return True
-
-class ExportRiseModelOperator(ExportModelOperatorBase):
-    bl_idname = "export_scene.tr10model"
-    bl_menu_item_name = "ROTTR model (.tr10model)"
-    filename_ext = ".tr10model"
-
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.ROTTR
-
-class ExportShadowModelOperator(ExportModelOperatorBase):
-    bl_idname = "export_scene.tr11model"
-    bl_menu_item_name = "SOTTR model (.tr11model)"
-    filename_ext = ".tr11model"
-
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.SOTTR
-
-    def create_model_exporter(self, scale_factor: float) -> ModelExporter:
-        return ShadowModelExporter(scale_factor)
+    def create_cloth_exporter(self, scale_factor: float, game: CdcGame) -> ClothExporter:
+        match game:
+            case CdcGame.TR2013:
+                return Tr2013ClothExporter(scale_factor)
+            case _:
+                return ClothExporter(scale_factor, game)

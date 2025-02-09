@@ -2,7 +2,7 @@ import bpy
 from bpy.types import Context
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 from typing import TYPE_CHECKING, Annotated, Any, Generic, Protocol, TypeVar, cast
-from io_scene_tr_reboot.properties.BlenderPropertyGroup import BlenderPropertyGroup, Prop, PropOption, PropSubType
+from io_scene_tr_reboot.properties.BlenderPropertyGroup import BlenderPropertyGroup, Prop
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ class BlenderOperatorMetaClass(type(bpy.types.Operator)):
                     property_class = Enumerable(property_class.__bases__).first_or_none(BlenderOperatorMetaClass.is_property_group_type)
 
                 if Enumerable(bases).any(lambda b: b.__name__ == "ImportOperatorBase" or b.__name__ == "ExportOperatorBase"):
-                    annotations["filter_glob"] = Annotated[str, Prop("Filter", default = "*" + namespace["filename_ext"], options = { PropOption.HIDDEN })]
+                    annotations["filter_glob"] = Annotated[str, Prop("Filter", default = "*" + namespace["filename_ext"], options = { "HIDDEN" })]
 
                 namespace["__annotations__"] = BlenderPropertyGroup.convert_annotations(class_name, annotations)
 
@@ -50,8 +50,8 @@ class BlenderMenuOperatorBase(Generic[TProperties], BlenderOperatorBase[TPropert
 
 
 class ImportOperatorProperties(BlenderPropertyGroup, Protocol):
-    filepath: Annotated[str, Prop("File path", subtype = PropSubType.FILE_PATH)]
-    filter_glob: Annotated[str, Prop("Filter", options = { PropOption.HIDDEN })]
+    filepath: Annotated[str, Prop("File path")] #, subtype = "FILE_PATH")]
+    filter_glob: Annotated[str, Prop("Filter", options = { "HIDDEN" })]
 
 TImportProperties = TypeVar("TImportProperties", bound = ImportOperatorProperties)
 
@@ -71,8 +71,9 @@ class ImportOperatorBase(Generic[TImportProperties], BlenderMenuOperatorBase[TIm
 
 
 class ExportOperatorProperties(BlenderPropertyGroup, Protocol):
-    filepath: Annotated[str, Prop("File path", subtype = PropSubType.FILE_PATH)]
-    check_existing: Annotated[bool, Prop("Check Existing", default = True, options = { PropOption.HIDDEN })]
+    filepath: Annotated[str, Prop("File path")] #, subtype = "FILE_PATH")]
+    filter_glob: Annotated[str, Prop("Filter", options = { "HIDDEN" })]
+    check_existing: Annotated[bool, Prop("Check Existing", default = True, options = { "HIDDEN" })]
 
 TExportOperatorProperties = TypeVar("TExportOperatorProperties", bound = ExportOperatorProperties)
 
@@ -84,6 +85,7 @@ class ExportOperatorBase(Generic[TExportOperatorProperties], BlenderOperatorBase
     filename_ext: str
 
     def invoke(self, context: bpy.types.Context | None, event: bpy.types.Event) -> set[OperatorReturnItems]:
+        self.properties.filter_glob = self.filename_ext.replace(".", "*.")
         return ExportHelper.invoke(self, context, event)            # type: ignore
 
     def check(self, context: Context | None) -> bool:

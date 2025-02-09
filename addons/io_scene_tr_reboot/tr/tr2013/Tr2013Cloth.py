@@ -1,7 +1,7 @@
 from ctypes import sizeof
-from typing import Sequence, cast
+from typing import TYPE_CHECKING, Sequence, cast
 from mathutils import Vector
-from io_scene_tr_reboot.tr.Cloth import Cloth, ClothMass, ClothMassAnchorBone, ClothSpring, ClothStrip, IClothDef, IClothDefAnchorBone, IClothDefMass, IClothDefSpring, IClothDefStrip, IClothTune, IClothTuneCollisionGroup, IClothTuneConfig, IClothTuneStripGroup
+from io_scene_tr_reboot.tr.Cloth import Cloth, ClothFeatureSupport, ClothMass, ClothMassAnchorBone, ClothMassSpringVector, ClothSpring, ClothStrip, IClothDef, IClothDefAnchorBone, IClothDefMass, IClothDefSpring, IClothDefStrip, IClothTune, IClothTuneCollisionGroup, IClothTuneConfig, IClothTuneStripGroup
 from io_scene_tr_reboot.tr.Collision import Collision, CollisionKey
 from io_scene_tr_reboot.tr.ResourceBuilder import ResourceBuilder
 from io_scene_tr_reboot.tr.ResourceReader import ResourceReader
@@ -10,13 +10,13 @@ from io_scene_tr_reboot.tr.tr2013.Tr2013Collision import Tr2013Collision
 from io_scene_tr_reboot.util.CStruct import CFloat, CInt, CLong, CShort, CStruct, CStruct32
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
-class _ClothDef(CStruct32):
+class _ClothDef(CStruct32, IClothDef if TYPE_CHECKING else object):
     strips_ref: ResourceReference | None
     num_strips: CShort
 
 assert(sizeof(_ClothDef) == 6)
 
-class _ClothDefStrip(CStruct32):
+class _ClothDefStrip(CStruct32, IClothDefStrip if TYPE_CHECKING else object):
     masses_ref: ResourceReference | None
     springs_ref: ResourceReference | None
     parent_bone_local_id: CInt
@@ -30,13 +30,13 @@ class _ClothDefStrip(CStruct32):
 
 assert(sizeof(_ClothDefStrip) == 0x14)
 
-class _ClothDefMass(CStruct32):
+class _ClothDefMass(CStruct32, IClothDefMass if TYPE_CHECKING else object):
     position: Vector
     anchor_bones_ref: ResourceReference | None
     num_anchor_bones: CShort
     field_16: CShort
-    vector_array_ref: ResourceReference | None
-    type: CShort
+    spring_vector_array_ref: ResourceReference | None
+    is_pinned: CShort
     local_bone_id: CShort
     rank: CShort
     field_22: CShort
@@ -44,13 +44,20 @@ class _ClothDefMass(CStruct32):
     field_28: CInt
     field_2C: CInt
 
-    mass: int
+    @property
+    def mass(self) -> int:
+        return 255 if self.is_pinned == 0 else 0
+
+    @mass.setter
+    def mass(self, value: int) -> None:             # type: ignore
+        self.is_pinned = 0 if value == 255 else 1
+
     bounce_back_factor: int
-    _ignored_fields_ = ("mass", "bounce_back_factor")
+    _ignored_fields_ = ("bounce_back_factor",)
 
 assert(sizeof(_ClothDefMass) == 0x30)
 
-class _ClothDefAnchorBone(CStruct32):
+class _ClothDefAnchorBone(CStruct32, IClothDefAnchorBone if TYPE_CHECKING else object):
     offset: Vector
     weight: CFloat
     local_bone_id: CShort
@@ -59,7 +66,7 @@ class _ClothDefAnchorBone(CStruct32):
 
 assert(sizeof(_ClothDefAnchorBone) == 0x20)
 
-class _ClothDefSpring(CStruct32):
+class _ClothDefSpring(CStruct32, IClothDefSpring if TYPE_CHECKING else object):
     rest_length: CFloat
     mass_1_idx: CShort
     mass_2_idx: CShort
@@ -69,7 +76,7 @@ class _ClothDefSpring(CStruct32):
 
 assert(sizeof(_ClothDefSpring) == 8)
 
-class _ClothTune(CStruct32):
+class _ClothTune(CStruct32, IClothTune if TYPE_CHECKING else object):
     default_config_idx: CInt
     wet_config_idx: CInt
     low_cover_config_idx: CInt
@@ -91,13 +98,13 @@ class _ClothTune(CStruct32):
 
 assert(sizeof(_ClothTune) == 0x3C)
 
-class _ClothTuneConfig(CStruct32):
+class _ClothTuneConfig(CStruct32, IClothTuneConfig if TYPE_CHECKING else object):
     num_strip_group_indices: CInt
     strip_group_indices_ref: ResourceReference | None
 
 assert(sizeof(_ClothTuneConfig) == 8)
 
-class _ClothTuneStripGroup(CStruct32):
+class _ClothTuneStripGroup(CStruct32, IClothTuneStripGroup if TYPE_CHECKING else object):
     gravity: CFloat
     drag: CFloat
     max_velocity_update_iterations: CInt
@@ -106,7 +113,7 @@ class _ClothTuneStripGroup(CStruct32):
     sub_step_count: CInt
     wind_factor: CFloat
     wind_on_constraints: CInt
-    max_mass_bounce_back_strength: CFloat
+    max_mass_bounceback_factor: CFloat
     transform_type: CInt
     spring_stretchiness_default_percentage: CInt
     spring_stretchiness_lower_percentage: CInt
@@ -122,22 +129,35 @@ class _ClothTuneStripGroup(CStruct32):
     field_54: CInt
     field_58: CInt
 
-    gravity_factor: float
+    @property
+    def gravity_factor(self) -> float:
+        return self.gravity / 9.8
+
+    @gravity_factor.setter
+    def gravity_factor(self, value: float) -> None:     # type: ignore
+        self.gravity = value * 9.8
+
     buoyancy: float
     pose_follow_factor: float
     spring_stretchiness_upper_percentage: int
     reference_time_delta_multiplier: float
-    _ignored_fields_ = ("gravity_factor", "buoyancy", "pose_follow_factor", "spring_stretchiness_upper_percentage", "reference_time_delta_multiplier")
+    _ignored_fields_ = ("buoyancy", "pose_follow_factor", "spring_stretchiness_upper_percentage", "reference_time_delta_multiplier")
 
 assert(sizeof(_ClothTuneStripGroup) == 0x5C)
 
-class _ClothTuneCollisionGroup(CStruct32):
+class _ClothTuneCollisionGroup(CStruct32, IClothTuneCollisionGroup if TYPE_CHECKING else object):
     count: CInt
     items_ref: ResourceReference | None
 
 assert(sizeof(_ClothTuneCollisionGroup) == 8)
 
 class Tr2013Cloth(Cloth):
+    supports = ClothFeatureSupport(
+        strip_pose_follow_factor = False,
+        mass_specific_bounceback_factor = False,
+        spring_specific_stretchiness = False
+    )
+
     definition_id: int
     tune_id: int
     strips: list[ClothStrip]
@@ -147,9 +167,9 @@ class Tr2013Cloth(Cloth):
         self.tune_id = tune_id
         self.strips = []
 
-    def read(self, definition_reader: ResourceReader, tune_reader: ResourceReader, external_collisions: list[Collision]) -> None:
+    def read(self, definition_reader: ResourceReader, tune_reader: ResourceReader, global_bone_ids: list[int | None], external_collisions: list[Collision]) -> None:
         self.read_definition(definition_reader)
-        self.read_tune(tune_reader, { CollisionKey(collision.type, collision.hash): collision for collision in external_collisions })
+        self.read_tune(tune_reader, global_bone_ids, { CollisionKey(collision.type, collision.hash): collision for collision in external_collisions })
 
     def read_definition(self, reader: ResourceReader) -> None:
         dtp_def = self.read_definition_header(reader)
@@ -174,6 +194,15 @@ class Tr2013Cloth(Cloth):
                     for dtp_anchor_bone in self.read_definition_anchor_bones(reader, dtp_mass.num_anchor_bones):
                         mass.anchor_local_bones.append(ClothMassAnchorBone(dtp_anchor_bone.local_bone_id, dtp_anchor_bone.offset))
 
+                if dtp_mass.spring_vector_array_ref is not None:
+                    reader.seek(dtp_mass.spring_vector_array_ref)
+                    num_spring_vectors = reader.read_int32()
+                    reader.skip(0xC)
+                    for _ in range(num_spring_vectors):
+                        spring_vector = reader.read_vec3d()
+                        spring_idx = int(reader.read_float())
+                        mass.spring_vectors.append(ClothMassSpringVector(spring_idx, spring_vector))
+
                 strip.masses.append(mass)
 
             reader.seek(dtp_strip.springs_ref)
@@ -182,7 +211,7 @@ class Tr2013Cloth(Cloth):
 
             self.strips.append(strip)
 
-    def read_tune(self, reader: ResourceReader, external_collisions: dict[CollisionKey, Collision]) -> None:
+    def read_tune(self, reader: ResourceReader, global_bone_ids: list[int | None], external_collisions: dict[CollisionKey, Collision]) -> None:
         dtp_tune = self.read_tune_header(reader)
         if dtp_tune.strip_groups_ref is None or \
            dtp_tune.collision_groups_ref is None:
@@ -190,12 +219,14 @@ class Tr2013Cloth(Cloth):
 
         reader.seek(dtp_tune.collision_groups_ref)
         collision_groups: list[Sequence[Collision]] = []
+        collision_base_idx = 0
         for dtp_collision_group in self.read_tune_collision_groups(reader, dtp_tune.num_collision_groups):
             if dtp_collision_group.items_ref is None:
                 raise Exception()
 
             reader.seek(dtp_collision_group.items_ref)
-            collision_groups.append(self.read_tune_collisions(reader, dtp_collision_group.count, external_collisions))
+            collision_groups.append(self.read_tune_collisions(reader, collision_base_idx, dtp_collision_group.count, global_bone_ids, external_collisions))
+            collision_base_idx += dtp_collision_group.count
 
         reader.seek(dtp_tune.strip_groups_ref)
         for dtp_strip_group in self.read_tune_strip_groups(reader, dtp_tune.num_strip_groups):
@@ -218,10 +249,11 @@ class Tr2013Cloth(Cloth):
                 strip.wind_factor = dtp_strip_group.wind_factor
                 strip.pose_follow_factor = dtp_strip_group.pose_follow_factor
                 strip.rigidity = dtp_strip_group.rigidity_percentage / 100
+                strip.mass_bounceback_factor = dtp_strip_group.max_mass_bounceback_factor
                 strip.drag = dtp_strip_group.drag
 
                 for mass in strip.masses:
-                    mass.bounceback_factor *= dtp_strip_group.max_mass_bounce_back_strength
+                    mass.bounceback_factor *= dtp_strip_group.max_mass_bounceback_factor
 
                 for spring in strip.springs:
                     spring.stretchiness = dtp_strip_group.spring_stretchiness_lower_percentage / 100 + spring.stretchiness * \
@@ -229,9 +261,9 @@ class Tr2013Cloth(Cloth):
 
                 strip.collisions = strip_group_collisions
 
-    def write(self, definition_writer: ResourceBuilder, tune_writer: ResourceBuilder) -> None:
+    def write(self, definition_writer: ResourceBuilder, tune_writer: ResourceBuilder, global_bone_ids: list[int | None]) -> None:
         self.write_definition(definition_writer)
-        self.write_tune(tune_writer)
+        self.write_tune(tune_writer, global_bone_ids)
 
     def write_definition(self, writer: ResourceBuilder) -> None:
         dtp = self.create_definition_header()
@@ -252,7 +284,6 @@ class Tr2013Cloth(Cloth):
             dtp_strip.num_springs = len(strip.springs)
             dtp_strip.parent_bone_local_id = strip.parent_bone_local_id
             writer.write_struct(cast(CStruct, dtp_strip))
-            #writer.align(0x10)
 
             dtp_strips.append(dtp_strip)
 
@@ -265,28 +296,35 @@ class Tr2013Cloth(Cloth):
                 dtp_mass = self.create_definition_mass()
                 dtp_mass.local_bone_id = mass.local_bone_id
                 dtp_mass.position = mass.position
-                dtp_mass.anchor_bones_ref = writer.make_internal_ref()
                 dtp_mass.num_anchor_bones = len(mass.anchor_local_bones)
-                dtp_mass.vector_array_ref = writer.make_internal_ref()
+                dtp_mass.anchor_bones_ref = writer.make_internal_ref() if dtp_mass.num_anchor_bones > 0 else None
+                dtp_mass.spring_vector_array_ref = writer.make_internal_ref()
                 dtp_mass.rank = mass_idx
                 dtp_mass.mass = int(mass.mass * 255)
-                dtp_mass.bounce_back_factor = int(mass.bounceback_factor * 255)
+                dtp_mass.bounce_back_factor = int(mass.bounceback_factor / strip.mass_bounceback_factor * 255) if strip.mass_bounceback_factor > 0 else 0
                 writer.write_struct(cast(CStruct, dtp_mass))
 
                 dtp_masses.append(dtp_mass)
 
         for mass, dtp_mass in Enumerable(self.strips).select_many(lambda s: s.masses).zip(dtp_masses):
-            cast(ResourceReference, dtp_mass.anchor_bones_ref).offset = writer.position
-            for anchor_bone in mass.anchor_local_bones:
-                dtp_anchor_bone = self.create_definition_anchor_bone()
-                dtp_anchor_bone.offset = anchor_bone.offset
-                dtp_anchor_bone.weight = 1.0 / len(mass.anchor_local_bones)
-                dtp_anchor_bone.local_bone_id = anchor_bone.local_bone_id
-                writer.write_struct(cast(CStruct, dtp_anchor_bone))
+            if dtp_mass.anchor_bones_ref is not None:
+                dtp_mass.anchor_bones_ref.offset = writer.position
+                for anchor_bone in mass.anchor_local_bones:
+                    dtp_anchor_bone = self.create_definition_anchor_bone()
+                    dtp_anchor_bone.offset = anchor_bone.offset
+                    dtp_anchor_bone.weight = 1.0 / len(mass.anchor_local_bones)
+                    dtp_anchor_bone.local_bone_id = anchor_bone.local_bone_id
+                    writer.write_struct(cast(CStruct, dtp_anchor_bone))
 
-            cast(ResourceReference, dtp_mass.vector_array_ref).offset = writer.position
-            writer.write_uint32(0)
             writer.align(0x10)
+            cast(ResourceReference, dtp_mass.spring_vector_array_ref).offset = writer.position
+            writer.write_uint32(len(mass.spring_vectors))
+            writer.write_int32(0)
+            writer.write_int32(0)
+            writer.write_int32(0)
+            for spring_idx, spring_vector in mass.spring_vectors:
+                writer.write_vec3d(spring_vector)
+                writer.write_float(spring_idx)
 
         for strip, dtp_strip in Enumerable(self.strips).zip(dtp_strips):
             cast(ResourceReference, dtp_strip.springs_ref).offset = writer.position
@@ -298,7 +336,7 @@ class Tr2013Cloth(Cloth):
                 dtp_spring.mass_2_idx = spring.mass_2_idx
                 writer.write_struct(cast(CStruct, dtp_spring))
 
-    def write_tune(self, writer: ResourceBuilder) -> None:
+    def write_tune(self, writer: ResourceBuilder, global_bone_ids: list[int | None]) -> None:
         dtp = self.create_tune_header()
         dtp.enabled = 1
         dtp.inner_distance = 5000
@@ -338,9 +376,9 @@ class Tr2013Cloth(Cloth):
             dtp_strip_group.relaxation_iterations = 5
             dtp_strip_group.sub_step_count = 2
             dtp_strip_group.wind_factor = strip.wind_factor
-            dtp_strip_group.max_mass_bounce_back_strength = 1.0
+            dtp_strip_group.max_mass_bounceback_factor = strip.mass_bounceback_factor
             dtp_strip_group.pose_follow_factor = strip.pose_follow_factor
-            dtp_strip_group.transform_type = 0
+            dtp_strip_group.transform_type = 1
             dtp_strip_group.spring_stretchiness_default_percentage = 0
             dtp_strip_group.spring_stretchiness_lower_percentage = 0
             dtp_strip_group.spring_stretchiness_upper_percentage = 100
@@ -359,11 +397,9 @@ class Tr2013Cloth(Cloth):
         for i, (strip, dtp_strip_group) in enumerate(Enumerable(self.strips).zip(dtp_strip_groups)):
             cast(ResourceReference, dtp_strip_group.strip_ids_ref).offset = writer.position
             self.write_tune_strip_id(writer, strip.id)
-            #writer.align(0x10)
 
             cast(ResourceReference, dtp_strip_group.collision_group_indices_ref).offset = writer.position
             writer.write_uint32(i)
-            #writer.align(0x10)
 
         writer.align(0x10)
 
@@ -374,14 +410,13 @@ class Tr2013Cloth(Cloth):
             dtp_collision_group.count = len(strip.collisions)
             dtp_collision_group.items_ref = writer.make_internal_ref()
             writer.write_struct(cast(CStruct, dtp_collision_group))
-            #writer.align(0x10)
 
             dtp_collision_groups.append(dtp_collision_group)
 
         for strip, dtp_collision_group in Enumerable(self.strips).zip(dtp_collision_groups):
             cast(ResourceReference, dtp_collision_group.items_ref).offset = writer.position
             for collision in strip.collisions:
-                dtp_collision = self.create_tune_collision(collision)
+                dtp_collision = self.create_tune_collision(collision, global_bone_ids)
                 writer.write_struct(dtp_collision)
 
     def read_definition_header(self, reader: ResourceReader) -> IClothDef:
@@ -397,7 +432,6 @@ class Tr2013Cloth(Cloth):
     def read_definition_masses(self, reader: ResourceReader, count: int) -> Sequence[IClothDefMass]:
         def_masses = reader.read_struct_list(_ClothDefMass, count)
         for def_mass in def_masses:
-            def_mass.mass = 255
             def_mass.bounce_back_factor = 0
 
         return def_masses
@@ -420,17 +454,16 @@ class Tr2013Cloth(Cloth):
     def read_tune_collision_groups(self, reader: ResourceReader, count: int) -> Sequence[IClothTuneCollisionGroup]:
         return reader.read_struct_list(_ClothTuneCollisionGroup, count)
 
-    def read_tune_collisions(self, reader: ResourceReader, count: int, external_collisions: dict[CollisionKey, Collision]) -> Sequence[Collision]:
+    def read_tune_collisions(self, reader: ResourceReader, base_idx: int, count: int, global_bone_ids: list[int | None], external_collisions: dict[CollisionKey, Collision]) -> Sequence[Collision]:
         collisions: list[Collision] = []
         for i in range(count):
-            collisions.append(Tr2013Collision.read(reader, i))
+            collisions.append(Tr2013Collision.read(reader, base_idx + i, global_bone_ids))
 
         return collisions
 
     def read_tune_strip_groups(self, reader: ResourceReader, count: int) -> Sequence[IClothTuneStripGroup]:
         dtp_strip_groups = reader.read_struct_list(_ClothTuneStripGroup, count)
         for dtp_strip_group in dtp_strip_groups:
-            dtp_strip_group.gravity_factor = dtp_strip_group.gravity / 9.8
             dtp_strip_group.pose_follow_factor = 0.0
             dtp_strip_group.spring_stretchiness_upper_percentage = 100
 
@@ -469,5 +502,5 @@ class Tr2013Cloth(Cloth):
     def create_tune_collision_group(self) -> IClothTuneCollisionGroup:
         return _ClothTuneCollisionGroup()
 
-    def create_tune_collision(self, collision: Collision) -> CStruct:
-        return Tr2013Collision.to_struct(collision)
+    def create_tune_collision(self, collision: Collision, global_bone_ids: list[int | None]) -> CStruct:
+        return Tr2013Collision.to_struct(collision, global_bone_ids)

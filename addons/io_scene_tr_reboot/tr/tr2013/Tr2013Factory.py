@@ -21,11 +21,10 @@ from io_scene_tr_reboot.tr.tr2013.Tr2013Model import Tr2013Model
 from io_scene_tr_reboot.tr.tr2013.Tr2013Skeleton import Tr2013Skeleton
 
 class Tr2013Factory(IFactory):
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.TR2013
+    game = CdcGame.TR2013
+    cloth_class = Tr2013Cloth
 
-    def create_collection(self, object_ref_file_path: str) -> Collection:
+    def open_collection(self, object_ref_file_path: str) -> Collection:
         return Tr2013Collection(object_ref_file_path)
 
     def create_model(self, model_id: int, model_data_id: int) -> IModel:
@@ -44,6 +43,7 @@ class Tr2013Factory(IFactory):
         bone = Tr2013Bone()
         bone.min = Vector()
         bone.max = Vector()
+        bone.last_vertex = 0xFFFF
         bone.info_ref = None
         return bone
 

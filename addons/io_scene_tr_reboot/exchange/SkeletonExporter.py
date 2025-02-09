@@ -9,7 +9,7 @@ from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties
 from io_scene_tr_reboot.tr.Bone import IBone
 from io_scene_tr_reboot.tr.Collection import Collection
 from io_scene_tr_reboot.tr.Enumerations import CdcGame, ResourceType
-from io_scene_tr_reboot.tr.FactoryFactory import FactoryFactory
+from io_scene_tr_reboot.tr.FactoryFactory import Factories
 from io_scene_tr_reboot.tr.IFactory import IFactory
 from io_scene_tr_reboot.tr.ResourceBuilder import ResourceBuilder
 from io_scene_tr_reboot.tr.ResourceKey import ResourceKey
@@ -26,7 +26,7 @@ class SkeletonExporter(SlotsBase):
     def __init__(self, scale_factor: float, game: CdcGame) -> None:
         self.scale_factor = scale_factor
         self.game = game
-        self.factory = FactoryFactory.get(game)
+        self.factory = Factories.get(game)
 
     def export(self, folder_path: str, bl_armature_obj: bpy.types.Object) -> None:
         if bpy.context.object is not None:

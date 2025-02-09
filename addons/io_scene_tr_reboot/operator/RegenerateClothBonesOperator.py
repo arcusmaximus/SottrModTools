@@ -181,11 +181,12 @@ class RegenerateClothBonesOperator(BlenderOperatorBase[BlenderPropertyGroup]):
                 bl_parent_bone = bl_armature.edit_bones[cloth_strip_properties.parent_bone_name]
 
                 for bl_vertex in cast(bpy.types.Mesh, bl_cloth_strip_obj.data).vertices:
-                    bl_edit_bone: bpy.types.EditBone
+                    bl_edit_bone: bpy.types.EditBone | None = None
 
                     if len(bl_vertex.groups) > 0:
-                        bl_edit_bone = bl_armature.edit_bones[bl_cloth_strip_obj.vertex_groups[bl_vertex.groups[0].group].name]
-                    else:
+                        bl_edit_bone = bl_armature.edit_bones.get(bl_cloth_strip_obj.vertex_groups[bl_vertex.groups[0].group].name)
+
+                    if bl_edit_bone is None:
                         next_local_bone_id = next_local_bone_ids_by_skeleton_id[skeleton_id]
                         bone_name = BlenderNaming.make_bone_name(skeleton_id, None, next_local_bone_id)
                         bl_edit_bone = bl_armature.edit_bones.new(bone_name)

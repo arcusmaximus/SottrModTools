@@ -22,13 +22,12 @@ class Tr2013SkeletonExporter(SkeletonExporter):
         if not isinstance(tr_skeleton, Tr2013Skeleton):
             raise Exception()
 
-        scene_properties = SceneProperties.get_instance(bpy.context.scene)
         for bl_mesh_obj in Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
             model_id_set = BlenderNaming.parse_model_name(bl_mesh_obj.name)
             model_resource = ResourceKey(ResourceType.DTP, model_id_set.model_id)
             model_data_resource = ResourceKey(ResourceType.MODEL, model_id_set.model_data_id)
 
-            model_bytes = SceneProperties.get_file(scene_properties, model_id_set.model_id)
+            model_bytes = SceneProperties.get_file(model_id_set.model_id)
             model_data_path = os.path.join(folder_path, f"{model_data_resource.id}.tr9modeldata")
             if model_bytes is None or not os.path.isfile(model_data_path):
                 continue
@@ -43,11 +42,11 @@ class Tr2013SkeletonExporter(SkeletonExporter):
             model_data_builder = ResourceBuilder(model_data_resource, CdcGame.TR2013)
             model_data_builder.write_reader(model_data_reader)
 
-            model.bone_id_map_ref = ResourceReference(ResourceType.MODEL, model_id_set.model_data_id, model_data_builder.position)
-            tr_skeleton.write_id_mappings(model_data_builder)
-
             model.bones_ref = ResourceReference(ResourceType.MODEL, model_id_set.model_data_id, model_data_builder.position)
             tr_skeleton.write_bones(model_data_builder)
+
+            model.bone_id_map_ref = ResourceReference(ResourceType.MODEL, model_id_set.model_data_id, model_data_builder.position)
+            tr_skeleton.write_id_mappings(model_data_builder)
 
             model_path = os.path.join(folder_path, Collection.make_resource_file_name(model_resource, CdcGame.TR2013))
             with open(model_path, "wb") as model_file:

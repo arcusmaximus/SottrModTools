@@ -21,43 +21,47 @@ class _Collision(CStruct32):
 assert(sizeof(_Collision) == 0x14)
 
 class _ITr2013Collision(Protocol):
-    def assign_from_struct(self, struct: _Collision) -> None: ...
-    def assign_to_struct(self, struct: _Collision) -> None: ...
+    def assign_from_struct(self, struct: _Collision, global_bone_ids: list[int | None]) -> None: ...
+    def assign_to_struct(self, struct: _Collision, global_bone_ids: list[int | None]) -> None: ...
 
 class Tr2013Collision(Collision):
     @classmethod
-    def read(cls, reader: ResourceReader, index: int) -> Collision:
+    def read(cls, reader: ResourceReader, index: int, global_bone_ids: list[int | None]) -> Collision:
         struct = reader.read_struct(_Collision)
         collision = cls.create(CollisionType(struct.type), index)
-        collision.global_bone_id = struct.bone1.local_bone_idx
-        cast(_ITr2013Collision, collision).assign_from_struct(struct)
+        collision.global_bone_id = cls._convert_dtp_bone_id_to_global(struct.bone1.local_bone_idx, global_bone_ids)
+        cast(_ITr2013Collision, collision).assign_from_struct(struct, global_bone_ids)
         return collision
 
     @classmethod
-    def to_struct(cls, collision: Collision) -> CStruct:
+    def to_struct(cls, collision: Collision, global_bone_ids: list[int | None]) -> CStruct:
         struct = _Collision()
+        struct.bone1 = _CollisionBone()
+        struct.bone2 = _CollisionBone()
+
         struct.type = collision.type
         struct.constraint_type = collision.type
         struct.bone1.type = 1
-        struct.bone1.local_bone_idx = collision.global_bone_id
-        cast(_ITr2013Collision, collision).assign_to_struct(struct)
+        struct.bone1.local_bone_idx = cls._convert_global_bone_id_to_dtp(collision.global_bone_id, global_bone_ids)
+        cast(_ITr2013Collision, collision).assign_to_struct(struct, global_bone_ids)
         return struct
 
 
 class Tr2013CollisionCapsule(CollisionCapsule, Tr2013Collision, _ITr2013Collision):
-    def assign_from_struct(self, struct: _Collision) -> None:
-        self.target_global_bone_id = struct.bone2.local_bone_idx
+    def assign_from_struct(self, struct: _Collision, global_bone_ids: list[int | None]) -> None:
+        self.target_global_bone_id = self._convert_dtp_bone_id_to_global(struct.bone2.local_bone_idx, global_bone_ids)
         self.radius = struct.radius
 
-    def assign_to_struct(self, struct: _Collision) -> None:
-        struct.bone2.local_bone_idx = coalesce(self.target_global_bone_id, 0)
+    def assign_to_struct(self, struct: _Collision, global_bone_ids: list[int | None]) -> None:
+        struct.bone2.type = 1
+        struct.bone2.local_bone_idx = self._convert_global_bone_id_to_dtp(coalesce(self.target_global_bone_id, -1), global_bone_ids)
         struct.radius = self.radius
 
 class Tr2013CollisionSphere(CollisionSphere, Tr2013Collision, _ITr2013Collision):
-    def assign_from_struct(self, struct: _Collision) -> None:
+    def assign_from_struct(self, struct: _Collision, global_bone_ids: list[int | None]) -> None:
         self.radius = struct.radius
 
-    def assign_to_struct(self, struct: _Collision) -> None:
+    def assign_to_struct(self, struct: _Collision, global_bone_ids: list[int | None]) -> None:
         struct.radius = self.radius
 
 Tr2013Collision.type_mapping = {

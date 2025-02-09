@@ -1,26 +1,523 @@
-//------------------------------------------------
-//--- 010 Editor v15.0 Binary Template
-//
-//      File: tr9model.bt
-//   Authors: arc_
-//   Purpose: Parse TR2013 model files
-//  Category: TR2013
-//------------------------------------------------
-
 #define TR_VERSION 9
 #include "../trcommon.bt"
 
 typedef struct
 {
-    FSkip(4);
-    int numOldBones;
-    int numVirtualBones;
-    Ref oldBoneListRef;
-    FSkip(0x58);
-    Ref modelDataRef;
-    Ref newBoneListRef;
-    Ref boneIdMapRef;
-} Model;
+    short pad1 : 7;
+    short collide : 1;
+    short slopeSlide : 1;
+    short flooring : 1;
+    short slowSlope : 1;
+    short noWallJump : 1;
+    short stairs : 1;
+    short noRappel : 1;
+    short wallCrawl : 1;
+    short noPlayerResponse : 1;
+} HPrimFlags <optimize=false>;
+
+typedef struct
+{
+    short x;
+    short y;
+    short z;
+} Position <optimize=false>;
+
+typedef struct
+{
+    ushort mass;
+    char buoyancyFactor;
+    ubyte waterCurrentFactor;
+    char explosionFactor;
+    char weaponhitFactor;
+} PhysCollideGameData <optimize=false>;
+
+typedef struct
+{
+    int iHitMaterialType;
+    short damage;
+    char subType;
+    char noAttach;
+    char nojumpcollision;
+    char noWeaponHit;
+    char ropeArrowAttach;
+    char toughRopePull;
+} GameplayGameData <optimize=false>;
+
+typedef struct
+{
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInSphereList;
+    FSkip(1);
+    ushort radius;
+    Position position;
+    unsigned int radiusSquared;
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+} HSphere <optimize=false>;
+
+typedef struct
+{
+    Vector4 width;
+    Vector4 pos;
+    Quaternion quat;
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInBoxList;
+    FSkip(1);
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+} HBox <optimize=false>;
+
+typedef struct
+{
+    int segment;
+    ushort index;
+    ushort indexInMarkerList;
+    float px;
+    float py;
+    float pz;
+    float rx;
+    float ry;
+    float rz;
+} HMarker <optimize=false>;
+
+typedef struct
+{
+    Vector4 pos;
+    Quaternion quat;
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInCapsuleList;
+    FSkip(1);
+    ushort radius;
+    ushort length;
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+} HCapsule <optimize=false>;
+
+typedef struct
+{
+    Ref gc1Ref;
+    Ref gc2Ref;
+    short type;
+    FSkip(2);
+    int numFloats;
+    Ref floatListRef;
+    if (CanSeekTo(floatListRef))
+    {
+        SeekToRef(floatListRef);
+        float floatList[numFloats];
+        ReturnFromRef();
+    }
+    float floatData[1];
+} HGeomCommand <optimize=false>;
+
+typedef struct
+{
+    Matrix rotationMatrixFwd;
+    Matrix rotationMatrixInv;
+} GeomSpeedCacheData <optimize=false>;
+
+typedef struct
+{
+    Ref cacheDataRef;
+    if (CanSeekTo(cacheDataRef))
+    {
+        SeekToRef(cacheDataRef);
+        GeomSpeedCacheData cacheData;
+        ReturnFromRef();
+    }
+    Ref debugMeshRef;
+    Vector4 position;
+    Quaternion rotation;
+} Geom <optimize=false>;
+
+typedef struct
+{
+    Vector4 pos;
+    Quaternion quat;
+    Vector4 centerOfMass;
+    float inertiaTensor[9];
+    HPrimFlags flags;
+    ubyte id;
+    ubyte rank;
+    ubyte indexInGeomList;
+    FSkip(1);
+    PhysCollideGameData physCollide;
+    FSkip(2);
+    GameplayGameData gameplay;
+    Ref geomCommandRef;
+    if (CanSeekTo(geomCommandRef))
+    {
+        SeekToRef(geomCommandRef);
+        HGeomCommand geomCommand;
+        ReturnFromRef();
+    }
+    Ref geomRef;
+    if (CanSeekTo(geomRef))
+    {
+        SeekToRef(geomRef);
+        Geom geom;
+        ReturnFromRef();
+    }
+} HGeom <optimize=false>;
+
+typedef struct
+{
+    int numHSpheres;
+    Ref hsphereListRef;
+    if (CanSeekTo(hsphereListRef))
+    {
+        SeekToRef(hsphereListRef);
+        HSphere hsphereList[numHSpheres];
+        ReturnFromRef();
+    }
+    int numHBoxes;
+    Ref hboxListRef;
+    if (CanSeekTo(hboxListRef))
+    {
+        SeekToRef(hboxListRef);
+        HBox hboxList;
+        ReturnFromRef();
+    }
+    int numHMarkers;
+    Ref hmarkerListRef;
+    if (CanSeekTo(hmarkerListRef))
+    {
+        SeekToRef(hmarkerListRef);
+        HMarker hmarkerList[numHMarkers];
+        ReturnFromRef();
+    }
+    int numHCapsules;
+    Ref hcapsuleListRef;
+    if (CanSeekTo(hcapsuleListRef))
+    {
+        SeekToRef(hcapsuleListRef);
+        HCapsule hcapsuleList[numHCapsules];
+        ReturnFromRef();
+    }
+    int numHGeoms;
+    Ref hgeomListRef;
+    if (CanSeekTo(hgeomListRef))
+    {
+        SeekToRef(hgeomListRef);
+        HGeom hgeomList[numHGeoms];
+        ReturnFromRef();
+    }
+} HInfo <optimize=false>;
+
+typedef struct
+{
+    Vector4 min;
+    Vector4 max;
+    Vector4 pivot;
+    int flags;
+    short firstVertex;
+    short lastVertex;
+    int parent;
+    Ref hInfoRef;
+    if (CanSeekTo(hInfoRef))
+    {
+        SeekToRef(hInfoRef);
+        HInfo hInfo;
+        ReturnFromRef();
+    }
+} Segment <optimize=false>;
+
+typedef struct
+{
+    short x;
+    short y;
+    short z;
+} SKUVertex <optimize=false>;
+
+typedef struct
+{
+    SKUVertex vertex;
+    short normal;
+    short segment;
+} MVertex <optimize=false>;
+
+typedef struct
+{
+    ushort v0;
+    ushort v1;
+    ushort v2;
+} MFace___unnamed_type_face_ <optimize=false>;
+
+typedef struct
+{
+    MFace___unnamed_type_face_ face;
+    ushort sameVertBits;
+} MFace <optimize=false>;
+
+typedef struct
+{
+    Vector4 _Parent;
+} Euler <optimize=false>;
+
+typedef struct
+{
+    Vector4 pos;
+    Euler rot;
+    int type;
+    int body1;
+    int body2;
+} MJoint <optimize=false>;
+
+typedef struct
+{
+    int count;
+} AnimatedListInfo <optimize=false>;
+
+typedef struct
+{
+    ubyte bone1;
+    ubyte bone2;
+    ubyte count;
+} BoneMirrorData <optimize=false>;
+
+typedef struct
+{
+    short x;
+    short y;
+    short z;
+    short pad;
+} SVector <optimize=false>;
+
+typedef struct
+{
+    int useAnticCamera;
+    int dTPCameraAnticDataID[6];
+} CameraAnticRemove <optimize=false>;
+
+typedef struct
+{
+    int numPoints;
+    int pad[3];
+    Vector4 point[1];
+} PolyLine <optimize=false>;
+
+typedef struct
+{
+} IHighlightableResource <optimize=false>;
+
+typedef struct
+{
+    IHighlightableResource _Parent;
+} IMaterial <optimize=false>;
+
+typedef struct
+{
+    float renderRadius;
+    int texture;
+    Ref ropeMaterialRef;
+    if (CanSeekTo(ropeMaterialRef))
+    {
+        SeekToRef(ropeMaterialRef);
+        IMaterial ropeMaterial;
+        ReturnFromRef();
+    }
+    unsigned int renderRopeColor;
+    float vLength;
+    float uWidth;
+    byte bSmoothRope;
+    byte bRenderHighlight;
+} RopeRenderData <optimize=false>;
+
+typedef struct
+{
+    int overrideMovementCamera;
+    int dTPCameraDataID;
+    int dTPMarkupDataID;
+    CameraAnticRemove cameraAntic;
+    unsigned int flags;
+    ushort introID;
+    short markupID;
+    short bone;
+    char cat;
+    char type;
+    uint shape : 3;
+    uint alwaysSavingGrab : 1;
+    uint neverSavingGrab : 1;
+    uint rescuePoint : 1;
+    uint renderPlayerCloser : 1;
+    uint neverRunOff : 1;
+    uint alwaysRunOff : 1;
+    uint alwaysRunGrab : 1;
+    uint neverRunGrab : 1;
+    uint allowSwing : 1;
+    uint trapeze : 1;
+    uint forceUnbracedLedge : 1;
+    uint allowHighAttach : 1;
+    uint allowJumpOff : 1;
+    uint automaticPullUp : 1;
+    uint neverPullUp : 1;
+    uint autoHurdle : 1;
+    uint neverHurdle : 1;
+    uint allowQuickHop : 1;
+    uint alwaysDeflect : 1;
+    uint neverDeflect : 1;
+    uint deflectInCombat : 1;
+    uint deflectInGround : 1;
+    uint deflectInCrawl : 1;
+    uint deflectInWallCrawl : 1;
+    uint generateNavHelper : 1;
+    uint orientZup : 1;
+    uint ledgeAsCover : 1;
+    uint erraticMovement : 1;
+    uint alternateControlScheme : 1;
+    uint ladder : 1;
+    uint leftShoulderAim : 1;
+    uint mantleOnly : 1;
+    uint noCoverTouch : 1;
+    uint debug1 : 4;
+    uint padding : 24;
+    float pos[3];
+    float bbox[6];
+    Ref polyLineRef;
+    if (CanSeekTo(polyLineRef))
+    {
+        SeekToRef(polyLineRef);
+        PolyLine polyLine;
+        ReturnFromRef();
+    }
+    Ref ropeRenderDataRef;
+    if (CanSeekTo(ropeRenderDataRef))
+    {
+        SeekToRef(ropeRenderDataRef);
+        RopeRenderData ropeRenderData;
+        ReturnFromRef();
+    }
+} MarkUp <optimize=false>;
+
+typedef struct
+{
+    ushort segment;
+    ushort flags;
+    float px;
+    float py;
+    float pz;
+    float rx;
+    float ry;
+    float rz;
+    unsigned int uniqueId;
+} ModelTarget <optimize=false>;
+
+typedef struct
+{
+    int numSegments;
+    Ref segmentListRef;
+    if (CanSeekTo(segmentListRef))
+    {
+        SeekToRef(segmentListRef);
+        Segment segmentList[numSegments];
+        ReturnFromRef();
+    }
+} SegmentList <optimize=false>;
+
+typedef struct
+{
+    int version;
+    int oldNumSegments;
+    int numVirtSegments;
+    Ref oldSegmentListRef;
+    if (CanSeekTo(oldSegmentListRef))
+    {
+        SeekToRef(oldSegmentListRef);
+        Segment oldSegmentList[oldNumSegments];
+        ReturnFromRef();
+    }
+    Vector4 modelScale;
+    int numVertices;
+    Ref vertexListRef;
+    if (CanSeekTo(vertexListRef))
+    {
+        SeekToRef(vertexListRef);
+        MVertex vertexList;
+        ReturnFromRef();
+    }
+    int numNormals;
+    Ref normalListRef;
+    if (CanSeekTo(normalListRef))
+    {
+        SeekToRef(normalListRef);
+        Vector4 normalList[numNormals];
+        ReturnFromRef();
+    }
+    int numFaces;
+    Ref faceListRef;
+    if (CanSeekTo(faceListRef))
+    {
+        SeekToRef(faceListRef);
+        MFace faceList[numFaces];
+        ReturnFromRef();
+    }
+    int numJoints;
+    Ref jointListRef;
+    if (CanSeekTo(jointListRef))
+    {
+        SeekToRef(jointListRef);
+        MJoint jointList[numJoints];
+        ReturnFromRef();
+    }
+    float maxRad;
+    float maxRadSq;
+    Ref animatedListInfoRef;
+    if (CanSeekTo(animatedListInfoRef))
+    {
+        SeekToRef(animatedListInfoRef);
+        AnimatedListInfo animatedListInfo;
+        ReturnFromRef();
+    }
+    Ref boneMirrorDataRef;
+    if (CanSeekTo(boneMirrorDataRef))
+    {
+        SeekToRef(boneMirrorDataRef);
+        BoneMirrorData boneMirrorData;
+        ReturnFromRef();
+    }
+    Ref boneIgnoreMirrorDataRef;
+    if (CanSeekTo(boneIgnoreMirrorDataRef))
+    {
+        SeekToRef(boneIgnoreMirrorDataRef);
+        ubyte boneIgnoreMirrorData;
+        ReturnFromRef();
+    }
+    Ref drawgroupCenterListRef;
+    if (CanSeekTo(drawgroupCenterListRef))
+    {
+        SeekToRef(drawgroupCenterListRef);
+        SVector drawgroupCenterList;
+        ReturnFromRef();
+    }
+    int numMarkUps;
+    Ref markUpListRef;
+    if (CanSeekTo(markUpListRef))
+    {
+        SeekToRef(markUpListRef);
+        MarkUp markUpList[numMarkUps];
+        ReturnFromRef();
+    }
+    int numTargets;
+    Ref targetListRef;
+    if (CanSeekTo(targetListRef))
+    {
+        SeekToRef(targetListRef);
+        ModelTarget targetList[numTargets];
+        ReturnFromRef();
+    }
+    Ref cdcRenderModelRef;
+    Ref segListRef;
+    Ref boneIDMapRef;
+} Model <optimize=false>;
 
 RefDefinitions refDefinitions;
-Model model <open=true>;
+Model root <open=true>;

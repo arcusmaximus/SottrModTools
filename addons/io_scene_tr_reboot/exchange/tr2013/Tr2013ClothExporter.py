@@ -46,14 +46,13 @@ class Tr2013ClothExporter(ClothExporter):
             break
 
     def write_cloth_tune_file(self, folder_path: str, bl_armature_obj: bpy.types.Object, tune_builder: ResourceBuilder) -> None:
-        scene_properties = SceneProperties.get_instance(bpy.context.scene)
         object_id = Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)) \
                                                         .select(lambda o: BlenderNaming.parse_model_name(o.name).object_id) \
                                                         .first_or_none()
         if object_id is None:
             return
 
-        object_content = SceneProperties.get_file(scene_properties, object_id)
+        object_content = SceneProperties.get_file(object_id)
         if object_content is None:
             raise Exception()
 
@@ -64,7 +63,8 @@ class Tr2013ClothExporter(ClothExporter):
         object_builder = ResourceBuilder(object_resource, CdcGame.TR2013)
         object_builder.write_reader(object_reader)
 
-        header.cloth_tune_ref = object_builder.make_internal_ref()
+        header.cloth_tune_ref_1 = object_builder.make_internal_ref()
+        header.cloth_tune_ref_2 = object_builder.make_internal_ref()
         object_builder.write_builder(tune_builder)
 
         object_builder.position = 0

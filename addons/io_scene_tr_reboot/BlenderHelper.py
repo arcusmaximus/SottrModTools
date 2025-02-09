@@ -178,8 +178,7 @@ class BlenderHelper:
 
                 return bl_attr.data[edge_idx].value
             else:
-                bl_layer_collection = cast(bmesh.types.BMLayerCollection[float | None], bl_mesh.edges.layers.float)
-                bl_layer = bl_layer_collection.get("bevel_weight_edge")
+                bl_layer = bl_mesh.edges.layers.float.get("bevel_weight_edge")
                 if bl_layer is None:
                     return 0
 
@@ -199,8 +198,7 @@ class BlenderHelper:
                 bl_attr = cast(bpy.types.FloatAttribute, bl_mesh.attributes.get("bevel_weight_edge") or bl_mesh.attributes.new("bevel_weight_edge", "FLOAT", "EDGE"))
                 bl_attr.data[edge_idx].value = weight
             else:
-                bl_layer_collection = cast(bmesh.types.BMLayerCollection[float | None], bl_mesh.edges.layers.float)
-                bl_layer = bl_layer_collection.get("bevel_weight_edge")
+                bl_layer = bl_mesh.edges.layers.float.get("bevel_weight_edge")
                 if bl_layer is None:
                     raise Exception("bevel_weight_edge attribute not found")
 

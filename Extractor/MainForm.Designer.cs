@@ -72,8 +72,8 @@ namespace TrRebootTools.Extractor
             // 
             // _btnSwitchGame
             // 
+            this._btnSwitchGame.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this._btnSwitchGame.Dock = System.Windows.Forms.DockStyle.Fill;
-            this._btnSwitchGame.Image = global::TrRebootTools.Extractor.Properties.Resources.SelectGame;
             this._btnSwitchGame.Location = new System.Drawing.Point(554, 3);
             this._btnSwitchGame.Name = "_btnSwitchGame";
             this._btnSwitchGame.Size = new System.Drawing.Size(66, 66);

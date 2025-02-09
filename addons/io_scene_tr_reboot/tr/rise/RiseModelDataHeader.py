@@ -19,7 +19,7 @@ class RiseModelDataHeader(CStruct64, IModelDataHeader if TYPE_CHECKING else obje
     max_shadow_lod:             CFloat
     model_type:                 CInt
     sort_bias:                  CFloat
-    bone_usage_map:             CArray[CInt, Literal[8]]
+    bone_usage_map:             CArray[CInt, Literal[8]]        # type: ignore
     mesh_parts_offet:           CLong
     mesh_headers_offset:        CLong
     bone_mappings_offset:       CLong

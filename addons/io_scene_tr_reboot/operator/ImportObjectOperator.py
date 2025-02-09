@@ -1,6 +1,7 @@
-from abc import abstractmethod
 from typing import TYPE_CHECKING, Annotated, Protocol
 import bpy
+import os
+import re
 from bpy.types import Context
 from io_scene_tr_reboot.BlenderHelper import BlenderHelper
 from io_scene_tr_reboot.BlenderNaming import BlenderNaming
@@ -16,8 +17,9 @@ from io_scene_tr_reboot.operator.BlenderOperatorBase import ImportOperatorBase, 
 from io_scene_tr_reboot.operator.OperatorCommon import OperatorCommon
 from io_scene_tr_reboot.operator.OperatorContext import OperatorContext
 from io_scene_tr_reboot.properties.BlenderPropertyGroup import Prop
+from io_scene_tr_reboot.properties.SceneProperties import SceneProperties
 from io_scene_tr_reboot.tr.Enumerations import CdcGame
-from io_scene_tr_reboot.tr.FactoryFactory import FactoryFactory
+from io_scene_tr_reboot.tr.FactoryFactory import Factories
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 if TYPE_CHECKING:
@@ -28,43 +30,46 @@ else:
 class _Properties(ImportOperatorProperties, Protocol):
     import_lods:                    Annotated[bool, Prop("Import LODs")]
     split_into_parts:               Annotated[bool, Prop("Split meshes into parts")]
-    merge_with_existing_skeletons:  Annotated[bool, Prop("Merge with existing skeleton(s)", default = True)]
-    keep_original_skeletons:        Annotated[bool, Prop("Keep original skeletons", default = True)]
+    merge_with_existing_skeletons:  Annotated[bool, Prop("(SOTTR) Merge with existing skeletons", default = True)]
+    keep_original_skeletons:        Annotated[bool, Prop("(SOTTR) Keep original skeletons", default = True)]
 
-class ImportObjectOperatorBase(ImportOperatorBase[_Properties]):
-    bl_idname = ""
-    bl_menu_item_name = ""
-    filename_ext = ""
-
-    @property
-    @abstractmethod
-    def game(self) -> CdcGame: ...
+class ImportObjectOperator(ImportOperatorBase[_Properties]):
+    bl_idname = "import_scene.trobjectref"
+    bl_menu_item_name = "Tomb Raider Reboot object (.trXobjectref)"
+    filename_ext = ".tr9objectref;.tr10objectref;.tr11objectref"
 
     def execute(self, context: Context | None) -> set[OperatorReturnItems]:
         if context is None:
             return { "CANCELLED" }
 
-        with OperatorContext.begin(self):
-            tr_collection = FactoryFactory.get(self.game).create_collection(self.properties.filepath)
+        game = self.get_game_from_file_path(self.properties.filepath)
+        if game is None:
+            return { "CANCELLED" }
 
-            skeleton_importer = self.create_skeleton_importer(OperatorCommon.scale_factor)
+        SceneProperties.set_game(game)
+
+        with OperatorContext.begin(self):
+            tr_collection = Factories.get(game).open_collection(self.properties.filepath)
+
+            skeleton_importer = self.create_skeleton_importer(OperatorCommon.scale_factor, game)
             bl_armature_obj = skeleton_importer.import_from_collection(tr_collection)
 
             model_importer = self.create_model_importer(
                 OperatorCommon.scale_factor,
                 self.properties.import_lods,
-                self.properties.split_into_parts
+                self.properties.split_into_parts,
+                game
             )
             model_importer.import_from_collection(tr_collection, bl_armature_obj)
 
             if bl_armature_obj is not None:
-                collision_importer = self.create_collision_importer(OperatorCommon.scale_factor)
+                collision_importer = self.create_collision_importer(OperatorCommon.scale_factor, game)
                 collision_importer.import_from_collection(tr_collection, bl_armature_obj)
 
-                cloth_importer = self.create_cloth_importer(OperatorCommon.scale_factor)
+                cloth_importer = self.create_cloth_importer(OperatorCommon.scale_factor, game)
                 cloth_importer.import_from_collection(tr_collection, bl_armature_obj)
 
-            if self.properties.merge_with_existing_skeletons and bl_armature_obj is not None:
+            if game == CdcGame.SOTTR and self.properties.merge_with_existing_skeletons and bl_armature_obj is not None:
                 self.merge(context)
 
             BlenderHelper.view_all()
@@ -86,44 +91,25 @@ class ImportObjectOperatorBase(ImportOperatorBase[_Properties]):
 
             bl_global_armature_obj = merger.add(bl_global_armature_obj, bl_armature_obj)
 
-    def create_skeleton_importer(self, scale_factor: float) -> SkeletonImporter:
+    def get_game_from_file_path(self, file_path: str) -> CdcGame | None:
+        match = re.match(r".tr(\d+)objectref", os.path.splitext(file_path)[1])
+        if match is None:
+            return None
+
+        return CdcGame(int(match.group(1)))
+
+    def create_skeleton_importer(self, scale_factor: float, game: CdcGame) -> SkeletonImporter:
         return SkeletonImporter(scale_factor)
 
-    def create_model_importer(self, scale_factor: float, import_lods: bool, split_into_parts: bool) -> ModelImporter:
-        return ModelImporter(scale_factor, import_lods, split_into_parts)
+    def create_model_importer(self, scale_factor: float, import_lods: bool, split_into_parts: bool, game: CdcGame) -> ModelImporter:
+        match game:
+            case CdcGame.TR2013:
+                return Tr2013ModelImporter(scale_factor, import_lods, split_into_parts)
+            case _:
+                return ModelImporter(scale_factor, import_lods, split_into_parts)
 
-    def create_collision_importer(self, scale_factor: float) -> CollisionImporter:
+    def create_collision_importer(self, scale_factor: float, game: CdcGame) -> CollisionImporter:
         return CollisionImporter(scale_factor)
 
-    def create_cloth_importer(self, scale_factor: float) -> ClothImporter:
+    def create_cloth_importer(self, scale_factor: float, game: CdcGame) -> ClothImporter:
         return ClothImporter(scale_factor)
-
-class ImportTr2013ObjectOperator(ImportObjectOperatorBase):
-    bl_idname = "import_scene.tr9objectref"
-    bl_menu_item_name = "TR2013 object (.tr9objectref)"
-    filename_ext = ".tr9objectref"
-
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.TR2013
-
-    def create_model_importer(self, scale_factor: float, import_lods: bool, split_into_parts: bool) -> ModelImporter:
-        return Tr2013ModelImporter(scale_factor, import_lods, split_into_parts)
-
-class ImportRiseObjectOperator(ImportObjectOperatorBase):
-    bl_idname = "import_scene.tr10objectref"
-    bl_menu_item_name = "ROTTR object (.tr10objectref)"
-    filename_ext = ".tr10objectref"
-
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.ROTTR
-
-class ImportShadowObjectOperator(ImportObjectOperatorBase):
-    bl_idname = "import_scene.tr11objectref"
-    bl_menu_item_name = "SOTTR object (.tr11objectref)"
-    filename_ext = ".tr11objectref"
-
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.SOTTR

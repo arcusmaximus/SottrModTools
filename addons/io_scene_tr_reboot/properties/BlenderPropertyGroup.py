@@ -1,31 +1,12 @@
-from enum import Enum
+from enum import IntEnum
 import bpy
-from typing import Any, Callable, ClassVar, Generic, Iterator, NamedTuple, Protocol, TypeGuard, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterator, NamedTuple, Protocol, TypeGuard, TypeVar, cast
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
-class PropSubType(Enum):
-    NONE = 0
-    PIXEL = 1
-    UNSIGNED = 2
-    PERCENTAGE = 3
-    FACTOR = 4
-    ANGLE = 5
-    TIME = 6
-    TIME_ABSOLUTE = 7
-    DISTANCE = 8
-    DISTANCE_CAMERA = 9
-    POWER = 10
-    TEMPERATURE = 11
-    FILE_PATH = 12
-
-class PropOption(Enum):
-    HIDDEN = 0
-    SKIP_SAVE = 1
-    ANIMATABLE = 2
-    LIBRARY_EDITABLE = 3
-    PROPORTIONAL = 4
-    TEXTEDIT_UPDATE = 5
-    OUTPUT_PATH = 6
+if TYPE_CHECKING:
+    from bpy._typing.rna_enums import PropertyFlagItems, PropertySubtypeNumberItems
+else:
+    PropertyFlagItems = PropertySubtypeNumberItems = str
 
 class Prop(NamedTuple):
     name: str
@@ -34,22 +15,20 @@ class Prop(NamedTuple):
     min: float | None = None
     max: float | None = None
     search: Callable[["BlenderPropertyGroup", bpy.types.Context, str], list[str]] | None = None
-    options: set[PropOption] | None = None
-    subtype: PropSubType | None = None
+    options: set[PropertyFlagItems] | None = None
+    subtype: PropertySubtypeNumberItems | None = None
     get: Callable[[bpy.types.Property], Any] | None = None
     set: Callable[[bpy.types.Property, Any], None] | None = None
 
-class EnumItem(NamedTuple):
-    identifier: str
+class EnumPropItem(NamedTuple):
+    code: IntEnum
     name: str
-    description: str
-    icon: str | None = None
-    value: int | None = None
+    description: str = ""
 
 class EnumProp(NamedTuple):
     name: str
-    items: list[EnumItem] | Callable[["BlenderPropertyGroup", bpy.types.Context | None], list[EnumItem]]
-    default: str | None = None
+    items: list[EnumPropItem]
+    default: IntEnum | None = None
 
 class FactoryFunction(Protocol):
     def __call__(self, **kwds: Any) -> Any: ...
@@ -75,6 +54,7 @@ class BlenderPropertyGroup(Protocol):
 
     @classmethod
     def register(cls) -> None:
+        bpy.props.IntProperty()
         metaclass: type = type(bpy.types.PropertyGroup)
         cls.bl_class = metaclass.__new__(
             metaclass,
@@ -120,8 +100,9 @@ class BlenderPropertyGroup(Protocol):
                     metadata_dict = BlenderPropertyGroup.get_metadata_dict(property_metadata)
                     annotations[property_name] = BlenderPropertyGroup.property_factory_funcs[property_type](**metadata_dict)
             elif isinstance(property_metadata, EnumProp):
-                metadata_dict = BlenderPropertyGroup.get_metadata_dict(property_metadata)
-                annotations[property_name] = bpy.props.EnumProperty(**metadata_dict)
+                items = Enumerable(property_metadata.items).select(lambda i: (i.code.name, i.name, i.description, i.code.value)).to_list()
+                default = property_metadata.default.value if property_metadata.default is not None else None
+                annotations[property_name] = bpy.props.EnumProperty(name = property_metadata.name, items = items, default = default)
             else:
                 raise Exception(f"Property {property_name} in class {class_name} doesn't have a correct annotation")
 
@@ -130,12 +111,6 @@ class BlenderPropertyGroup(Protocol):
     @staticmethod
     def get_metadata_dict(prop: NamedTuple) -> dict[str, Any]:
         result: dict[str, Any] = prop._asdict()
-        for key, value in result.items():
-            if isinstance(value, Enum):
-                result[key] = value.name
-            elif isinstance(value, set):
-                result[key] = Enumerable(cast(set[Enum], value)).select(lambda v: v.name).to_set()
-
         for empty_key in Enumerable(result.items()).where(lambda p: p[1] is None).select(lambda p: p[0]).to_list():
             del result[empty_key]
 

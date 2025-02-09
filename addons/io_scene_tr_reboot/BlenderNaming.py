@@ -62,7 +62,7 @@ class BlenderNaming:
             return None
 
         object_id = match.group(1)
-        return BlenderMeshIdSet(int(object_id) if len(object_id) > 0 else 0, int(match.group(2)), int(match.group(3)), int(match.group(4)))
+        return BlenderMeshIdSet(int(object_id) if object_id is not None else 0, int(match.group(2)), int(match.group(3)), int(match.group(4)))
 
     @staticmethod
     def parse_mesh_name(name: str) -> BlenderMeshIdSet:

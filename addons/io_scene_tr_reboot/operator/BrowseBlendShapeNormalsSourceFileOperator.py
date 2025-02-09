@@ -13,8 +13,8 @@ class BrowseBlendShapeNormalsSourceFileOperator(ImportOperatorBase[ImportOperato
     bl_idname = "tr_reboot.browse_blend_shape_normals_source_file"
     bl_label = "Select"
     bl_description = "Browse for .trXmodeldata file"
-    bl_menu_item_name = "TR Reboot model"
-    filename_ext = ".tr9modeldata;.tr10model;.tr11modeldata"
+    bl_menu_item_name = "Tomb Raider Reboot model"
+    filename_ext = ".tr9modeldata;.tr10modeldata;.tr11modeldata"
 
     @classmethod
     def poll(cls, context: bpy.types.Context | None) -> bool:

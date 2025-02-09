@@ -21,11 +21,10 @@ from io_scene_tr_reboot.tr.rise.RiseModel import RiseModel
 from io_scene_tr_reboot.tr.rise.RiseSkeleton import RiseSkeleton
 
 class RiseFactory(IFactory):
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.ROTTR
+    game = CdcGame.ROTTR
+    cloth_class = RiseCloth
 
-    def create_collection(self, object_ref_file_path: str) -> Collection:
+    def open_collection(self, object_ref_file_path: str) -> Collection:
         return RiseCollection(object_ref_file_path)
 
     def create_model(self, model_id: int, model_data_id: int) -> IModel:

@@ -9,7 +9,7 @@ class MeshPanel(bpy.types.Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "data"
-    bl_label = "TR Mesh Properties"
+    bl_label = "Tomb Raider Properties"
 
     @classmethod
     def poll(cls, context: bpy.types.Context | None) -> bool:

@@ -49,12 +49,14 @@ class Tr2013Skeleton(SkeletonBase[Tr2013Bone]):
         writer.write_int32(len(self.bones))
         bones_ref = writer.write_internal_ref()
 
+        writer.align(0x10)
         bones_ref.offset = writer.position
         writer.write_struct_list(self.bones)
 
     def write_id_mappings(self, writer: ResourceBuilder) -> None:
-        writer.write_int32(Enumerable(self.bones).count(lambda b: b.global_id is not None))
-        writer.write_int32(0)
+        num_global_bones = Enumerable(self.bones).count(lambda b: b.global_id is not None)
+        writer.write_int32(num_global_bones)
+        writer.write_int32(num_global_bones)
         mappings_ref = writer.write_internal_ref()
 
         mappings_ref.offset = writer.position

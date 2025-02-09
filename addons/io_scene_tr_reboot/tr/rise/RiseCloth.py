@@ -1,7 +1,7 @@
 from ctypes import sizeof
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 from mathutils import Vector
-from io_scene_tr_reboot.tr.Cloth import IClothDef, IClothDefAnchorBone, IClothDefMass, IClothDefSpring, IClothDefStrip, IClothTune, IClothTuneCollisionGroup, IClothTuneCollisionHash, IClothTuneConfig, IClothTuneStripGroup
+from io_scene_tr_reboot.tr.Cloth import IClothDef, IClothDefAnchorBone, IClothDefMass, IClothDefSpring, IClothDefStrip, IClothTune, IClothTuneCollisionGroup, IClothTuneCollisionKey, IClothTuneConfig, IClothTuneStripGroup
 from io_scene_tr_reboot.tr.Collision import Collision, CollisionKey, CollisionType
 from io_scene_tr_reboot.tr.ResourceBuilder import ResourceBuilder
 from io_scene_tr_reboot.tr.ResourceReader import ResourceReader
@@ -9,13 +9,13 @@ from io_scene_tr_reboot.tr.ResourceReference import ResourceReference
 from io_scene_tr_reboot.tr.tr2013.Tr2013Cloth import Tr2013Cloth
 from io_scene_tr_reboot.util.CStruct import CByte, CFloat, CInt, CLong, CShort, CStruct, CStruct64, CULong
 
-class _ClothDef(CStruct64):
+class _ClothDef(CStruct64, IClothDef if TYPE_CHECKING else object):
     strips_ref: ResourceReference | None
     num_strips: CShort
 
 assert(sizeof(_ClothDef) == 0xA)
 
-class _ClothDefStrip(CStruct64):
+class _ClothDefStrip(CStruct64, IClothDefStrip if TYPE_CHECKING else object):
     masses_ref: ResourceReference | None
     springs_ref: ResourceReference | None
     parent_bone_local_id: CInt
@@ -30,25 +30,32 @@ class _ClothDefStrip(CStruct64):
 
 assert(sizeof(_ClothDefStrip) == 0x20)
 
-class _ClothDefMass(CStruct64):
+class _ClothDefMass(CStruct64, IClothDefMass if TYPE_CHECKING else object):
     position: Vector
     anchor_bones_ref: ResourceReference | None
     num_anchor_bones: CShort
     field_1A: CShort
     field_1C: CInt
-    vector_array_ref: ResourceReference | None
-    type: CShort
+    spring_vector_array_ref: ResourceReference | None
+    is_pinned: CShort
     local_bone_id: CShort
     rank: CShort
     field_2E: CShort
 
-    mass: int
+    @property
+    def mass(self) -> int:
+        return 255 if self.is_pinned == 0 else 0
+
+    @mass.setter
+    def mass(self, value: int) -> None:             # type: ignore
+        self.is_pinned = 0 if value == 255 else 1
+
     bounce_back_factor: int
-    _ignored_fields_ = ("mass", "bounce_back_factor")
+    _ignored_fields_ = ("bounce_back_factor",)
 
 assert(sizeof(_ClothDefMass) == 0x30)
 
-class _ClothDefAnchorBone(CStruct64):
+class _ClothDefAnchorBone(CStruct64, IClothDefAnchorBone if TYPE_CHECKING else object):
     offset: Vector
     weight: CFloat
     local_bone_id: CShort
@@ -57,7 +64,7 @@ class _ClothDefAnchorBone(CStruct64):
 
 assert(sizeof(_ClothDefAnchorBone) == 0x20)
 
-class _ClothDefSpring(CStruct64):
+class _ClothDefSpring(CStruct64, IClothDefSpring if TYPE_CHECKING else object):
     rest_length: CFloat
     mass_1_idx: CShort
     mass_2_idx: CShort
@@ -67,7 +74,7 @@ class _ClothDefSpring(CStruct64):
 
 assert(sizeof(_ClothDefSpring) == 8)
 
-class _ClothTune(CStruct64):
+class _ClothTune(CStruct64, IClothTune if TYPE_CHECKING else object):
     enabled: CByte
     field_1: CByte
     field_2: CShort
@@ -93,14 +100,14 @@ class _ClothTune(CStruct64):
 
 assert(sizeof(_ClothTune) == 0x60)
 
-class _ClothTuneConfig(CStruct64):
+class _ClothTuneConfig(CStruct64, IClothTuneConfig if TYPE_CHECKING else object):
     num_strip_group_indices: CInt
     field_4: CInt
     strip_group_indices_ref: ResourceReference | None
 
 assert(sizeof(_ClothTuneConfig) == 0x10)
 
-class _ClothTuneStripGroup(CStruct64):
+class _ClothTuneStripGroup(CStruct64, IClothTuneStripGroup if TYPE_CHECKING else object):
     gravity: CFloat
     drag: CFloat
     max_velocity_update_iterations: CInt
@@ -109,7 +116,7 @@ class _ClothTuneStripGroup(CStruct64):
     sub_step_count: CInt
     wind_factor: CFloat
     wind_on_constraints: CInt
-    max_mass_bounce_back_strength: CFloat
+    max_mass_bounceback_factor: CFloat
     transform_type: CInt
     spring_stretchiness_default_percentage: CInt
     spring_stretchiness_lower_percentage: CInt
@@ -126,23 +133,30 @@ class _ClothTuneStripGroup(CStruct64):
     field_60: CLong
     field_68: CLong
 
-    gravity_factor: float
+    @property
+    def gravity_factor(self) -> float:
+        return self.gravity / 9.8
+
+    @gravity_factor.setter
+    def gravity_factor(self, value: float) -> None:     # type: ignore
+        self.gravity = value * 9.8
+
     buoyancy: float
     pose_follow_factor: float
     spring_stretchiness_upper_percentage: int
     reference_time_delta_multiplier: float
-    _ignored_fields_ = ("gravity_factor", "buoyancy", "pose_follow_factor", "spring_stretchiness_upper_percentage", "reference_time_delta_multiplier")
+    _ignored_fields_ = ("buoyancy", "pose_follow_factor", "spring_stretchiness_upper_percentage", "reference_time_delta_multiplier")
 
 assert(sizeof(_ClothTuneStripGroup) == 0x70)
 
-class _ClothTuneCollisionGroup(CStruct64):
+class _ClothTuneCollisionGroup(CStruct64, IClothTuneCollisionGroup if TYPE_CHECKING else object):
     count: CInt
     field_4: CInt
     items_ref: ResourceReference | None
 
 assert(sizeof(_ClothTuneCollisionGroup) == 0x10)
 
-class _ClothTuneCollisionKey(CStruct64):
+class _ClothTuneCollisionKey(CStruct64, IClothTuneCollisionKey if TYPE_CHECKING else object):
     type: CByte
     field_1: CByte
     field_2: CShort
@@ -169,7 +183,6 @@ class RiseCloth(Tr2013Cloth):
     def read_definition_masses(self, reader: ResourceReader, count: int) -> Sequence[IClothDefMass]:
         dtp_masses = reader.read_struct_list(_ClothDefMass, count)
         for dtp_mass in dtp_masses:
-            dtp_mass.mass = 255
             dtp_mass.bounce_back_factor = 0
 
         return dtp_masses
@@ -190,7 +203,7 @@ class RiseCloth(Tr2013Cloth):
     def read_tune_collision_groups(self, reader: ResourceReader, count: int) -> Sequence[IClothTuneCollisionGroup]:
         return reader.read_struct_list(_ClothTuneCollisionGroup, count)
 
-    def read_tune_collisions(self, reader: ResourceReader, count: int, external_collisions: dict[CollisionKey, Collision]) -> Sequence[Collision]:
+    def read_tune_collisions(self, reader: ResourceReader, base_idx: int, count: int, global_bone_ids: list[int | None], external_collisions: dict[CollisionKey, Collision]) -> Sequence[Collision]:
         dtp_collision_hashes = reader.read_struct_list(_ClothTuneCollisionKey, count)
         collisions: list[Collision] = []
         for dtp_collision_hash in dtp_collision_hashes:
@@ -201,7 +214,7 @@ class RiseCloth(Tr2013Cloth):
 
         return collisions
 
-    def read_tune_collision_key(self, dtp_collision: IClothTuneCollisionHash, reader: ResourceReader) -> CollisionKey:
+    def read_tune_collision_key(self, dtp_collision: IClothTuneCollisionKey, reader: ResourceReader) -> CollisionKey:
         if dtp_collision.hash_data_2 == 0:
             return CollisionKey(CollisionType(dtp_collision.type), dtp_collision.hash_data_1)
 
@@ -233,7 +246,6 @@ class RiseCloth(Tr2013Cloth):
     def read_tune_strip_groups(self, reader: ResourceReader, count: int) -> Sequence[IClothTuneStripGroup]:
         dtp_strip_groups = reader.read_struct_list(_ClothTuneStripGroup, count)
         for dtp_strip_group in dtp_strip_groups:
-            dtp_strip_group.gravity_factor = dtp_strip_group.gravity / 9.8
             dtp_strip_group.pose_follow_factor = 0.0
             dtp_strip_group.spring_stretchiness_upper_percentage = 100
 
@@ -272,7 +284,7 @@ class RiseCloth(Tr2013Cloth):
     def create_tune_collision_group(self) -> IClothTuneCollisionGroup:
         return _ClothTuneCollisionGroup()
 
-    def create_tune_collision(self, collision: Collision) -> CStruct:
+    def create_tune_collision(self, collision: Collision, global_bone_ids: list[int | None]) -> CStruct:
         dtp_collision_hash = _ClothTuneCollisionKey()
         dtp_collision_hash.type = collision.type
         dtp_collision_hash.hash_data_1 = collision.hash

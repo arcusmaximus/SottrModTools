@@ -6,6 +6,8 @@ class IModelDataHeader(Protocol):
     num_indexes:                int
     bound_box_min:              Vector
     bound_box_max:              Vector
+    min_lod:                    float
+    max_lod:                    float
     has_vertex_weights:         bool
     has_blend_shapes:           bool
 
@@ -21,6 +23,8 @@ class IModelDataHeader(Protocol):
     num_meshes:                 int
     num_bone_mappings:          int
     num_lod_levels:             int
+
+    bone_usage_map:             list[int]
 
     num_blend_shapes:           int
     blend_shape_names_offset:   int

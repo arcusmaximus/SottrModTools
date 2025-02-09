@@ -201,7 +201,7 @@ typedef struct
     ushort numAnchorBones;
     FSkip(2);
     Ref springVectorArrayRef;
-    ushort type;
+    ushort isPinned;
     ushort boneId;
     ushort rank;
     FSkip(0xE);
@@ -226,8 +226,6 @@ typedef struct
     float restLength;
     ushort massIdx1;
     ushort massIdx2;
-    
-    local int endPos = FTell();
 } ClothSpring <optimize=false>;
 
 typedef struct
@@ -291,12 +289,10 @@ if (CanSeekTo(modelRefs.clothStripsArrayRef))
     ClothStripArray clothStripArray;
     if (clothStripArray.numStrips > 0)
     {
-        local int lastStripIdx = clothStripArray.numStrips - 1;
-        local int lastSpringIdx = clothStripArray.strips[lastStripIdx].numSprings - 1;
-        FSeek(clothStripArray.strips[lastStripIdx].springs[lastSpringIdx].endPos);
+        FSeek(gResourceBodyPos + refDefinitions.internalRefs[refDefinitions.numInternalRefs - 2].refOffset - 4);
         BoneArray boneArray;
         
-        FSeek(boneArray.endPos);
+        FSeek(gResourceBodyPos + refDefinitions.internalRefs[refDefinitions.numInternalRefs - 1].refOffset - 8);
         BoneIdMappingArray boneIdMappingArray;
     }
     ReturnFromRef();
@@ -308,3 +304,4 @@ if (CanSeekTo(modelRefs.modelDataRef))
     ModelData modelData;
     ReturnFromRef();
 }
+

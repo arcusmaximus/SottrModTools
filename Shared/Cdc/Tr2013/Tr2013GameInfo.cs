@@ -1,4 +1,6 @@
-﻿namespace TrRebootTools.Shared.Cdc.Tr2013
+﻿using System.Drawing;
+
+namespace TrRebootTools.Shared.Cdc.Tr2013
 {
     internal class Tr2013GameInfo : CdcGameInfo
     {
@@ -7,6 +9,8 @@
         public override string ExeName => "TombRaider.exe";
 
         public override string ShortName => "TR2013";
+
+        public override Image Icon => Properties.Resources.Tr2013;
 
         public override string RegistryDisplayName => "Tomb Raider";
 

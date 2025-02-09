@@ -289,8 +289,19 @@ class ModelImporter(SlotsBase):
 
         bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)
         for bl_bone in bl_armature.bones:
+            BlenderHelper.set_bone_visible(bl_armature, bl_bone, False)
+
+        for bl_bone in bl_armature.bones:
             if bl_bone.name not in used_bone_names:
-                BlenderHelper.set_bone_visible(bl_armature, bl_bone, False)
+                continue
+
+            while True:
+                BlenderHelper.set_bone_visible(bl_armature, bl_bone, True)
+                bl_bone = cast(bpy.types.Bone | None, bl_bone.parent)
+                if bl_bone is None or bl_bone.name in used_bone_names:
+                    break
+
+                used_bone_names.add(bl_bone.name)
 
     def separate_lods(self, tr_model: IModel) -> None:
         new_tr_meshes: list[IMesh] = []
@@ -339,9 +350,8 @@ class ModelImporter(SlotsBase):
         return flags[0]
 
     def store_collection_files(self, tr_collection: Collection) -> None:
-        scene_properties = SceneProperties.get_instance(bpy.context.scene)
         for file_id, file_data in self.get_collection_files_to_store(tr_collection).items():
-            SceneProperties.set_file(scene_properties, file_id, file_data)
+            SceneProperties.set_file(file_id, file_data)
 
     def get_collection_files_to_store(self, tr_collection: Collection) -> dict[int, bytes]:
         return {}

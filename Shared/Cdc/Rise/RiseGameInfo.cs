@@ -1,4 +1,6 @@
-﻿namespace TrRebootTools.Shared.Cdc.Rise
+﻿using System.Drawing;
+
+namespace TrRebootTools.Shared.Cdc.Rise
 {
     internal class RiseGameInfo : CdcGameInfo
     {
@@ -7,6 +9,8 @@
         public override string ExeName => "ROTTR.exe";
 
         public override string ShortName => "ROTTR";
+
+        public override Image Icon => Properties.Resources.Rise;
 
         public override string RegistryDisplayName => "Rise of the Tomb Raider";
 

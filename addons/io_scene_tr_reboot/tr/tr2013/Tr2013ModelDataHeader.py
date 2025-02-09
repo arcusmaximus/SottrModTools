@@ -17,7 +17,7 @@ class Tr2013ModelDataHeader(CStruct32, IModelDataHeader if TYPE_CHECKING else ob
     max_lod:                        CFloat
     model_type:                     CInt
     sort_bias:                      CFloat
-    bone_usage_map:                 CArray[CInt, Literal[8]]
+    bone_usage_map:                 CArray[CInt, Literal[8]]        # type: ignore
     mesh_parts_offet:               CInt
     mesh_headers_offset:            CInt
     bone_mappings_offset:           CInt

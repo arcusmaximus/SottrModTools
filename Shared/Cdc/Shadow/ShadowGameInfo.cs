@@ -1,4 +1,6 @@
-﻿namespace TrRebootTools.Shared.Cdc.Shadow
+﻿using System.Drawing;
+
+namespace TrRebootTools.Shared.Cdc.Shadow
 {
     internal class ShadowGameInfo : CdcGameInfo
     {
@@ -7,6 +9,8 @@
         public override string ExeName => "SOTTR.exe";
 
         public override string ShortName => "SOTTR";
+
+        public override Image Icon => Properties.Resources.Shadow;
 
         public override string RegistryDisplayName => "Shadow of the Tomb Raider";
 

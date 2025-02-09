@@ -34,8 +34,10 @@ namespace TrRebootTools.ModManager
             _archiveSet = ArchiveSet.Open(gameFolderPath, true, true, game);
             _gameResourceUsages = new ResourceUsageCache();
 
+            CdcGameInfo gameInfo = CdcGameInfo.Get(game);
             Version version = Assembly.GetEntryAssembly().GetName().Version;
-            Text = string.Format(Text, CdcGameInfo.Get(game).ShortName, $"{version.Major}.{version.Minor}.{version.Build} Beta 5");
+            Text = string.Format(Text, gameInfo.ShortName, $"{version.Major}.{version.Minor}.{version.Build} Beta 6");
+            _btnSelectGame.BackgroundImage = gameInfo.Icon;
         }
 
         private async void MainForm_Load(object sender, EventArgs e)

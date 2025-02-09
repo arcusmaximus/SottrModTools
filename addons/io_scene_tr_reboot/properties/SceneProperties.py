@@ -1,7 +1,8 @@
 import base64
 from typing import Annotated
 import bpy
-from io_scene_tr_reboot.properties.BlenderPropertyGroup import BlenderAttachedPropertyGroup, BlenderPropertyGroup, BlenderPropertyGroupCollection, Prop
+from io_scene_tr_reboot.properties.BlenderPropertyGroup import BlenderAttachedPropertyGroup, BlenderPropertyGroup, BlenderPropertyGroupCollection, EnumProp, EnumPropItem, Prop
+from io_scene_tr_reboot.tr.Enumerations import CdcGame
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 class SceneFileProperties(BlenderPropertyGroup):
@@ -11,10 +12,33 @@ class SceneFileProperties(BlenderPropertyGroup):
 class SceneProperties(BlenderAttachedPropertyGroup[bpy.types.Scene]):
     property_name = "tr11_properties"
 
+    game: Annotated[
+        str,
+        EnumProp(
+            "Game",
+            [
+                EnumPropItem(CdcGame.TR2013, "Tomb Raider (2013)"),
+                EnumPropItem(CdcGame.ROTTR,  "Rise of the Tomb Raider"),
+                EnumPropItem(CdcGame.SOTTR,  "Shadow of the Tomb Raider")
+            ],
+            default = CdcGame.SOTTR
+        )
+    ]
     files: Annotated[BlenderPropertyGroupCollection[SceneFileProperties], Prop("Files")]
 
     @staticmethod
-    def get_file(props: "SceneProperties", id: int) -> bytes | None:
+    def get_game() -> CdcGame:
+        props = SceneProperties.get_instance(bpy.context.scene)
+        return CdcGame[props.game]
+
+    @staticmethod
+    def set_game(game: CdcGame) -> None:
+        props = SceneProperties.get_instance(bpy.context.scene)
+        props.game = game.name
+
+    @staticmethod
+    def get_file(id: int) -> bytes | None:
+        props = SceneProperties.get_instance(bpy.context.scene)
         file = Enumerable(props.files).first_or_none(lambda f: f.id == id)
         if file is None:
             return None
@@ -22,7 +46,8 @@ class SceneProperties(BlenderAttachedPropertyGroup[bpy.types.Scene]):
         return base64.b64decode(file.data)
 
     @staticmethod
-    def set_file(props: "SceneProperties", id: int, data: memoryview | bytes) -> None:
+    def set_file(id: int, data: memoryview | bytes) -> None:
+        props = SceneProperties.get_instance(bpy.context.scene)
         file = Enumerable(props.files).first_or_none(lambda f: f.id == id)
         if file is None:
             file = props.files.add()

@@ -19,8 +19,10 @@ from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 class Tr2013ObjectHeader(CStruct32):
     padding_1: CArray[CByte, Literal[0x80]]
-    cloth_tune_ref: ResourceReference | None
-    padding_2: CArray[CByte, Literal[0x5C]]
+    cloth_tune_ref_1: ResourceReference | None
+    padding_2: CArray[CByte, Literal[0x50]]
+    cloth_tune_ref_2: ResourceReference | None
+    padding_3: CArray[CByte, Literal[8]]
     num_models: CInt
     model_refs_ref: ResourceReference | None
 
@@ -47,7 +49,7 @@ class Tr2013Collection(Collection):
         else:
             self.__model_refs = []
 
-        self.__cloth_tune_ref = object_header.cloth_tune_ref
+        self.__cloth_tune_ref = object_header.cloth_tune_ref_1
         self.__models = {}
 
     def get_model_instances(self) -> list[Collection.ModelInstance]:
@@ -114,7 +116,8 @@ class Tr2013Collection(Collection):
     def get_cloth(self) -> Cloth | None:
         cloth_definition_ref = self.cloth_definition_ref
         cloth_tune_ref = self.cloth_tune_ref
-        if cloth_definition_ref is None or cloth_tune_ref is None:
+        skeleton = self.get_skeleton()
+        if cloth_definition_ref is None or cloth_tune_ref is None or skeleton is None:
             return None
 
         definition_reader = self.get_resource_reader(cloth_definition_ref, True)
@@ -125,8 +128,10 @@ class Tr2013Collection(Collection):
         definition_reader.seek(cloth_definition_ref)
         tune_reader.seek(cloth_tune_ref)
 
+        global_bone_ids = Enumerable(skeleton.bones).select(lambda b: b.global_id).to_list()
+
         cloth = Tr2013Cloth(cloth_definition_ref.id, cloth_tune_ref.id)
-        cloth.read(definition_reader, tune_reader, [])
+        cloth.read(definition_reader, tune_reader, global_bone_ids, [])
         return cloth
 
     def get_legacy_model(self, resource: ResourceKey) -> Tr2013LegacyModel | None:

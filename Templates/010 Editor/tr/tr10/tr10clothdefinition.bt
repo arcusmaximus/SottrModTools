@@ -53,7 +53,7 @@ typedef struct
         ReturnFromRef();
     }
     
-    ushort type;
+    ushort isPinned;
     ushort localBoneId;
     ushort rank;
     FSkip(2);

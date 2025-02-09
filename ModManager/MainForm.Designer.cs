@@ -62,9 +62,9 @@ namespace TrRebootTools.ModManager
             // 
             // _btnSelectGame
             // 
+            this._btnSelectGame.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this._btnSelectGame.Dock = System.Windows.Forms.DockStyle.Fill;
             this._btnSelectGame.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this._btnSelectGame.Image = global::TrRebootTools.ModManager.Properties.Resources.SelectGame;
             this._btnSelectGame.Location = new System.Drawing.Point(564, 3);
             this._btnSelectGame.Name = "_btnSelectGame";
             this._btnSelectGame.Size = new System.Drawing.Size(74, 74);

@@ -4,14 +4,17 @@
 
 This toolset allows modding the games from the Tomb Raider Reboot trilogy. The following are supported:
 
-|                                            | Tomb Raider (2013) | Rise of the Tomb Raider | Shadow of the Tomb Raider |
+|                                            | Tomb Raider (2013)* | Rise of the Tomb Raider | Shadow of the Tomb Raider |
 | ------------------------------------------ | ------------------ | ----------------------- | ------------------------- |
 | Meshes                                     | ✓                  | ✓                      | ✓                         |
 | Textures                                   | ✓                  | ✓                      | ✓                         |
 | Text (outfit descriptions, subtitles etc.) | ✓                  | ✓                      | ✓                         |
-| Cloth physics                              |                    | ~                       | ✓                         |
+| Cloth physics                              | ✓                  | ✓                       | ✓                         |
 | Animations                                 |                    |                         | ✓                         |
 | Sound                                      |                    |                         | ✓                         |
+
+\* For Tomb Raider (2013), the "Definitive Edition" that can only be bought on the Xbox store is **not** supported.
+Only the "regular" version is.
 
 This page will give a quick introduction to the various file types involved, and then explain how to create and package mods.
 
@@ -95,12 +98,11 @@ There are a few other extensions such as .trXscript, which are however unexplore
 The extractor and manager need no installation and can be run from anywhere. They'll try to autodetect where
 each game is installed and ask you to provide the location if they can't find it.
 
-The Blender addon can be installed as follows. Note that it requires Blender **3.6.5** or above (including 4.0).
+The Blender addon can be installed as follows. Note that it requires Blender **4.0** or above.
 
 - Click Edit → Preferences in the menu.
 - Select the "Add-ons" tab.
-- Click "Install..." (in Blender 4.0 and above, this is hidden behind a small down-arrow button in the top right
-  of the window).
+- Click the small arrow in the top right corner and choose "Install from Disk..."
 - Select io_scene_tr_reboot.zip.
 - Enable the checkmark next to "Import-Export: TR Reboot mesh support."
 
@@ -115,7 +117,7 @@ in the correct folder depending on which hex editor you have:
 ### Importing
 
 Start by extracting the .drm of the model you want to edit. Then launch Blender, choose File → Import →
-TR2013/ROTTR/SOTTR object, and select the .trXobjectref file. This will import the model's meshes, materials,
+Tomb Raider Reboot object, and select the .trXobjectref file. This will import the model's meshes, materials,
 and skeleton if there is one.
 
 The import filechooser has the following options on the right hand side:
@@ -137,7 +139,7 @@ The import filechooser has the following options on the right hand side:
   a Blender mesh per TR mesh part. Alternatively, you can of course use Blender's "Separate By Material" operator
   after importing.
 
-- **Merge with existing skeleton(s)**
+- **(SOTTR) Merge with existing skeleton(s)**
 
   In SOTTR, each of Lara's outfits is split into as many as four pieces (head/hair/torso/legs), with each piece having its
   own partial skeleton. What's more, different skeletons typically have different IDs for the same bone.
@@ -147,7 +149,7 @@ The import filechooser has the following options on the right hand side:
   Simply import one outfit piece, then import another (and another...) into the same Blender scene with this option
   enabled. The merging feature is explained in more detail later on.
 
-- **Keep original skeletons**
+- **(SOTTR) Keep original skeletons**
 
   Lets you choose between two different ways of merging skeletons:
 
@@ -352,7 +354,7 @@ of Blender's Properties editor.
 
 ### Exporting
 
-Exporting is done through the menu item File → Export → TR2013/ROTTR/SOTTR model. The addon will export
+Exporting is done through the menu item File → Export → Tomb Raider Reboot model. The addon will export
 the models you have selected, or all models in the scene if none are selected. It'll produce several files
 per model depending on the target game.
 
@@ -394,9 +396,7 @@ animation thus being slower overall, not faster.
 ## Cloth physics modding
 
 Not all bones in an outfit are driven by an animation or other bones: some are instead driven by a
-cloth physics simulation. You can add these physics to your own models in SOTTR.
-It technically "works" in ROTTR too, but results can be wonky to unusable (more due to an issue
-with the tools than with the game no doubt).
+cloth physics simulation. You can add these physics to your own models.
 
 The cloth system involves the following concepts:
 * Strip: a patch of fabric (or hair, or rope...) consisting of masses and springs.
@@ -406,14 +406,13 @@ The cloth system involves the following concepts:
   This is what keeps the masses from just flying away.
 * Collision: a simple, invisible shape (box, sphere, capsule...) which cloth masses are not allowed to enter.
 
-To get started, click File → Import → SOTTR Object as usual and check "Import cloth and collisions" in the
-file chooser before clicking Import. If the outfit has physics, you'll notice that in addition to the model
-and skeleton, you now have a bunch of wireframe meshes. Each such mesh represents a cloth strip:
+If an imported outfit has physics, you'll notice that in addition to the model and skeleton,
+you now have a bunch of wireframe meshes. Each such mesh represents a cloth strip:
 the vertices are the masses, and the edges are the springs.
 
 The naming convention for each cloth strip is as follows:
 `<object name>_clothstrip_<skeleton ID>_<cloth definition ID>_<cloth component ID>_<cloth strip ID>`.
-The first three IDs correspond to .tr11dtp files (which you can view and edit with the binary templates).
+The first three IDs correspond to .trXdtp files (which you can view and edit with the binary templates).
 The last ID is an arbitrary number that identifies the cloth strip.
 
 If you want to add a new cloth strip, you can duplicate an existing one and change its name so that
@@ -426,7 +425,7 @@ whatever way you want.
 > to get things working. You can identify the object file by opening the .tr11objectref file
 > with the corresponding binary template.
 
-The addon adds a custom "TR Cloth" tab to Blender's sidebar (which you can open by pressing `N`).
+The addon adds a custom "Tomb Raider Cloth" tab to Blender's sidebar (which you can open by pressing `N`).
 This tab lets you perform various cloth-related operations:
 
 * **Bones**
@@ -495,8 +494,23 @@ but if you delete one, the exported cloth strips will no longer be linked to it
 and no longer collide with it ingame. (This also means you should normally keep the collisions
 around in your Blender file, as otherwise, the cloth strips won't collide with anything.)
 
-Once you're done making your changes, export the model as usual (File → Export → SOTTR model),
+Once you're done making your changes, export the model as usual (File → Export → Tomb Raider Reboot model),
 making sure to check "Export skeleton" and "Export cloth" in the file chooser.
+
+### TR2013
+
+TR2013 is a bit more annoying to get custom cloth physics into. Rather than putting the clothstrips
+and bones in the outfit itself like with the other games, they need to be put in laracroft.drm:
+
+- Import both laracroft.drm and the outfit you want to mod into the same Blender scene.
+- Set up your custom cloth strip meshes under the laracroft skeleton and regenerate the physics bones as usual.
+- Update the outfit skeleton to match the laracroft skeleton. You can do this by deleting all the bones
+  in the outfit skeleton (make sure all the bone groups are visible first), duplicating the laracroft
+  skeleton, and then joining this duplicate into the outfit skeleton: select the duplicate laracroft skeleton,
+  then the outfit skeleton, and finally press Ctrl-J while the mouse hovers of the 3D Viewport.
+- Update the outfit mesh, adding vertex weights for the physics bones in the outfit skeleton.
+- When you're done, export both the laracroft model (for the skeleton and cloth strips) and the outfit model
+  (for the mesh).
 
 ## External resource references
 

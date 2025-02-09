@@ -23,11 +23,10 @@ from io_scene_tr_reboot.tr.shadow.ShadowModelReferences import ShadowModelRefere
 from io_scene_tr_reboot.tr.shadow.ShadowSkeleton import ShadowSkeleton
 
 class ShadowFactory(IFactory):
-    @property
-    def game(self) -> CdcGame:
-        return CdcGame.SOTTR
+    game = CdcGame.SOTTR
+    cloth_class = ShadowCloth
 
-    def create_collection(self, object_ref_file_path: str) -> Collection:
+    def open_collection(self, object_ref_file_path: str) -> Collection:
         return ShadowCollection(object_ref_file_path)
 
     def create_model(self, model_id: int, model_data_id: int) -> IModel:

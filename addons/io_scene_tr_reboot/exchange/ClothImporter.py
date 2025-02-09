@@ -64,6 +64,7 @@ class ClothImporter(SlotsBase):
         cloth_strip_properties.wind_factor = tr_cloth_strip.wind_factor
         cloth_strip_properties.stiffness = tr_cloth_strip.pose_follow_factor
         cloth_strip_properties.rigidity = tr_cloth_strip.rigidity
+        cloth_strip_properties.bounceback_factor = tr_cloth_strip.mass_bounceback_factor
         cloth_strip_properties.dampening = tr_cloth_strip.drag
 
         for i, tr_cloth_mass in enumerate(tr_cloth_strip.masses):

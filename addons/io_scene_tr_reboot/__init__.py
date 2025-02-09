@@ -19,9 +19,9 @@ TrCStructTypeMappings.register()
 
 from io_scene_tr_reboot.operator.BrowseBlendShapeNormalsSourceFileOperator import BrowseBlendShapeNormalsSourceFileOperator
 from io_scene_tr_reboot.operator.ImportAnimationOperator import ImportShadowAnimationOperator
-from io_scene_tr_reboot.operator.ImportObjectOperator import ImportRiseObjectOperator, ImportShadowObjectOperator, ImportTr2013ObjectOperator
+from io_scene_tr_reboot.operator.ImportObjectOperator import ImportObjectOperator
 from io_scene_tr_reboot.operator.ExportAnimationOperator import ExportShadowAnimationOperator
-from io_scene_tr_reboot.operator.ExportModelOperator import ExportRiseModelOperator, ExportShadowModelOperator, ExportTr2013ModelOperator
+from io_scene_tr_reboot.operator.ExportModelOperator import ExportModelOperator
 from io_scene_tr_reboot.operator.FixVertexGroupNamesOperator import FixVertexGroupNamesOperator
 from io_scene_tr_reboot.operator.RegenerateClothBonesOperator import RegenerateClothBonesOperator
 from io_scene_tr_reboot.operator.PinClothBonesOperator import PinClothBonesOperator
@@ -36,6 +36,7 @@ from io_scene_tr_reboot.ui.ClothStripPanel import ClothStripPanel
 from io_scene_tr_reboot.ui.ClothSpringPanel import ClothSpringPanel
 from io_scene_tr_reboot.ui.ClothBonesPanel import ClothBonesPanel
 from io_scene_tr_reboot.ui.MeshPanel import MeshPanel
+from io_scene_tr_reboot.ui.ScenePanel import ScenePanel
 
 class ITrMenuOperator(Protocol):
     bl_idname: str
@@ -43,14 +44,8 @@ class ITrMenuOperator(Protocol):
     bl_menu_item_name: str
 
 menu_operators: list[ITrMenuOperator] = [
-    ImportTr2013ObjectOperator,
-    ImportRiseObjectOperator,
-    ImportShadowObjectOperator,
-
-    ExportTr2013ModelOperator,
-    ExportRiseModelOperator,
-    ExportShadowModelOperator,
-
+    ImportObjectOperator,
+    ExportModelOperator,
     ImportShadowAnimationOperator,
     ExportShadowAnimationOperator
 ]
@@ -66,7 +61,8 @@ other_classes: list[type] = [
     ClothBonesPanel,
     ClothStripPanel,
     ClothSpringPanel,
-    MeshPanel
+    MeshPanel,
+    ScenePanel
 ]
 
 custom_property_groups: list[type[BlenderPropertyGroup]] = [

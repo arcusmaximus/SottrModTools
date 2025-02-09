@@ -1,7 +1,10 @@
-from io_scene_tr_reboot.tr.Skeleton import ISkeleton
 from io_scene_tr_reboot.tr.rise.RiseCollision import RiseCollision
 
 class ShadowCollision(RiseCollision):
-    @classmethod
-    def _convert_dtp_bone_id_to_global(cls, dtp_bone_id: int, skeleton: ISkeleton) -> int:
+    @staticmethod
+    def _convert_dtp_bone_id_to_global(dtp_bone_id: int, global_bone_ids: list[int | None]) -> int:
         return dtp_bone_id
+
+    @staticmethod
+    def _convert_global_bone_id_to_dtp(global_bone_id: int, global_bone_ids: list[int | None]) -> int:
+        return global_bone_id

@@ -1,4 +1,5 @@
 from asyncio import Protocol
+from typing import ClassVar
 from io_scene_tr_reboot.tr.Bone import IBone
 from io_scene_tr_reboot.tr.BoneConstraint import IBoneConstraint
 from io_scene_tr_reboot.tr.Cloth import Cloth
@@ -11,10 +12,10 @@ from io_scene_tr_reboot.tr.Model import IModel
 from io_scene_tr_reboot.tr.Skeleton import ISkeleton
 
 class IFactory(Protocol):
-    @property
-    def game(self) -> CdcGame: ...
+    game: ClassVar[CdcGame]
+    cloth_class: ClassVar[type[Cloth]]
 
-    def create_collection(self, object_ref_file_path: str) -> Collection: ...
+    def open_collection(self, object_ref_file_path: str) -> Collection: ...
 
     def create_model(self, model_id: int, model_data_id: int) -> IModel: ...
 

@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using TrRebootTools.Shared.Cdc.Rise;
 using TrRebootTools.Shared.Cdc.Shadow;
@@ -26,6 +27,8 @@ namespace TrRebootTools.Shared.Cdc
         public abstract string ExeName { get; }
 
         public abstract string ShortName { get; }
+
+        public abstract Image Icon { get; }
 
         public abstract string RegistryDisplayName { get; }
 

@@ -23,7 +23,7 @@ class ShadowModelDataHeader(CStruct64, IModelDataHeader if TYPE_CHECKING else ob
     lod_mode:                   CInt
     model_type:                 CInt
     sort_bias:                  CFloat
-    bone_usage_map:             CArray[CInt, Literal[32]]
+    bone_usage_map:             CArray[CInt, Literal[32]]       # type: ignore
     mesh_parts_offet:           CLong
     mesh_headers_offset:        CLong
     bone_mappings_offset:       CLong

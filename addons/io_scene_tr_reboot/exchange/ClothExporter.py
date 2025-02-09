@@ -6,11 +6,11 @@ from io_scene_tr_reboot.BlenderHelper import BlenderHelper
 from io_scene_tr_reboot.BlenderNaming import BlenderNaming
 from io_scene_tr_reboot.properties.BoneProperties import BoneProperties
 from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties
-from io_scene_tr_reboot.tr.Cloth import Cloth, ClothMass, ClothMassAnchorBone, ClothSpring, ClothStrip
+from io_scene_tr_reboot.tr.Cloth import Cloth, ClothMass, ClothMassAnchorBone, ClothMassSpringVector, ClothSpring, ClothStrip
 from io_scene_tr_reboot.tr.Collection import Collection
 from io_scene_tr_reboot.tr.Collision import Collision
 from io_scene_tr_reboot.tr.Enumerations import CdcGame, ResourceType
-from io_scene_tr_reboot.tr.FactoryFactory import FactoryFactory
+from io_scene_tr_reboot.tr.FactoryFactory import Factories
 from io_scene_tr_reboot.tr.IFactory import IFactory
 from io_scene_tr_reboot.tr.ResourceBuilder import ResourceBuilder
 from io_scene_tr_reboot.tr.ResourceKey import ResourceKey
@@ -45,7 +45,7 @@ class ClothExporter:
     def __init__(self, scale_factor: float, game: CdcGame) -> None:
         self.scale_factor = scale_factor
         self.game = game
-        self.factory = FactoryFactory.get(game)
+        self.factory = Factories.get(game)
 
     def export_cloths(self, folder_path: str, bl_armature_obj: bpy.types.Object, bl_local_armature_objs: dict[int, bpy.types.Object]) -> None:
         collision_bounding_boxes = self.get_collision_bounding_boxes(bl_armature_obj)
@@ -61,7 +61,6 @@ class ClothExporter:
     def get_collision_bounding_boxes(self, bl_armature_obj: bpy.types.Object) -> dict[Collision, _BoundingBox]:
         result: dict[Collision, _BoundingBox] = {}
 
-        factory = FactoryFactory.get(self.game)
         for bl_empty in Enumerable(bl_armature_obj.children).where(lambda o: not o.data and BlenderNaming.is_collision_empty_name(o.name)):
             for bl_obj in Enumerable(bl_empty.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
                 collision_key = BlenderNaming.parse_collision_name(bl_obj.name)
@@ -69,9 +68,9 @@ class ClothExporter:
                 collision_data = ObjectProperties.get_instance(bl_obj).collision.data
                 collision: Collision
                 if collision_data:
-                    collision = factory.deserialize_collision(collision_data)
+                    collision = self.factory.deserialize_collision(collision_data)
                 else:
-                    collision = factory.create_collision(collision_key.type, collision_key.hash)
+                    collision = self.factory.create_collision(collision_key.type, collision_key.hash)
 
                 bounding_box = self.get_world_bounding_box(bl_obj)
                 result[collision] = bounding_box
@@ -110,7 +109,11 @@ class ClothExporter:
 
         definition_builder = ResourceBuilder(ResourceKey(ResourceType.DTP, cloth_id_set.definition_id), self.game)
         tune_builder = ResourceBuilder(ResourceKey(ResourceType.DTP, cloth_id_set.tune_id), self.game)
-        tr_cloth.write(definition_builder, tune_builder)
+        global_bone_ids = Enumerable(cast(bpy.types.Armature, bl_armature_obj.data).bones).select(lambda b: BlenderNaming.parse_bone_name(b.name)) \
+                                                                                          .order_by(lambda ids: ids.local_id) \
+                                                                                          .select(lambda ids: ids.global_id) \
+                                                                                          .to_list()
+        tr_cloth.write(definition_builder, tune_builder, global_bone_ids)
 
         self.write_cloth_definition_file(folder_path, bl_armature_obj, definition_builder)
         self.write_cloth_tune_file(folder_path, bl_armature_obj, tune_builder)
@@ -169,6 +172,7 @@ class ClothExporter:
         tr_cloth_strip.wind_factor = cloth_strip_properties.wind_factor
         tr_cloth_strip.pose_follow_factor = cloth_strip_properties.stiffness
         tr_cloth_strip.rigidity = cloth_strip_properties.rigidity
+        tr_cloth_strip.mass_bounceback_factor = cloth_strip_properties.bounceback_factor
         tr_cloth_strip.drag = cloth_strip_properties.dampening
 
     def add_cloth_strip_masses(
@@ -199,12 +203,11 @@ class ClothExporter:
             tr_cloth_mass = ClothMass(bone_id_set.local_id, bone_infos_by_local_id[bone_id_set.local_id].position)
             tr_cloth_mass.bounceback_factor = bone_cloth_properties.bounceback_factor
             if BlenderHelper.is_bone_in_group(bl_armature_obj, bl_bone, BlenderNaming.pinned_cloth_bone_group_name):
+                anchor_offset = bone_infos_by_local_id[tr_cloth_strip.parent_bone_local_id].position - bone_infos_by_local_id[bone_id_set.local_id].position
+                tr_cloth_mass.anchor_local_bones = [ClothMassAnchorBone(tr_cloth_strip.parent_bone_local_id, anchor_offset)]
                 tr_cloth_mass.mass = 0.0
             else:
                 tr_cloth_mass.mass = 1.0
-
-            anchor_offset = bone_infos_by_local_id[tr_cloth_strip.parent_bone_local_id].position - bone_infos_by_local_id[bone_id_set.local_id].position
-            tr_cloth_mass.anchor_local_bones = [ClothMassAnchorBone(tr_cloth_strip.parent_bone_local_id, anchor_offset)]
 
             tr_cloth_strip.masses.append(tr_cloth_mass)
 
@@ -213,16 +216,29 @@ class ClothExporter:
 
         for bl_edge in bl_cloth_strip_mesh.edges:
             tr_cloth_spring = ClothSpring(bl_edge.vertices[0], bl_edge.vertices[1], BlenderHelper.get_edge_bevel_weight(bl_cloth_strip_mesh, bl_edge.index))
+            spring_idx = len(tr_cloth_strip.springs)
             tr_cloth_strip.springs.append(tr_cloth_spring)
 
-        if len(tr_cloth_strip.springs) > 256:
-            raise Exception(f"Too many springs in cloth strip {tr_cloth_strip.id}: has {len(tr_cloth_strip.springs)}, can be at most 256")
+            spring_vector = bl_cloth_strip_mesh.vertices[tr_cloth_spring.mass_2_idx].co - bl_cloth_strip_mesh.vertices[tr_cloth_spring.mass_1_idx].co
+            tr_cloth_mass1 = tr_cloth_strip.masses[tr_cloth_spring.mass_1_idx]
+            if len(tr_cloth_mass1.spring_vectors) < 4:
+                tr_cloth_mass1.spring_vectors.append(ClothMassSpringVector(spring_idx, spring_vector))
+
+            tr_cloth_mass2 = tr_cloth_strip.masses[tr_cloth_spring.mass_2_idx]
+            if len(tr_cloth_mass2.spring_vectors) < 4:
+                tr_cloth_mass2.spring_vectors.append(ClothMassSpringVector(spring_idx, -spring_vector))
+
+        for tr_cloth_mass in tr_cloth_strip.masses:
+            num_springs = len(tr_cloth_mass.spring_vectors)
+            for i in range(num_springs):
+                cross_vector = tr_cloth_mass.spring_vectors[i].vector.cross(tr_cloth_mass.spring_vectors[(i + 1) % num_springs].vector)
+                tr_cloth_mass.spring_vectors.append(ClothMassSpringVector(-1, cast(Vector, cross_vector)))
 
     def add_cloth_strip_collisions(self, tr_cloth_strip: ClothStrip, bl_cloth_strip_obj: bpy.types.Object, collision_bounding_boxes: dict[Collision, _BoundingBox]) -> None:
         cloth_strip_bounding_box = self.get_world_bounding_box(bl_cloth_strip_obj)
         cloth_strip_bounding_box = _BoundingBox(
-            cloth_strip_bounding_box.min - Vector((0.2, 0.2, 0.2)),
-            cloth_strip_bounding_box.max + Vector((0.2, 0.2, 0.2))
+            cloth_strip_bounding_box.min - Vector((0.5, 0.5, 0.5)),
+            cloth_strip_bounding_box.max + Vector((0.5, 0.5, 0.5))
         )
         for collision_key, collision_bounding_box in collision_bounding_boxes.items():
             if cloth_strip_bounding_box.intersects(collision_bounding_box):

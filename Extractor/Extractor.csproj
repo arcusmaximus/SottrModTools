@@ -106,7 +106,6 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <None Include="Resources\SelectGame.png" />
     <Content Include="SOTR_PC_Release.list">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

@@ -121,7 +121,6 @@
     <Content Include="Resources\AddZip.png" />
     <Content Include="Resources\Reinstall.png" />
     <Content Include="Resources\Remove.png" />
-    <None Include="Resources\SelectGame.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj">

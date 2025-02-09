@@ -18,6 +18,7 @@ from io_scene_tr_reboot.tr.rise.RiseMaterial import RiseMaterial
 from io_scene_tr_reboot.tr.rise.RiseModel import RiseModel
 from io_scene_tr_reboot.tr.rise.RiseSkeleton import RiseSkeleton
 from io_scene_tr_reboot.util.CStruct import CInt, CLong, CStruct64, CUInt, CULong
+from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 class _ObjectHeader(CStruct64):
     zone_id: CInt
@@ -181,6 +182,8 @@ class RiseCollection(Collection):
         if skeleton is None:
             return []
 
+        global_bone_ids = Enumerable(skeleton.bones).select(lambda b: b.global_id).to_list()
+
         type_hashes: dict[CollisionType, int] = {
             CollisionType.BOX:                 Hashes.genericboxshapelist,
             CollisionType.CAPSULE:             Hashes.genericcapsuleshapelist,
@@ -198,13 +201,13 @@ class RiseCollection(Collection):
                 if reader is None:
                     continue
 
-                collision = self._read_collision(type, component.hash, reader, component.transform, skeleton)
+                collision = self._read_collision(type, component.hash, reader, component.transform, global_bone_ids)
                 self._collisions.append(collision)
 
         return self._collisions
 
-    def _read_collision(self, type: CollisionType, hash: int, reader: ResourceReader, transform: Matrix, skeleton: ISkeleton):
-        return RiseCollision.read(type, hash, reader, transform, skeleton)
+    def _read_collision(self, type: CollisionType, hash: int, reader: ResourceReader, transform: Matrix, global_bone_ids: list[int | None]):
+        return RiseCollision.read(type, hash, reader, transform, global_bone_ids)
 
     @property
     def cloth_definition_ref(self) -> ResourceReference | None:
@@ -217,7 +220,8 @@ class RiseCollection(Collection):
     def get_cloth(self) -> Cloth | None:
         cloth_definition_ref = self.cloth_definition_ref
         cloth_component_ref  = self.cloth_tune_ref
-        if cloth_definition_ref is None or cloth_component_ref is None:
+        skeleton = self.get_skeleton()
+        if cloth_definition_ref is None or cloth_component_ref is None or skeleton is None:
             return None
 
         cloth_definition_reader = self.get_resource_reader(cloth_definition_ref, True)
@@ -225,10 +229,11 @@ class RiseCollection(Collection):
         if cloth_definition_reader is None or cloth_component_reader is None:
             return None
 
+        global_bone_ids = Enumerable(skeleton.bones).select(lambda b: b.global_id).to_list()
         collisions = self.get_collisions()
 
         cloth = self._create_cloth(cloth_definition_ref.id, cloth_component_ref.id)
-        cloth.read(cloth_definition_reader, cloth_component_reader, collisions)
+        cloth.read(cloth_definition_reader, cloth_component_reader, global_bone_ids, collisions)
         return cloth
 
     def _create_cloth(self, definition_id: int, component_id: int) -> Cloth:

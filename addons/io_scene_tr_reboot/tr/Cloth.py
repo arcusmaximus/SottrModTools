@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import NamedTuple, Protocol
+from typing import ClassVar, NamedTuple, Protocol
 from mathutils import Vector
 from io_scene_tr_reboot.tr.Collision import Collision
 from io_scene_tr_reboot.tr.ResourceBuilder import ResourceBuilder
@@ -11,11 +11,16 @@ class ClothMassAnchorBone(NamedTuple):
     local_bone_id: int
     offset: Vector
 
+class ClothMassSpringVector(NamedTuple):
+    spring_idx: int
+    vector: Vector
+
 class ClothMass(SlotsBase):
     local_bone_id: int
     position: Vector
     mass: float
     anchor_local_bones: list[ClothMassAnchorBone]
+    spring_vectors: list[ClothMassSpringVector]
     bounceback_factor: float
 
     def __init__(self, local_bone_id: int, position: Vector) -> None:
@@ -23,6 +28,7 @@ class ClothMass(SlotsBase):
         self.position = position
         self.mass = 1.0
         self.anchor_local_bones = []
+        self.spring_vectors = []
         self.bounceback_factor = 0
 
 class ClothSpring(SlotsBase):
@@ -46,6 +52,7 @@ class ClothStrip(SlotsBase):
     wind_factor: float
     pose_follow_factor: float
     rigidity: float
+    mass_bounceback_factor: float
     drag: float
 
     def __init__(self, id: int, parent_bone_local_id: int) -> None:
@@ -59,9 +66,17 @@ class ClothStrip(SlotsBase):
         self.wind_factor = 1
         self.pose_follow_factor = 0
         self.rigidity = 0
+        self.mass_bounceback_factor = 0
         self.drag = 0
 
+class ClothFeatureSupport(NamedTuple):
+    strip_pose_follow_factor: bool
+    mass_specific_bounceback_factor: bool
+    spring_specific_stretchiness: bool
+
 class Cloth(SlotsBase):
+    supports: ClassVar[ClothFeatureSupport]
+
     definition_id: int
     tune_id: int
     strips: list[ClothStrip]
@@ -72,10 +87,10 @@ class Cloth(SlotsBase):
         self.strips = []
 
     @abstractmethod
-    def read(self, definition_reader: ResourceReader, tune_reader: ResourceReader, external_collisions: list[Collision]) -> None: ...
+    def read(self, definition_reader: ResourceReader, tune_reader: ResourceReader, global_bone_ids: list[int | None], external_collisions: list[Collision]) -> None: ...
 
     @abstractmethod
-    def write(self, definition_writer: ResourceBuilder, tune_writer: ResourceBuilder) -> None: ...
+    def write(self, definition_writer: ResourceBuilder, tune_writer: ResourceBuilder, global_bone_ids: list[int | None]) -> None: ...
 
 
 
@@ -98,7 +113,7 @@ class IClothDefMass(Protocol):
     position: Vector
     anchor_bones_ref: ResourceReference | None
     num_anchor_bones: int
-    vector_array_ref: ResourceReference | None
+    spring_vector_array_ref: ResourceReference | None
     local_bone_id: int
     mass: int
     bounce_back_factor: int
@@ -143,7 +158,7 @@ class IClothTuneStripGroup(Protocol):
     sub_step_count: int
     wind_factor: float
     wind_on_constraints: int
-    max_mass_bounce_back_strength: float
+    max_mass_bounceback_factor: float
     pose_follow_factor: float
     transform_type: int
     spring_stretchiness_default_percentage: int
@@ -162,7 +177,7 @@ class IClothTuneCollisionGroup(Protocol):
     count: int
     items_ref: ResourceReference | None
 
-class IClothTuneCollisionHash(Protocol):
+class IClothTuneCollisionKey(Protocol):
     type: int
     hash_data_1: int
     hash_data_2: int

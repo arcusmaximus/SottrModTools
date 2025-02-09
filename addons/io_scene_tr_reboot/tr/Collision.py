@@ -3,6 +3,7 @@ from enum import IntEnum
 from typing import ClassVar, NamedTuple, cast
 from mathutils import Matrix
 from io_scene_tr_reboot.tr.ResourceReader import ResourceReader
+from io_scene_tr_reboot.util.Conditional import coalesce
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 from io_scene_tr_reboot.util.Serializer import Serializer
 
@@ -57,6 +58,14 @@ class Collision:
             return cls.create(type, hash)
 
         return cast(Collision, Serializer.deserialize_object(data, create_collision))
+
+    @staticmethod
+    def _convert_dtp_bone_id_to_global(dtp_bone_id: int, global_bone_ids: list[int | None]) -> int:
+        return coalesce(global_bone_ids[dtp_bone_id], -1)
+
+    @staticmethod
+    def _convert_global_bone_id_to_dtp(global_bone_id: int, global_bone_ids: list[int | None]) -> int:
+        return Enumerable(global_bone_ids).index_of(global_bone_id)
 
 class CollisionSphere(Collision):
     radius: float
