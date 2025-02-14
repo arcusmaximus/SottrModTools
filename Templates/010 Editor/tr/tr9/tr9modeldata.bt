@@ -287,16 +287,14 @@ if (CanSeekTo(modelRefs.clothStripsArrayRef))
 {
     SeekToRef(modelRefs.clothStripsArrayRef);
     ClothStripArray clothStripArray;
-    if (clothStripArray.numStrips > 0)
-    {
-        FSeek(gResourceBodyPos + refDefinitions.internalRefs[refDefinitions.numInternalRefs - 2].refOffset - 4);
-        BoneArray boneArray;
-        
-        FSeek(gResourceBodyPos + refDefinitions.internalRefs[refDefinitions.numInternalRefs - 1].refOffset - 8);
-        BoneIdMappingArray boneIdMappingArray;
-    }
     ReturnFromRef();
 }
+
+FSeek(gResourceBodyPos + refDefinitions.internalRefs[refDefinitions.numInternalRefs - 2].refOffset - 4);
+BoneArray boneArray;
+
+FSeek(gResourceBodyPos + refDefinitions.internalRefs[refDefinitions.numInternalRefs - 1].refOffset - 8);
+BoneIdMappingArray boneIdMappingArray;
 
 if (CanSeekTo(modelRefs.modelDataRef))
 {
@@ -304,4 +302,3 @@ if (CanSeekTo(modelRefs.modelDataRef))
     ModelData modelData;
     ReturnFromRef();
 }
-

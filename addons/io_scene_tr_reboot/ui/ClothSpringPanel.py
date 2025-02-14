@@ -2,7 +2,7 @@ import bpy
 from io_scene_tr_reboot.BlenderNaming import BlenderNaming
 from io_scene_tr_reboot.properties.SceneProperties import SceneProperties
 from io_scene_tr_reboot.properties.ToolSettingProperties import ToolSettingProperties
-from io_scene_tr_reboot.tr.FactoryFactory import Factories
+from io_scene_tr_reboot.tr.Factories import Factories
 
 class ClothSpringPanel(bpy.types.Panel):
     bl_idname = "TR_PT_ClothSpringPanel"

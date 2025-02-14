@@ -19,7 +19,7 @@ from io_scene_tr_reboot.operator.OperatorContext import OperatorContext
 from io_scene_tr_reboot.properties.BlenderPropertyGroup import Prop
 from io_scene_tr_reboot.properties.SceneProperties import SceneProperties
 from io_scene_tr_reboot.tr.Enumerations import CdcGame
-from io_scene_tr_reboot.tr.FactoryFactory import Factories
+from io_scene_tr_reboot.tr.Factories import Factories
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 if TYPE_CHECKING:

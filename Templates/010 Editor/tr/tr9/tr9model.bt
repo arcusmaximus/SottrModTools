@@ -279,10 +279,20 @@ typedef struct
 
 typedef struct
 {
-    ubyte bone1;
-    ubyte bone2;
+    ubyte localIdRange1Start;
+    ubyte localIdRange2Start;
     ubyte count;
-} BoneMirrorData <optimize=false>;
+} BoneMirrorData <read=Str("range 1 start = %u, range 2 start = %u, count = %u", localIdRange1Start, localIdRange2Start, count)>;
+
+typedef struct
+{
+    while (true)
+    {
+        BoneMirrorData range;
+        if (range.count == 0)
+            break;
+    }
+} BoneMirrorDatas;
 
 typedef struct
 {
@@ -481,7 +491,7 @@ typedef struct
     if (CanSeekTo(boneMirrorDataRef))
     {
         SeekToRef(boneMirrorDataRef);
-        BoneMirrorData boneMirrorData;
+        BoneMirrorDatas boneMirrorDatas;
         ReturnFromRef();
     }
     Ref boneIgnoreMirrorDataRef;

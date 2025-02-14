@@ -11,7 +11,7 @@ from io_scene_tr_reboot.operator.OperatorContext import OperatorContext
 from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties, ObjectSkeletonProperties
 from io_scene_tr_reboot.tr.BlendShape import BlendShape
 from io_scene_tr_reboot.tr.Enumerations import CdcGame, ResourceType
-from io_scene_tr_reboot.tr.FactoryFactory import Factories
+from io_scene_tr_reboot.tr.Factories import Factories
 from io_scene_tr_reboot.tr.Hashes import Hashes
 from io_scene_tr_reboot.tr.IFactory import IFactory
 from io_scene_tr_reboot.tr.Mesh import IMesh

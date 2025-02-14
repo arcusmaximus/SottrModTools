@@ -1,0 +1,672 @@
+local uint SectionDataSize;
+
+enum ResourceType
+{
+    RESOURCETYPE_NONE             = 0,
+    RESOURCETYPE_ANIMATION        = 2,
+    RESOURCETYPE_PSDRES           = 4,
+    RESOURCETYPE_TEXTURE          = 5,
+    RESOURCETYPE_SOUND            = 6,
+    RESOURCETYPE_DTP              = 7,
+    RESOURCETYPE_SCRIPT           = 8,
+    RESOURCETYPE_SHADERLIB        = 9,
+    RESOURCETYPE_MATERIAL         = 10,
+    RESOURCETYPE_GLOBALCONTENTREF = 11,
+    RESOURCETYPE_MODEL            = 12,
+    RESOURCETYPE_COLLISIONMESH    = 13,
+    RESOURCETYPE_OBJECTREF        = 14,
+    RESOURCETYPE_TRIGGER          = 15
+};
+
+struct{
+	int32 numRelocations1;
+    FSeek(8);
+    int32 numRelocations3;
+	FSeek(16);
+	int32 numRelocations4;
+	FSeek(((numRelocations1 * 8) + 4));
+	FSeek(((20 + numRelocations1 * 8) + numRelocations4 * 4) + numRelocations3 * 4);
+	local int32 offsetStart = FTell();
+	FSeek(20);
+	struct{
+		uint32 offset;
+		uint32 referencedOffset;
+	}Relocations[numRelocations1]<read=Str("%u, %u", offset, referencedOffset)>;
+    struct {
+        int refOffset : 25;
+        ResourceType resourceType : 7;
+    } PackedExternalRefDefinition[numRelocations4];
+	uint Relocations3[numRelocations3];
+    struct {
+        int refOffset : 25;
+        ResourceType resourceType : 7;
+    } PackedExternalRefDefinition[numRelocations3];
+		
+	SectionDataSize = (((20 + numRelocations1 * 8) + numRelocations4 * 4) + numRelocations3 * 4);
+}SectionData <fgcolor=cGreen>;
+
+FSeek(SectionDataSize);
+
+struct{
+	struct{		
+		uint32 dynamic : 1;
+		uint32 cld_camera : 1;
+		uint32 cld_camera_boom : 1;
+		uint32 cldgex : 1;
+		uint32 cldenemy : 1;
+		uint32 cldstat : 1;
+		uint32 clddyna : 1;
+		uint32 cldterr : 1;
+		uint32 cld_triggers : 1;
+		uint32 platform : 1;
+		uint32 dont_deactivate : 1;
+		uint32 dont_pause_in_pause : 1;
+		uint32 wait_for_command : 1;
+		uint32 no_dump : 1;
+		uint32 animated_mini_instance : 1;
+		uint32 has_lod : 1;
+		uint32 no_draw : 1;
+		uint32 dont_start_fx : 1;
+		uint32 fx_use_object : 1;
+		uint32 no_mesh : 1;
+		uint32 physical_object : 1;
+		uint32 used_in_game_for_has_moving_markers : 1;
+		uint32 no_save : 1;
+		uint32 lookatme : 1;
+		uint32 stay_in_player_unit : 1;
+		uint32 does_not_move_to_new_units : 1;
+		uint32 incremental_remove : 1;
+		uint32 moved_from_birth_unit : 1;
+		uint32 not_animated : 1;
+		uint32 use_miniInstance : 1;
+		uint32 boundsphere_on_t_node : 1;
+		uint32 always_use_bounding_sphere : 1;
+		uint32 use_animated_bounding_box : 1;
+		uint32 close_camera_fadeable : 1;
+		uint32 debris : 1;
+		uint32 player_object : 1;
+		uint32 enemy_object : 1;
+		uint32 vehicle_object : 1;
+		uint32 rigidbody : 1;
+		uint32 flammable : 1;
+		uint32 timelineonly_animation : 1;
+		uint32 aim_transparent : 1;
+		uint32 two_animprocessors : 1;
+		uint32 three_animprocessors : 1;
+		uint32 five_animprocessors : 1;
+		uint32 disabled_at_runtime : 1;
+		uint32 skydome : 1;
+		uint32 modelview_only : 1;
+		uint32 localMotionBlur : 1;
+		uint32 applyWetLight : 1;
+		uint32 draw_in_SH_captures : 1;
+		uint32 can_draw_in_reflections : 1;
+		uint32 no_save_unless_moved : 1;
+		uint32 purgeable_save : 1;
+		uint32 npc_object : 1;
+		uint32 gamerules_object : 1;
+		uint32 use_bone_usage_map : 1;
+		uint32 activate_reticle : 1;
+		uint32 duplicated : 1;
+		uint32 disallow_aim_transparent_for_players : 1;
+		uint32 interactive_target : 1;
+		uint32 no_edge_grab : 1;
+		uint32 pushpull_disable_auto_detach : 1;
+		uint32 lara_can_hurdle : 1;
+		uint32 lara_updates_jump_vel_when_jumping_from : 1;
+		uint32 lara_can_trapeze : 1;
+		uint32 localFeedbackEffect : 1;
+		int32 __bitfieldpadding64 : 29;
+	}ObjectFlags;
+
+	struct{			
+		int vvRemoveDist;
+		int removeDist;
+		float lod1Dist;
+		float lod2Dist;
+		ubyte lod1Model;
+		ubyte lod2Model;
+		FSkip(2);
+		float skinThickness;
+		float motionBlurStrength;
+		ushort m_shSampleMarker;
+		char m_sampleSHOnce;
+		FSkip(1);
+		float m_triggerVolumeOffset;
+		char m_bUseOutfitManager;
+		FSkip(3);
+		float maxRad;
+	}ObjectHeader;
+
+	uint m_numAnimPatterns;
+	uint m_pAnimPatterns;
+	uint m_numAnimations;
+	uint m_pAnimations;
+	if (m_numAnimations > 0) {
+		FSeek(SectionData.Relocations[0].referencedOffset + SectionDataSize);
+		struct{
+			short Name_animID;
+			short Name_animNum;
+			uint Name_animFx;
+			uint DebugName;
+		}AnimEntry[m_numAnimations];
+	}
+	FSeek(72 + SectionDataSize);
+	uint m_numAnimBlends;
+	uint m_pAnimBlends;
+	if (m_numAnimBlends > 0) {
+		FSeek(SectionData.Relocations[1].referencedOffset + SectionDataSize);
+		struct{
+			uint DebugName;
+			ushort AnimFragments;
+			FSkip(2);
+			uint AnimFragmentCount;
+			byte AnimFragmentsNew;
+			FSkip(3);
+			int AnimFragmentNewCount;
+			short PlaySpeed;
+			char PlayMode;
+			char BlendType;
+			char RootInterpMode;
+			char InterpFrames;
+			char StartFrame;
+			char InterpFramesOverride;
+			char AlphaTable;
+			char AlphaTableOut;
+			char RagdollSection;
+			ubyte BoneSet;
+			byte unusedFlags : 6;
+			byte AsymmetricFromRun : 1;
+			byte Mirror : 1;
+			FSkip(3);
+		}AnimBlend[m_numAnimBlends];
+	}
+	FSeek(80 + SectionDataSize);
+	uint m_hasAnimGraph;
+	uint m_pAnimGraph;
+	if (m_hasAnimGraph > 0) {
+		FSeek(SectionData.Relocations[2].referencedOffset + SectionDataSize);
+		struct {
+			uint m_animGraphDataRef;
+			uint m_animGraphDataRef;
+			uint m_animGraphDataRef;
+		}AnimGraphRootRef[m_numAnimations];
+	}
+	FSeek(88 + SectionDataSize);
+	uint m_numHostedAnimGraphs;
+	uint m_pHostedAnimGraphs;
+	char m_enableAnimComponentV2ForModelView;
+	FSkip(3);
+	uint m_numRagdolls;
+	uint m_pRagdolls;
+	if (m_numRagdolls > 0) {
+		FSeek(SectionData.Relocations[4].referencedOffset + SectionDataSize);	
+		struct{
+			uint m_name;
+			float m_totalMass;
+			int m_contactRank;
+			float m_radiusScale;
+			char m_autoSleep;
+			FSkip(3);
+			float m_angularThreshold;
+			float m_linearThreshold;
+			float m_restitution;
+			float m_angularDamping;
+			float m_linearDamping;
+			float m_linearSoftness;
+			float m_angularSoftness;
+			float m_relaxation;
+			float m_globalJointFrictionMultiplier;
+			float m_globalMuMutiplier;
+			int m_iterations;
+			float m_inertiaScale;
+			float m_windScale;
+			float m_explosionFactor;
+			uint m_surfaceMaterialID;
+			char m_useBonePositions;
+			char m_resetPhysicalComponent;
+			FSkip(2);
+			uint m_ragdollBones;
+			uint m_numRagdollBones;
+	        if (m_numRagdollBones > 0) {
+		        FSeek(SectionData.Relocations[24852].referencedOffset + SectionDataSize);	
+                struct {
+                    uint DebugName;
+                    short m_modelBoneIndex;
+                    short m_startBoneIdx;
+                    float m_startOffset[3];
+                    short m_endBoneIdx;
+                    FSkip(2);
+                    float m_endOffset[3];
+                    uint m_parentRDBoneIdx;
+                    float m_mass;
+                    float m_radius;
+                    float m_buoyancy;
+                    float m_mu;
+                    int m_jointType;
+                    float m_jointOffset[3];
+                    float m_axis1[3];
+                    float m_axis2[3];
+                    float m_axis1LimitMin;
+                    float m_axis1LimitMax;
+                    float m_axis2LimitMin;
+                    float m_axis2LimitMax;
+                    float m_coneAngle;
+                    float m_jointFriction;
+                    float m_animMotorMaxForceScale;
+                    float m_animMotorVelScale;
+                    char m_followAnim;
+                    FSkip(3);
+                    uint sound;
+                    uint m_surfaceMaterialOverrideID;
+                    char m_overrideSoftness;
+                    FSkip(3);
+                    struct {
+                        uint sound;
+                        int softnessType;
+                        struct {
+                            struct {
+                                float linearSoftness;
+                                float angularSoftness;
+                            } SimpleSoftness;
+                            struct {
+                              float linearSoftness[3];
+                              float angularSoftness[3];
+                            } AdvancedSoftness;
+                            struct{
+                                float linearDamping;
+                                float linearFrequency;
+                                float angularDamping;
+                                float angularFrequency;
+                            } SimpleSpringSoftness;
+
+                        } SoftnessUnion;
+
+                        float relaxation;
+                        char numIterations;
+                        FSkip(3);
+                        int soundSource;
+                        ubyte collideConnectedBodies : 1;
+                        ubyte smoothLimits : 1;
+                        ubyte __bitfieldpadding6 : 6;
+                        FSkip(3);
+                    } CommonJointProp;
+
+                } RagdollBoneTune;
+            }
+		}RagdollTune[m_numRagdolls];
+	}
+	FSeek(108 + SectionDataSize);
+	uint m_numIKControllers;
+	uint m_pIKControllers;
+	if (m_numIKControllers > 0) {
+		FSeek (SectionData.Relocations[5].referencedOffset + SectionDataSize);
+		struct {
+			int m_maxIterations;
+			float m_tolerance;
+			uint m_defaultSpeedLimit;
+			uint m_IKChainList;
+			uint m_numIKChains;
+			uint m_IKLimitGroups;
+			uint m_numIKLimitGroups;
+			uint m_IKSharedJoints;
+			uint m_numSharedJoints;
+			uint m_IKExclusiveGroups;
+			uint m_numExclusiveGroups;
+			uint m_IKSpeedLimits;
+			uint m_numSpeedLimits;
+		} IKSystemTune[m_numIKControllers];
+	}
+	FSeek(116 + SectionDataSize);
+	uint m_numIKBlends;
+	uint m_pIKBlends;
+	if (m_numIKBlends > 0) {
+		FSeek (SectionData.Relocations[6].referencedOffset + SectionDataSize);
+		struct {
+			ubyte id;
+			ubyte animBlendType;
+			FSkip(2);
+			uint blendID;
+			ubyte targetDegree;
+			FSkip(3);
+			uint numTargets;
+			uint targetList;
+			int switchBlendPicker;
+		struct {
+			char Yes;
+		} switchBlend;
+			FSkip(3);
+		struct {
+			int blendRange;
+			ubyte blendDivs;
+			FSkip(3);
+		} blendValue1;
+		struct {
+			int blendRange;
+			ubyte blendDivs;
+			FSkip(3);
+		} blendValue2;
+			ubyte numZDivs;
+			float depthDiv;
+			float clampDist;
+			char zeroMatrix;
+			ubyte sampleMethodType;
+			uint targetModel;
+			uint sampleMethod;
+			char usecMatrix;
+			uint numcVectors;
+			uint cVectorList;
+		} IKBlend;
+	}
+	FSeek(124 + SectionDataSize);
+	uint m_numCloth;
+	uint m_pCloth;
+	if (m_numCloth > 0) {
+		FSeek (SectionData.Relocations[6].referencedOffset + SectionDataSize);
+		struct{
+			uint m_defaultClothConfig;
+			uint m_wetClothConfig;
+			uint m_lowCoverClothConfig;
+			uint m_defaultFlammableConfig;
+			float m_innerDistance;
+			float m_outerDistance;
+			uint m_clothConfigs;
+			uint m_numClothConfigs;
+	        if (m_numClothConfigs > 0) {
+		        FSeek (SectionData.Relocations[25428].referencedOffset + SectionDataSize);
+		        struct {
+                    uint m_numClothConfigGroups;
+                    uint m_clothConfigGroups;
+	                if (m_numClothConfigGroups > 0) {
+		                FSeek (SectionData.Relocations[25429].referencedOffset + SectionDataSize);
+		                struct {
+                            float m_gravity;
+                            float m_drag;
+                            int m_maxVelIterations;
+                            int m_maxPosIterations;
+                            int m_relaxationIterations;
+                            int m_subStepCount;
+                            float m_windResponse;
+                            char m_windOnConstraints;
+                            FSkip(3);
+                            float m_poseStr;
+                            int m_matrixType;
+                            int m_fixedToFreeSlop;
+                            int m_freeToFreeSlop;
+                            int m_rigidity;
+                            float m_massScale;
+                            float m_dtScale;
+                            uint m_numClothPieces;
+                            ubyte m_clothPieces;
+                            FSkip(3);
+                            uint m_numCollisionGroups;
+                            uint m_collisionGroups;
+                            char m_collidesExternal;
+                            FSkip(3);
+		                } ClothConfigGroup;
+                    }
+		        } ClothConfig;
+            }
+            FSeek(88896 + SectionDataSize);
+			uint m_clothGroups;
+			uint m_numClothGroups;
+	        if (m_numClothConfigs > 0) {
+		        FSeek (SectionData.Relocations[25432].referencedOffset + SectionDataSize);
+		            struct {
+                        float m_gravity;
+                        float m_drag;
+                        int m_maxVelIterations;
+                        int m_maxPosIterations;
+                        int m_relaxationIterations;
+                        int m_subStepCount;
+                        float m_windResponse;
+                        char m_windOnConstraints;
+                        FSkip(3);
+                        float m_poseStr;
+                        int m_matrixType;
+                        int m_fixedToFreeSlop;
+                        int m_freeToFreeSlop;
+                        int m_rigidity;
+                        float m_massScale;
+                        float m_dtScale;
+                        uint m_numClothPieces;
+                        ubyte m_clothPieces;
+                        FSkip(3);
+                        uint m_numCollisionGroups;
+                        uint m_collisionGroups;
+                        char m_collidesExternal;
+                        FSkip(3);
+                        struct {
+                            struct {
+                                byte terrain : 1;
+                                byte player : 1;
+                                byte npc : 1;
+                                byte enemy : 1;
+                                byte object : 1;
+                                byte shard : 1;
+                                byte camera : 1;
+                                byte cloth : 1;
+                                byte incidental : 1;
+                                byte gear : 1;
+                                byte thrownProjectile : 1;
+                                byte arrow : 1;
+                                byte clutter : 1;
+                                byte cameraLineOfSight : 1;
+                                byte __bitfieldpadding8 : 2;
+                            } collideWith;
+                            struct {
+                                byte terrain : 1;
+                                byte player : 1;
+                                byte npc : 1;
+                                byte enemy : 1;
+                                byte object : 1;
+                                byte shard : 1;
+                                byte camera : 1;
+                                byte cloth : 1;
+                                byte incidental : 1;
+                                byte gear : 1;
+                                byte thrownProjectile : 1;
+                                byte arrow : 1;
+                                byte clutter : 1;
+                                byte cameraLineOfSight : 1;
+                                byte __bitfieldpadding8 : 2;
+                            } collideNotWith;
+                            struct {
+                                byte terrain : 1;
+                                byte player : 1;
+                                byte npc : 1;
+                                byte enemy : 1;
+                                byte object : 1;
+                                byte shard : 1;
+                                byte camera : 1;
+                                byte cloth : 1;
+                                byte incidental : 1;
+                                byte gear : 1;
+                                byte thrownProjectile : 1;
+                                byte arrow : 1;
+                                byte clutter : 1;
+                                byte cameraLineOfSight : 1;
+                                byte __bitfieldpadding8 : 2;
+                            } collideAs;
+                            FSkip(2);
+                            int collideGroup;
+                        } CollisionCategory;
+		            } ClothGroup[m_numClothGroups];
+                }
+            FSeek(88904 + SectionDataSize);
+			uint m_collisionGroups;
+			uint m_numCollisionGroups;
+			char m_flammable;
+			FSkip(3);
+			uint m_numFlammableConfigs;
+			uint m_flammableConfigs;
+		}ClothTune;
+	}
+	FSeek(132 + SectionDataSize);
+	uint m_numSoftBodies;
+	uint m_pSoftBody;
+	if (m_numSoftBodies > 0) {
+		FSeek (SectionData.Relocations[7].referencedOffset + SectionDataSize);
+        struct {
+            uint m_defaultSoftBodyConfig;
+            uint m_softBodyConfigs;
+            uint m_numSoftBodyConfigs;
+            uint m_softBodies;
+            uint m_numSoftBodies;
+            uint m_softBodyLinks;
+            uint m_numSoftBodyLinks;
+        } SoftBodyTune;
+    }
+	FSeek(140 + SectionDataSize);
+	uint m_numSoundHandles;
+	uint m_pSoundHandles;
+	if (m_numSoundHandles > 0) {
+		FSeek (SectionData.Relocations[8].referencedOffset + SectionDataSize);
+        struct {
+            uint m_plex;
+            short m_segment;
+            ubyte m_restart;
+            FSkip(1);
+        } SoundHandle[m_numSoundHandles];
+    }
+	FSeek(148 + SectionDataSize);
+	uint m_numSoftAccessories;
+	uint m_pSoftAccessories;
+	ushort m_startAnimation;
+	FSkip(2);
+	struct {	
+		uint m_numBoneSets;
+		uint BoneSet_list;	
+	    if (m_numBoneSets > 0) {
+		    FSeek (SectionData.Relocations[9].referencedOffset + SectionDataSize);
+            struct {
+                ushort Type;
+                FSkip(2);
+                uint num_ranges;
+                uint range_list;
+                if (m_numBoneSets > 0) {
+		            FSeek (SectionData.Relocations[10].referencedOffset + SectionDataSize);
+                    struct {
+                      float weight;
+                      short start;
+                      short end;
+                    } BoneWeightRange[num_ranges];
+                }
+            } BoneSet[m_numBoneSets];
+        }
+	} BoneSet_struct;
+	FSeek(168 + SectionDataSize);
+	uint m_faceFxData;
+	uint TuneDataPtr;
+	uint m_scriptTypeID;
+	uint m_numChildObjects;
+	ushort m_pChildObjects;
+	FSkip(2);
+	uint Anim_list;
+	uint AnimBlend_list;
+	uint AnimPattern_list;
+	uint m_ragdollList;
+	uint IKController_list;
+	uint IKBlend_list;
+	uint Cloth_list;
+	uint SoftBody_list;
+	uint SoundHandle_list;
+	uint m_numModels;
+	uint m_pModelList;
+	uint m_pSoftAccessoryList;
+	uint AnimGraph_list;
+	uint HostedAnimGraph_list;
+	uint ActiongraphData;
+	uint AltActiongraphData;
+	struct {
+		float m_lod1Dist;
+		float m_lod2Dist;
+		char m_useLODGraphs;
+		FSkip(3);
+		int m_netLODType;
+		char m_switchLODOffscreen;
+		char m_useLOD2WhenOffscreen;
+		FSkip(2);
+		uint m_lod1Graph;
+		uint m_lod2Graph;
+	} AnimGraphLODInfo;
+	struct {
+		uint miNumTunables;
+		uint mpTunableRefList;
+		uint mpTunableList;
+	} TunableData;
+    struct {
+        int m_Type;
+        ushort m_DuplicaObjectID;
+        FSkip(2);
+        struct {
+            char m_bSyncPos;
+            char m_bSyncPosX;
+            char m_bSyncPosY;
+            char m_bSyncPosZ;
+            char m_bAllowLocalPos;
+            char m_bSyncRot;
+            char m_bSyncRotX;
+            char m_bSyncRotY;
+            char m_bSyncRotZ;
+            char m_bAllowLocalRot;
+            char m_bSyncAnim;
+            FSkip(1);
+            float m_fSyncAnimTime;
+            float m_fSyncAnimCorrectionFactor;
+            char m_bSyncPlatformAttach;
+            FSkip(3);
+        } m_Sync;
+
+    } NetObjectData;
+	struct {
+		char m_thorObject;
+		FSkip(3);
+	struct {
+		ubyte m_channel0;
+		ubyte m_channel1;
+		ubyte m_channel2;
+		ubyte m_channel3;
+		char m_overlayOn;
+		FSkip(3);
+	} SkinOverlay;
+	int queryTargetMarker;
+	} GameObjectBaseData;
+		uint m_numSyncAnims;
+		uint m_pSyncAnims;
+} ObjectBaseData;
+
+FSeek (SectionData.Relocations[1].referencedOffset + SectionDataSize);
+
+struct {
+    struct {
+        uint m_ObjectMapListCount;
+        uint m_ObjectMapList;
+    } m_OutfitObjectContainer;
+    
+    struct {
+        ushort m_ParentObjectID;
+        FSkip(2);
+        uint m_ParentObjectIDName;
+        uint m_OutfitListCount;
+        uint m_OutfitList;
+    } ObjectToOutfitMap;
+    
+    struct {
+        uint m_OutfitStateListCount;
+        uint m_OutfitStateList;
+    } OutfitObjectContainer;
+    
+FSeek (SectionData.Relocations[5].referencedOffset + SectionDataSize);
+    
+struct {
+    ushort m_ObjectID;
+    FSkip(2);
+    uint m_ObjectIDName;
+    ushort m_ObjectIDcine;
+    FSkip(2);
+    uint m_ObjectIDcineName;
+} OutfitObject[OutfitObjectContainer.m_OutfitStateListCount];
+
+
+} Outfits;

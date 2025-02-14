@@ -12,79 +12,162 @@ enum <uint> VertexAttributeName
     TEXCOORD1           = 0x8317902A,
     TEXCOORD2           = 0x8E54B6F3,
     TEXCOORD3           = 0x8A95AB44,
-    TEXCOORD4           = 0x94D2FB41
+    TEXCOORD4           = 0x94D2FB41,
+    
+    INVMASS             = 0xF3D624A6,
+    GLOBAL_ROT          = 0x6005F8E6,
+    LOCAL_ROT           = 0x711B7056,
+    THICKNESS           = 0x31DB583D,
+    REF_VECS            = 0xB9344C33
 };
 
 enum <byte> VertexAttributeType
 {
-    FLOAT1 = 0,
-    FLOAT2 = 1,
-    FLOAT3 = 2,
-    FLOAT4 = 3,
-    R8G8B8A8_UNORM_0 = 4,
-    R8G8B8A8_UNORM_1 = 5,
-    R8G8B8A8_UNORM_2 = 6,
-    R8G8B8A8_UNORM_3 = 7,
-    R8G8B8A8_UNORM_4 = 13,
-    R8G8B8A8_UNORM_5 = 22,
-    R8G8B8A8_UINT_0 = 8,
-    R8G8B8A8_UINT_1 = 23,
-    R16G16_SINT = 9,
-    R16G16B16A16_SINT = 10,
-    R16G16B16A16_UINT_0 = 11,
-    R16G16B16A16_UINT_1 = 24,
-    R32G32B32A32_UINT = 12,
-    R16G16_SNORM_0 = 14,
-    R16G16_SNORM_1 = 25,
-    R16G16B16A16_SNORM_0 = 15,
-    R16G16B16A16_SNORM_1 = 26,
-    R16G16_UNORM = 16,
-    R16G16B16A16_UNORM = 17,
-    R10G10B10A2_UINT = 18,
-    R10G10B10A2_UNORM_0 = 19,
-    R10G10B10A2_UNORM_1 = 20
+    VAT_FLOAT1,
+    VAT_FLOAT2,
+    VAT_FLOAT3,
+    VAT_FLOAT4,
+    VAT_R8G8B8A8_UNORM,
+    VAT_R8G8B8A8_UINT,
+    VAT_R16G16_SINT,
+    VAT_R16G16B16A16_SINT,
+    VAT_R16G16B16A16_UINT,
+    VAT_R32G32B32A32_UINT,
+    VAT_R16G16_SNORM,
+    VAT_R16G16B16A16_SNORM,
+    VAT_R16G16_UNORM,
+    VAT_R16G16B16A16_UNORM,
+    VAT_R10G10B10A2_UINT,
+    VAT_R10G10B10A2_UNORM
 };
 
-local VertexAttributeType gTr10ToTr11VertexAttributeTypeMapping[21];
-gTr10ToTr11VertexAttributeTypeMapping[0] = FLOAT1;
-gTr10ToTr11VertexAttributeTypeMapping[1] = FLOAT2;
-gTr10ToTr11VertexAttributeTypeMapping[2] = FLOAT3;
-gTr10ToTr11VertexAttributeTypeMapping[3] = FLOAT4;
-gTr10ToTr11VertexAttributeTypeMapping[4] = R8G8B8A8_UNORM_0;
-gTr10ToTr11VertexAttributeTypeMapping[5] = R8G8B8A8_UNORM_1;
-gTr10ToTr11VertexAttributeTypeMapping[6] = R8G8B8A8_UNORM_2;
-gTr10ToTr11VertexAttributeTypeMapping[7] = R8G8B8A8_UNORM_3;
-gTr10ToTr11VertexAttributeTypeMapping[8] = R8G8B8A8_UINT_0;
-gTr10ToTr11VertexAttributeTypeMapping[9] = R16G16_SINT;
-gTr10ToTr11VertexAttributeTypeMapping[10] = R16G16B16A16_SINT;
-gTr10ToTr11VertexAttributeTypeMapping[11] = R8G8B8A8_UNORM_4;
-gTr10ToTr11VertexAttributeTypeMapping[12] = R16G16_SNORM_0;
-gTr10ToTr11VertexAttributeTypeMapping[13] = R16G16B16A16_SNORM_0;
-gTr10ToTr11VertexAttributeTypeMapping[14] = R16G16_UNORM;
-gTr10ToTr11VertexAttributeTypeMapping[15] = R16G16B16A16_UNORM;
-gTr10ToTr11VertexAttributeTypeMapping[16] = R10G10B10A2_UINT;
-gTr10ToTr11VertexAttributeTypeMapping[17] = R10G10B10A2_UNORM_0;
-gTr10ToTr11VertexAttributeTypeMapping[19] = R16G16_SNORM_1;
-gTr10ToTr11VertexAttributeTypeMapping[20] = R16G16B16A16_SNORM_1;
+enum <byte> VertexAttributeClass9
+{
+    VAC9_FLOAT1,
+    VAC9_FLOAT2,
+    VAC9_FLOAT3,
+    VAC9_FLOAT4,
+    VAC9_COLOR32,
+    VAC9_VECTORC32,
+    VAC9_WEIGHTSC32,
+    VAC9_INDICESC32,
+    VAC9_UBYTE4,
+    VAC9_SHORT2,
+    VAC9_SHORT4,
+    VAC9_UBYTE4N,
+    VAC9_SHORT2N,
+    VAC9_SHORT4N,
+    VAC9_USHORT2N,
+    VAC9_USHORT4N,
+    VAC9_UDEC3,
+    VAC9_DEC3N,
+    VAC9_WEIGHTSUB4N,
+    VAC9_TEXCOORDS2,
+    VAC9_TEXCOORDS4,
+    VAC9_DEC4N
+};
+
+local VertexAttributeType gTr9VertexAttributeClassTypes[22];
+gTr9VertexAttributeClassTypes[VAC9_FLOAT1] = VAT_FLOAT1;
+gTr9VertexAttributeClassTypes[VAC9_FLOAT2] = VAT_FLOAT2;
+gTr9VertexAttributeClassTypes[VAC9_FLOAT3] = VAT_FLOAT3;
+gTr9VertexAttributeClassTypes[VAC9_FLOAT4] = VAT_FLOAT4;
+gTr9VertexAttributeClassTypes[VAC9_COLOR32] = VAT_R8G8B8A8_UNORM;
+gTr9VertexAttributeClassTypes[VAC9_VECTORC32] = VAT_R8G8B8A8_UNORM;
+gTr9VertexAttributeClassTypes[VAC9_WEIGHTSC32] = VAT_R8G8B8A8_UINT;
+gTr9VertexAttributeClassTypes[VAC9_INDICESC32] = VAT_R8G8B8A8_UINT;
+gTr9VertexAttributeClassTypes[VAC9_UBYTE4] = VAT_R8G8B8A8_UINT;
+gTr9VertexAttributeClassTypes[VAC9_SHORT2] = VAT_R16G16_SINT;
+gTr9VertexAttributeClassTypes[VAC9_SHORT4] = VAT_R16G16B16A16_SINT;
+gTr9VertexAttributeClassTypes[VAC9_UBYTE4N] = VAT_R8G8B8A8_UNORM;
+gTr9VertexAttributeClassTypes[VAC9_SHORT2N] = VAT_R16G16_SNORM;
+gTr9VertexAttributeClassTypes[VAC9_SHORT4N] = VAT_R16G16B16A16_SNORM;
+gTr9VertexAttributeClassTypes[VAC9_USHORT2N] = VAT_R16G16_UNORM;
+gTr9VertexAttributeClassTypes[VAC9_USHORT4N] = VAT_R16G16B16A16_UNORM;
+gTr9VertexAttributeClassTypes[VAC9_UDEC3] = VAT_R10G10B10A2_UINT;
+gTr9VertexAttributeClassTypes[VAC9_DEC3N] = VAT_R10G10B10A2_UNORM;
+gTr9VertexAttributeClassTypes[VAC9_WEIGHTSUB4N] = VAT_R8G8B8A8_UNORM;
+gTr9VertexAttributeClassTypes[VAC9_TEXCOORDS2] = VAT_R16G16_SNORM;
+gTr9VertexAttributeClassTypes[VAC9_TEXCOORDS4] = VAT_R16G16B16A16_SNORM;
+
+enum <byte> VertexAttributeClass11
+{
+    VAC11_FLOAT1,
+    VAC11_FLOAT2,
+    VAC11_FLOAT3,
+    VAC11_FLOAT4,
+    VAC11_COLOR32,
+    VAC11_VECTORC32,
+    VAC11_WEIGHTSC32,
+    VAC11_INDICESC32,
+    VAC11_UBYTE4,
+    VAC11_SHORT2,
+    VAC11_SHORT4,
+    VAC11_USHORT4,
+    VAC11_UINT4,
+    VAC11_UBYTE4N,
+    VAC11_SHORT2N,
+    VAC11_SHORT4N,
+    VAC11_USHORT2N,
+    VAC11_USHORT4N,
+    VAC11_UDEC3,
+    VAC11_UDEC3N,
+    VAC11_DEC3N,
+    VAC11_DEC4N,
+    VAC11_WEIGHTSUB4N,
+    VAC11_WEIGHTSUB4,
+    VAC11_WEIGHTSUHALF4,
+    VAC11_TEXCOORDS2,
+    VAC11_TEXCOORDS4
+};
+
+local VertexAttributeType gTr11VertexAttributeClassTypes[27];
+gTr11VertexAttributeClassTypes[VAC11_FLOAT1] = VAT_FLOAT1;
+gTr11VertexAttributeClassTypes[VAC11_FLOAT2] = VAT_FLOAT2;
+gTr11VertexAttributeClassTypes[VAC11_FLOAT3] = VAT_FLOAT3;
+gTr11VertexAttributeClassTypes[VAC11_FLOAT4] = VAT_FLOAT4;
+gTr11VertexAttributeClassTypes[VAC11_COLOR32] = VAT_R8G8B8A8_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_VECTORC32] = VAT_R8G8B8A8_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_WEIGHTSC32] = VAT_R8G8B8A8_UINT;
+gTr11VertexAttributeClassTypes[VAC11_INDICESC32] = VAT_R8G8B8A8_UINT;
+gTr11VertexAttributeClassTypes[VAC11_UBYTE4] = VAT_R8G8B8A8_UINT;
+gTr11VertexAttributeClassTypes[VAC11_SHORT2] = VAT_R16G16_SINT;
+gTr11VertexAttributeClassTypes[VAC11_SHORT4] = VAT_R16G16B16A16_SINT;
+gTr11VertexAttributeClassTypes[VAC11_USHORT4] = VAT_R16G16B16A16_UINT;
+gTr11VertexAttributeClassTypes[VAC11_UINT4] = VAT_R32G32B32A32_UINT;
+gTr11VertexAttributeClassTypes[VAC11_UBYTE4N] = VAT_R8G8B8A8_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_SHORT2N] = VAT_R16G16_SNORM;
+gTr11VertexAttributeClassTypes[VAC11_SHORT4N] = VAT_R16G16B16A16_SNORM;
+gTr11VertexAttributeClassTypes[VAC11_USHORT2N] = VAT_R16G16_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_USHORT4N] = VAT_R16G16B16A16_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_UDEC3] = VAT_R10G10B10A2_UINT;
+gTr11VertexAttributeClassTypes[VAC11_UDEC3N] = VAT_R10G10B10A2_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_DEC3N] = VAT_R10G10B10A2_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_WEIGHTSUB4N] = VAT_R8G8B8A8_UNORM;
+gTr11VertexAttributeClassTypes[VAC11_WEIGHTSUB4] = VAT_R8G8B8A8_UINT;
+gTr11VertexAttributeClassTypes[VAC11_WEIGHTSUHALF4] = VAT_R16G16B16A16_UINT;
+gTr11VertexAttributeClassTypes[VAC11_TEXCOORDS2] = VAT_R16G16_SNORM;
+gTr11VertexAttributeClassTypes[VAC11_TEXCOORDS4] = VAT_R16G16B16A16_SNORM;
 
 typedef struct
 {
     VertexAttributeName name;
     short offset <format=hex>;
-    byte type;
-    byte vertexBufferIdx;
     
-    local VertexAttributeType unifiedType;
     switch (TR_VERSION)
     {
+        case 9:
         case 10:
-            unifiedType = gTr10ToTr11VertexAttributeTypeMapping[type];
+            VertexAttributeClass9 class;
+            local VertexAttributeType type = gTr9VertexAttributeClassTypes[class];
             break;
         
         case 11:
-            unifiedType = type;
+            VertexAttributeClass11 class;
+            local VertexAttributeType type = gTr11VertexAttributeClassTypes[class];
             break;
     }
+    byte vertexBufferIdx;
 } VertexFormatAttribute <read=EnumToString(name), optimize=false>;
 
 typedef struct
@@ -101,91 +184,81 @@ typedef struct (VertexAttributeName name, VertexAttributeType type)
     local VertexAttributeName name_ = name;
     switch (type)
     {
-        case FLOAT1:
+        case VAT_FLOAT1:
             float x;
             break;
         
-        case FLOAT2:
+        case VAT_FLOAT2:
             float x, y;
             break;
         
-        case FLOAT3:
+        case VAT_FLOAT3:
             float x, y, z;
             break;
         
-        case FLOAT4:
+        case VAT_FLOAT4:
             float x, y, z, w;
             break;
         
-        case R8G8B8A8_UNORM_0:
-        case R8G8B8A8_UNORM_1:
-        case R8G8B8A8_UNORM_2:
-        case R8G8B8A8_UNORM_3:
-        case R8G8B8A8_UNORM_4:
-        case R8G8B8A8_UNORM_5:
+        case VAT_R8G8B8A8_UNORM:
             ubyte x <read=(this / 255.0)>;
             ubyte y <read=(this / 255.0)>;
             ubyte z <read=(this / 255.0)>;
             ubyte w <read=(this / 255.0)>;
             break;
         
-        case R8G8B8A8_UINT_0:
-        case R8G8B8A8_UINT_1:
+        case VAT_R8G8B8A8_UINT:
             ubyte x, y, z, w;
             break;
         
-        case R16G16_SINT:
+        case VAT_R16G16_SINT:
             short x, y;
             break;
         
-        case R16G16B16A16_SINT:
+        case VAT_R16G16B16A16_SINT:
             short x, y, z, w;
             break;
         
-        case R16G16B16A16_UINT_0:
-        case R16G16B16A16_UINT_1:
+        case VAT_R16G16B16A16_UINT:
             ushort x, y, z, w;
             break;
         
-        case R32G32B32A32_UINT:
+        case VAT_R32G32B32A32_UINT:
             uint x, y, z, w;
             break;
         
-        case R16G16_SNORM_0:
-        case R16G16_SNORM_1:
+        case VAT_R16G16_SNORM:
             short x <read=(this / 32768.0)>;
             short y <read=(this / 32768.0)>;
             break;
         
-        case R16G16B16A16_SNORM_0:
-        case R16G16B16A16_SNORM_1:
+        case VAT_R16G16B16A16_SNORM:
             short x <read=(this / 32768.0)>;
             short y <read=(this / 32768.0)>;
             short z <read=(this / 32768.0)>;
             short w <read=(this / 32768.0)>;
             break;
         
-        case R16G16_UNORM:
+        case VAT_R16G16_UNORM:
             ushort x <read=(this / 65535.0)>;
             ushort y <read=(this / 65535.0)>;
             break;
         
-        case R16G16B16A16_UNORM:
+        case VAT_R16G16B16A16_UNORM:
             ushort x <read=(this / 65535.0)>;
             ushort y <read=(this / 65535.0)>;
             ushort z <read=(this / 65535.0)>;
             ushort w <read=(this / 65535.0)>;
             break;
         
-        case R10G10B10A2_UINT:
+        case VAT_R10G10B10A2_UINT:
             uint x : 10;
             uint y : 10;
             uint z : 10;
             uint w : 2;
             break;
         
-        case R10G10B10A2_UNORM_0:
-        case R10G10B10A2_UNORM_1:
+        case VAT_R10G10B10A2_UNORM:
             uint x : 10 <read=(this / 1023.0)>;
             uint y : 10 <read=(this / 1023.0)>;
             uint z : 10 <read=(this / 1023.0)>;
@@ -204,7 +277,7 @@ void MakeVertexAttributes(VertexFormat& format)
             continue;
         
         FSeek(vertexPos + format.attributes[i].offset);
-        VertexAttribute attr(format.attributes[i].name, format.attributes[i].unifiedType);
+        VertexAttribute attr(format.attributes[i].name, format.attributes[i].type);
     }
     FSeek(vertexPos + format.vertexSizes[gCurrentVertexBufferIndex]);
 }
@@ -230,7 +303,6 @@ typedef struct (float scale)
 
 typedef struct
 {
-    
     int numBlendShapes;
     int numVertexOffsets;
     int field_8;

@@ -4,7 +4,7 @@ from io_scene_tr_reboot.tr.rise.RiseFactory import RiseFactory
 from io_scene_tr_reboot.tr.shadow.ShadowFactory import ShadowFactory
 from io_scene_tr_reboot.tr.tr2013.Tr2013Factory import Tr2013Factory
 
-class FactoryFactory:
+class Factories:
     @staticmethod
     def get(game: CdcGame) -> IFactory:
         match game:

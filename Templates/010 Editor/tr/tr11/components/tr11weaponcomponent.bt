@@ -1,5 +1,5 @@
 #define TR_VERSION 11
-#include "../trcommon.bt"
+#include "../../trcommon.bt"
 
 RefDefinitions refDefinitions;
 

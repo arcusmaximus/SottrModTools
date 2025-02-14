@@ -5,7 +5,7 @@ from io_scene_tr_reboot.operator.UnpinClothBonesOperator import UnpinClothBonesO
 from io_scene_tr_reboot.operator.RegenerateClothBonesOperator import RegenerateClothBonesOperator
 from io_scene_tr_reboot.properties.SceneProperties import SceneProperties
 from io_scene_tr_reboot.properties.ToolSettingProperties import ToolSettingProperties
-from io_scene_tr_reboot.tr.FactoryFactory import Factories
+from io_scene_tr_reboot.tr.Factories import Factories
 from io_scene_tr_reboot.util.Enumerable import Enumerable
 
 class ClothBonesPanel(bpy.types.Panel):

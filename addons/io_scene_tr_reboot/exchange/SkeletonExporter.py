@@ -9,7 +9,7 @@ from io_scene_tr_reboot.properties.ObjectProperties import ObjectSkeletonPropert
 from io_scene_tr_reboot.tr.Bone import IBone
 from io_scene_tr_reboot.tr.Collection import Collection
 from io_scene_tr_reboot.tr.Enumerations import CdcGame, ResourceType
-from io_scene_tr_reboot.tr.FactoryFactory import Factories
+from io_scene_tr_reboot.tr.Factories import Factories
 from io_scene_tr_reboot.tr.IFactory import IFactory
 from io_scene_tr_reboot.tr.ResourceBuilder import ResourceBuilder
 from io_scene_tr_reboot.tr.ResourceKey import ResourceKey
