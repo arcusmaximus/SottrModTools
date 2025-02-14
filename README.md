@@ -5,7 +5,7 @@ Rise of the Romb Raider, and Shadow of the Tomb Raider.
 
 [Download from NexusMods](https://www.nexusmods.com/shadowofthetombraider/mods/185?tab=files)
 
-[Documentation](https://github.com/arcusmaximus/SottrModTools/blob/main/Documentation.md)
+[Documentation](https://github.com/arcusmaximus/TrRebootModTools/blob/main/Documentation.md)
 
 ## Mod Manager
 
