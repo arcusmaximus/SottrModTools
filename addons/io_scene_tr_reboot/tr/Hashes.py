@@ -5,7 +5,7 @@ def _Hashes__hash_simple(data: bytes) -> int:
     for byte in data:
         hash ^= (hash << 5) + (hash >> 2) + byte
         hash &= 0xFFFFFFFF
-    
+
     return hash
 
 class Hashes:
@@ -22,6 +22,12 @@ class Hashes:
     texcoord2           = Crc32.calculate(b"Texcoord2")
     texcoord3           = Crc32.calculate(b"Texcoord3")
     texcoord4           = Crc32.calculate(b"Texcoord4")
+
+    invmass             = Crc32.calculate(b"InvMass")
+    local_rot           = Crc32.calculate(b"LocalRot")
+    global_rot          = Crc32.calculate(b"GlobalRot")
+    refvecs             = Crc32.calculate(b"RefVecs")
+    thickness           = Crc32.calculate(b"Thickness")
 
     cloth                               = _Hashes__hash_simple(b"cloth")
     genericboxshapelist                 = _Hashes__hash_simple(b"genericboxshapelist")

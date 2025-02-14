@@ -38,6 +38,13 @@ class ImportObjectOperator(ImportOperatorBase[_Properties]):
     bl_menu_item_name = "Tomb Raider Reboot object (.trXobjectref)"
     filename_ext = ".tr9objectref;.tr10objectref;.tr11objectref"
 
+    def draw(self, context: Context) -> None:
+        self.layout.prop(self.properties, "import_lods")
+        self.layout.prop(self.properties, "split_into_parts")
+        self.layout.prop(self.properties, "merge_with_existing_skeletons")
+        if self.properties.merge_with_existing_skeletons:
+            self.layout.prop(self.properties, "keep_original_skeletons")
+
     def execute(self, context: Context | None) -> set[OperatorReturnItems]:
         if context is None:
             return { "CANCELLED" }

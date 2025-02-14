@@ -505,7 +505,7 @@ and bones in the outfit itself like with the other games, they need to be put in
 - Import both laracroft.drm and the outfit you want to mod into the same Blender scene.
 - Set up your custom cloth strip meshes under the laracroft skeleton and regenerate the physics bones as usual.
 - Update the outfit skeleton to match the laracroft skeleton. You can do this by deleting all the bones
-  in the outfit skeleton (make sure all the bone groups are visible first), duplicating the laracroft
+  in the outfit skeleton (make sure all the bone collections are visible first), duplicating the laracroft
   skeleton, and then joining this duplicate into the outfit skeleton: select the duplicate laracroft skeleton,
   then the outfit skeleton, and finally press Ctrl-J while the mouse hovers of the 3D Viewport.
 - Update the outfit mesh, adding vertex weights for the physics bones in the outfit skeleton.
@@ -608,7 +608,7 @@ can choose the one they like.
 
 ### Tomb Raider (2013)
 
-(Courtesy of Raq on tombraidermodding.com)
+(Courtesy of Raq on [tombraidermodding.com](https://tombraidermodding.com))
 
 | Description | .drm file |
 | ----------- | --------- |
@@ -629,111 +629,123 @@ can choose the one they like.
 
 ### Rise of the Tomb Raider
 
-| Ingame name | Name in globalcrafting.drm | .drm file prefix |
-| ----------- | -------------------------- | ---------------- |
-| Ancient Vanguard | Armor_MongolsBane | laracroft_armor_mongolsbane |
-| Apex Predator | Huntress_BloodRed | laracroft_huntress_bloodred |
-| Battle Worn | LightJacket_BattleWorn | laracroft_jacket_light_battleworn |
-| Blue Henley | Henley_Blue | laracroft_long_sleeve_blue |
-| Classic Angel Of Darkness | Classic02 | laracroft_classic02 |
-| Classic Chronicles Catsuit | Classic05 | laracroft_classic05 |
-| Classic Croft Manor | Classic04 | laracroft_classic04 |
-| Classic Tomb Raider II | Classic01 | laracroft_classic01 |
-| Classic Tomb Raider II Bomber Jacket | Classic03 | laracroft_classic03 |
-| Commando | Infiltrator_Stalker | laracroft_infiltrator_stalker |
-| Dark Tank Top | TankTop_Dark | laracroft_tanktop_aqua |
-| Desert Tank Top | TankTop_Base | laracroft |
-| Expedition Jacket | WinterJacket_Base | laracroft_snow_gear |
-| Gray Henley | Henley_Base | laracroft_long_sleeve |
-| Hope's Bastion | Armor_UnholyVanguard | laracroft_armor_vanguard |
-| Huntress | Huntress_Base | laracroft_huntress |
-| Immortal Guardian | Armor_Base | laracroft_armor |
-| Infiltrator | Infiltrator_Deceiver | laracroft_infiltrator_deceiver |
-| Leather Jacket | Hoodie_Base | laracroft_hoodie |
-| Nightshade | Huntress_TheBeast | laracroft_huntress_thebeast |
-| Pioneer | Endurance | laracroft_endurance |
-| Reimagined Antarctica Outfit | Classic06 | laracroft_classic06 |
-| Remnant Jacket | LightJacket_Base | laracroft_jacket_light |
-| Rust Henley | Henley_Rust | laracroft_long_sleeve_rust |
-| Sacra Umbra | Armor_DemonSeed | laracroft_armor_demonseed |
-| Shadow Runner | Infiltrator_Base | laracroft_infiltrator |
-| Siberian Ranger | Infiltrator_Drifter | laracroft_infiltrator_drifter |
-| Sparrowhawk | Huntress_SnowWhite | laracroft_huntress_snowwhite |
-| Spirit Weaver | SpiritWeaver_Base | laracroft_spiritweaver |
-| Ushanka Camo | ColdDarkness | laracroft_colddarkness |
-| Valiant Explorer | Pringles | laracroft_pringles |
-| Whiteout Jacket | WinterJacket_WhiteOut | laracroft_snow_gear_whiteout |
-| Wraithskin | Witch_Base | laracroft_witch |
+| Ingame name | .drm file prefix | Name in globalcrafting.drm |
+| ----------- | ---------------- | -------------------------- |
+| Ancient Vanguard | laracroft_armor_mongolsbane | Armor_MongolsBane |
+| Apex Predator | laracroft_huntress_bloodred | Huntress_BloodRed |
+| Battle Worn | laracroft_jacket_light_battleworn | LightJacket_BattleWorn |
+| Blue Henley | laracroft_long_sleeve_blue | Henley_Blue |
+| Classic Angel Of Darkness | laracroft_classic02 | Classic02 |
+| Classic Chronicles Catsuit | laracroft_classic05 | Classic05 |
+| Classic Croft Manor | laracroft_classic04 | Classic04 |
+| Classic Tomb Raider II | laracroft_classic01 | Classic01 |
+| Classic Tomb Raider II Bomber Jacket | laracroft_classic03 | Classic03 |
+| Commando | laracroft_infiltrator_stalker | Infiltrator_Stalker |
+| Dark Tank Top | laracroft_tanktop_aqua | TankTop_Dark |
+| Desert Tank Top | laracroft | TankTop_Base |
+| Expedition Jacket | laracroft_snow_gear | WinterJacket_Base |
+| Gray Henley | laracroft_long_sleeve | Henley_Base |
+| Hope's Bastion | laracroft_armor_vanguard | Armor_UnholyVanguard |
+| Huntress | laracroft_huntress | Huntress_Base |
+| Immortal Guardian | laracroft_armor | Armor_Base |
+| Infiltrator | laracroft_infiltrator_deceiver | Infiltrator_Deceiver |
+| Leather Jacket | laracroft_hoodie | Hoodie_Base |
+| Nightshade | laracroft_huntress_thebeast | Huntress_TheBeast |
+| Pioneer | laracroft_endurance | Endurance |
+| Reimagined Antarctica Outfit | laracroft_classic06 | Classic06 |
+| Remnant Jacket | laracroft_jacket_light | LightJacket_Base |
+| Rust Henley | laracroft_long_sleeve_rust | Henley_Rust |
+| Sacra Umbra | laracroft_armor_demonseed | Armor_DemonSeed |
+| Shadow Runner | laracroft_infiltrator | Infiltrator_Base |
+| Siberian Ranger | laracroft_infiltrator_drifter | Infiltrator_Drifter |
+| Sparrowhawk | laracroft_huntress_snowwhite | Huntress_SnowWhite |
+| Spirit Weaver | laracroft_spiritweaver | SpiritWeaver_Base |
+| Ushanka Camo | laracroft_colddarkness | ColdDarkness |
+| Valiant Explorer | laracroft_pringles | Pringles |
+| Whiteout Jacket | laracroft_snow_gear_whiteout | WinterJacket_WhiteOut |
+| Wraithskin | laracroft_witch | Witch_Base |
+
+The .drm files containing the outfit icons (for the outfit selection menu at campsites)
+can be found in the following folder:
+
+pcx64-w\design\image resources\scaleform\sharedtextures\basecamp\trx_basecamp\paperdolls\outfits
+
 
 ### Shadow of the Tomb Raider
 
-| Ingame name | Name in globalcollectibleinfo.drm | .drm file prefix |
-| ----------- | --------------------------------- | ---------------- |
-| Adventurer | Lara_Prologue | paperdoll_piece_tr11_lara_jungle |
-| Angel Of Darkness | Lara_Loyalty_AOD | paperdoll_piece_tr11_lara_aod |
-| Blue Henley | Lara_Loyalty_TR10_BlueHenley | paperdoll_piece_tr11_lara_tr10_blue_henley |
-| Blue Heron Tunic | Lara_Outsider | paperdoll_piece_tr11_lara_outsider |
-| Bomber Jacket | Lara_Loyalty_TR2BomberJacket | paperdoll_piece_tr11_lara_tr2_bomber |
-| Boots Of The Empress Jaguar | Stealth_01_Legs | paperdoll_piece_tr11_lara_stealth_01_legs |
-| Brocken | HighTech_01 | paperdoll_piece_tr11_lara_dlc_hightech |
-| Brocken - Shadow | DLC_Outfit_01 | paperdoll_piece_tr11_lara_dlc_hightech_alt |
-| Ch'Amaka's Greaves | Assault_03_Legs | paperdoll_piece_tr11_lara_assault_03_legs |
-| Ch'Amaka's War Vest  | Assault_03_Torso | paperdoll_piece_tr11_lara_assault_03_torso |
-| Commando | Lara_Loyalty_TR10_Commando | paperdoll_piece_tr11_lara_tr10_commando |
-| Condor Cowl Of Urqu | Stealth_02_Torso | paperdoll_piece_tr11_lara_stealth_02_torso |
-| Crimson Huntress | Lara_CrimsonHuntress | paperdoll_piece_tr11_lara_priest |
-| Croft Fitness | DLC_Outfit_13 | paperdoll_piece_tr11_lara_workout_nostraps |
-| Desert Tank | Lara_Loyalty_TR10_DesertTank | paperdoll_piece_tr11_lara_tr10_desert_tanktop |
-| Dragon Scales | Kukulkan_01 | paperdoll_piece_tr11_lara_dlc_kukulkan_alt |
-| Dragon Scales - Legend | DLC_Outfit_05 | paperdoll_piece_tr11_lara_dlc_kukulkan |
-| Eveningstar's Boots | Exploration_01_Legs | paperdoll_piece_tr11_lara_exploration_01_legs |
-| Eveningstar's Cape | Exploration_01_Torso | paperdoll_piece_tr11_lara_exploration_01_torso |
-| Explorer | Lara_Explorer | paperdoll_piece_tr11_lara_explorer |
-| Gray Henley | Lara_Loyalty_TR10_GrayHenley | paperdoll_piece_tr11_lara_tr10_gray_henley |
-| Greaves Of Six Sky | Assault_02_Legs | paperdoll_piece_tr11_lara_assault_02_legs |
-| Hide Boots Of Urqu | Stealth_02_Legs | paperdoll_piece_tr11_lara_stealth_02_legs |
-| Hunter's Array | Trinity_01 | paperdoll_piece_tr11_lara_trinity |
-| Hunter's Array - Apex | DLC_Outfit_04 | paperdoll_piece_tr11_lara_trinity_alt |
-| Infiltrator | Lara_Loyalty_TR10_Infiltrator | paperdoll_piece_tr11_lara_tr10_infiltrator |
-| Kantu's Boots | Exploration_03_Legs | paperdoll_piece_tr11_lara_exploration_03_legs |
-| Kantu's Gilded Vest | Exploration_03_Torso | paperdoll_piece_tr11_lara_exploration_03_torso |
-| Leather Jacket | Lara_Loyalty_TR10_LeatherJacket | paperdoll_piece_tr11_lara_tr10_london_jacket |
-| Manko's Boots | Stealth_03_Legs | paperdoll_piece_tr11_lara_stealth_03_legs |
-| Manko's Tunic | Stealth_03_Torso | paperdoll_piece_tr11_lara_stealth_03_torso |
-| Mantle Of Six Sky | Assault_02_Torso | paperdoll_piece_tr11_lara_assault_02_torso |
-| Midnight Sentinel | DLC_Outfit_11 | paperdoll_piece_tr11_lara_dlc_original_yaaxil |
-| Midnight Sentinel - Farseer | DLC_Outfit_07 | paperdoll_piece_tr11_lara_dlc_original_yaaxil_alt |
-| Nine Strides' Boots | Exploration_02_Legs | paperdoll_piece_tr11_lara_exploration_02_legs |
-| Nine Strides' Harness | Exploration_02_Torso | paperdoll_piece_tr11_lara_exploration_02_torso |
-| Ozcollo's Greaves | Jaguar_01_Legs | paperdoll_piece_tr11_lara_path_jaguar_legs |
-| Ozcollo's Tunic | Jaguar_01_Torso | paperdoll_piece_tr11_lara_path_jaguar_torso |
-| Quenti Palla's Greaves | Eagle_01_Legs | paperdoll_piece_tr11_lara_path_eagle_legs |
-| Quenti Palla's Mantle | Eagle_01_Torso | paperdoll_piece_tr11_lara_path_eagle_torso |
-| Remnant Jacket | Lara_Loyalty_TR10_RemnantJacket | paperdoll_piece_tr11_lara_tr10_remnant |
-| Reptile Hide | Predator_01 | paperdoll_piece_tr11_lara_dlc_predator |
-| Reptile Hide - Leviathan | DLC_Outfit_06 | paperdoll_piece_tr11_lara_dlc_predator_alt |
-| Robes Of Puka Huk | Lara_Shaman | paperdoll_piece_tr11_lara_crimson_huntress |
-| Scales Of Q | Yaaxil_01 | paperdoll_piece_tr11_lara_yaaxil |
-| Scales Of Q - Feathered Serpent | DLC_Outfit_03 | paperdoll_piece_tr11_lara_yaaxil_alt |
-| Serpent Guard | Lara_WarriorPriest | paperdoll_piece_tr11_lara_highpriest |
-| Shadow Runner | Lara_Loyalty_TR10_ShadowRunner | paperdoll_piece_tr11_lara_tr10_shadowrunner_torso |
-| Siberian Ranger | Lara_Loyalty_TR10_SiberianRanger | paperdoll_piece_tr11_lara_tr10_siberian_ranger |
-| Sinchi Chiqa Battle Dress | Rebel_01 | paperdoll_piece_tr11_lara_dlc_rebelwarrior |
-| Sinchi Chiqa Battle Dress - Honor Guard | DLC_Outfit_02 | paperdoll_piece_tr11_lara_dlc_rebelwarrior_alt |
-| Survivor | Lara_Loyalty_TR9_ShipwreckedSurvivor | paperdoll_piece_tr11_lara_tr9_yamatai |
-| Tactical Adventurer | Lara_BlueTank | paperdoll_piece_tr11_lara_tactical |
-| Tactical Adventurer (Black) | Lara_Classic | paperdoll_piece_tr11_lara_classic |
-| Tactical Adventurer Classic | DLC_Outfit_12 | paperdoll_piece_tr11_lara_tactical_alt |
-| Three Fangs' Greaves | Snake_01_Legs | paperdoll_piece_tr11_lara_path_snek_legs |
-| Three Fangs' Tunic | Snake_01_Torso | paperdoll_piece_tr11_lara_path_snek_torso |
-| Tomb Raider 2 | Lara_Loyalty_TR2 | paperdoll_piece_tr11_lara_tr2 |
-| Tunic Of The Exiled Fox | Huntress_01 | paperdoll_piece_tr11_lara_dlc_huntress |
-| Tunic Of The Shorn One | DLC_Outfit_10 | paperdoll_piece_tr11_lara_quoriankasuit |
-| Vest Of The Empress Jaguar | Stealth_01_Torso | paperdoll_piece_tr11_lara_stealth_01_torso |
-| Wraithskin | Lara_Loyalty_TR10_Wraithskin | paperdoll_piece_tr11_lara_tr10_wraithskin |
-| Yaway's Battle Tunic | Assault_01_Torso | paperdoll_piece_tr11_lara_assault_01_torso |
-| Yaway's Wooden Greaves | Assault_01_Legs | paperdoll_piece_tr11_lara_assault_01_legs |
-| (Main menu) |  | paperdoll_generator_lara_menu |
+| Ingame name | .drm file prefix | Name in globalcollectibleinfo.drm |
+| ----------- | ---------------- | --------------------------------- |
+| Adventurer | paperdoll_piece_tr11_lara_jungle | Lara_Prologue |
+| Angel Of Darkness | paperdoll_piece_tr11_lara_aod | Lara_Loyalty_AOD |
+| Blue Henley | paperdoll_piece_tr11_lara_tr10_blue_henley | Lara_Loyalty_TR10_BlueHenley |
+| Blue Heron Tunic | paperdoll_piece_tr11_lara_outsider | Lara_Outsider |
+| Bomber Jacket | paperdoll_piece_tr11_lara_tr2_bomber | Lara_Loyalty_TR2BomberJacket |
+| Boots Of The Empress Jaguar | paperdoll_piece_tr11_lara_stealth_01_legs | Stealth_01_Legs |
+| Brocken | paperdoll_piece_tr11_lara_dlc_hightech | HighTech_01 |
+| Brocken - Shadow | paperdoll_piece_tr11_lara_dlc_hightech_alt | DLC_Outfit_01 |
+| Ch'Amaka's Greaves | paperdoll_piece_tr11_lara_assault_03_legs | Assault_03_Legs |
+| Ch'Amaka's War Vest  | paperdoll_piece_tr11_lara_assault_03_torso | Assault_03_Torso |
+| Commando | paperdoll_piece_tr11_lara_tr10_commando | Lara_Loyalty_TR10_Commando |
+| Condor Cowl Of Urqu | paperdoll_piece_tr11_lara_stealth_02_torso | Stealth_02_Torso |
+| Crimson Huntress | paperdoll_piece_tr11_lara_priest | Lara_CrimsonHuntress |
+| Croft Fitness | paperdoll_piece_tr11_lara_workout_nostraps | DLC_Outfit_13 |
+| Desert Tank | paperdoll_piece_tr11_lara_tr10_desert_tanktop | Lara_Loyalty_TR10_DesertTank |
+| Dragon Scales | paperdoll_piece_tr11_lara_dlc_kukulkan_alt | Kukulkan_01 |
+| Dragon Scales - Legend | paperdoll_piece_tr11_lara_dlc_kukulkan | DLC_Outfit_05 |
+| Eveningstar's Boots | paperdoll_piece_tr11_lara_exploration_01_legs | Exploration_01_Legs |
+| Eveningstar's Cape | paperdoll_piece_tr11_lara_exploration_01_torso | Exploration_01_Torso |
+| Explorer | paperdoll_piece_tr11_lara_explorer | Lara_Explorer |
+| Gray Henley | paperdoll_piece_tr11_lara_tr10_gray_henley | Lara_Loyalty_TR10_GrayHenley |
+| Greaves Of Six Sky | paperdoll_piece_tr11_lara_assault_02_legs | Assault_02_Legs |
+| Hide Boots Of Urqu | paperdoll_piece_tr11_lara_stealth_02_legs | Stealth_02_Legs |
+| Hunter's Array | paperdoll_piece_tr11_lara_trinity | Trinity_01 |
+| Hunter's Array - Apex | paperdoll_piece_tr11_lara_trinity_alt | DLC_Outfit_04 |
+| Infiltrator | paperdoll_piece_tr11_lara_tr10_infiltrator | Lara_Loyalty_TR10_Infiltrator |
+| Kantu's Boots | paperdoll_piece_tr11_lara_exploration_03_legs | Exploration_03_Legs |
+| Kantu's Gilded Vest | paperdoll_piece_tr11_lara_exploration_03_torso | Exploration_03_Torso |
+| Leather Jacket | paperdoll_piece_tr11_lara_tr10_london_jacket | Lara_Loyalty_TR10_LeatherJacket |
+| Manko's Boots | paperdoll_piece_tr11_lara_stealth_03_legs | Stealth_03_Legs |
+| Manko's Tunic | paperdoll_piece_tr11_lara_stealth_03_torso | Stealth_03_Torso |
+| Mantle Of Six Sky | paperdoll_piece_tr11_lara_assault_02_torso | Assault_02_Torso |
+| Midnight Sentinel | paperdoll_piece_tr11_lara_dlc_original_yaaxil | DLC_Outfit_11 |
+| Midnight Sentinel - Farseer | paperdoll_piece_tr11_lara_dlc_original_yaaxil_alt | DLC_Outfit_07 |
+| Nine Strides' Boots | paperdoll_piece_tr11_lara_exploration_02_legs | Exploration_02_Legs |
+| Nine Strides' Harness | paperdoll_piece_tr11_lara_exploration_02_torso | Exploration_02_Torso |
+| Ozcollo's Greaves | paperdoll_piece_tr11_lara_path_jaguar_legs | Jaguar_01_Legs |
+| Ozcollo's Tunic | paperdoll_piece_tr11_lara_path_jaguar_torso | Jaguar_01_Torso |
+| Quenti Palla's Greaves | paperdoll_piece_tr11_lara_path_eagle_legs | Eagle_01_Legs |
+| Quenti Palla's Mantle | paperdoll_piece_tr11_lara_path_eagle_torso | Eagle_01_Torso |
+| Remnant Jacket | paperdoll_piece_tr11_lara_tr10_remnant | Lara_Loyalty_TR10_RemnantJacket |
+| Reptile Hide | paperdoll_piece_tr11_lara_dlc_predator | Predator_01 |
+| Reptile Hide - Leviathan | paperdoll_piece_tr11_lara_dlc_predator_alt | DLC_Outfit_06 |
+| Robes Of Puka Huk | paperdoll_piece_tr11_lara_crimson_huntress | Lara_Shaman |
+| Scales Of Q | paperdoll_piece_tr11_lara_yaaxil | Yaaxil_01 |
+| Scales Of Q - Feathered Serpent | paperdoll_piece_tr11_lara_yaaxil_alt | DLC_Outfit_03 |
+| Serpent Guard | paperdoll_piece_tr11_lara_highpriest | Lara_WarriorPriest |
+| Shadow Runner | paperdoll_piece_tr11_lara_tr10_shadowrunner_torso | Lara_Loyalty_TR10_ShadowRunner |
+| Siberian Ranger | paperdoll_piece_tr11_lara_tr10_siberian_ranger | Lara_Loyalty_TR10_SiberianRanger |
+| Sinchi Chiqa Battle Dress | paperdoll_piece_tr11_lara_dlc_rebelwarrior | Rebel_01 |
+| Sinchi Chiqa Battle Dress - Honor Guard | paperdoll_piece_tr11_lara_dlc_rebelwarrior_alt | DLC_Outfit_02 |
+| Survivor | paperdoll_piece_tr11_lara_tr9_yamatai | Lara_Loyalty_TR9_ShipwreckedSurvivor |
+| Tactical Adventurer | paperdoll_piece_tr11_lara_tactical | Lara_BlueTank |
+| Tactical Adventurer (Black) | paperdoll_piece_tr11_lara_classic | Lara_Classic |
+| Tactical Adventurer Classic | paperdoll_piece_tr11_lara_tactical_alt | DLC_Outfit_12 |
+| Three Fangs' Greaves | paperdoll_piece_tr11_lara_path_snek_legs | Snake_01_Legs |
+| Three Fangs' Tunic | paperdoll_piece_tr11_lara_path_snek_torso | Snake_01_Torso |
+| Tomb Raider 2 | paperdoll_piece_tr11_lara_tr2 | Lara_Loyalty_TR2 |
+| Tunic Of The Exiled Fox | paperdoll_piece_tr11_lara_dlc_huntress | Huntress_01 |
+| Tunic Of The Shorn One | paperdoll_piece_tr11_lara_quoriankasuit | DLC_Outfit_10 |
+| Vest Of The Empress Jaguar | paperdoll_piece_tr11_lara_stealth_01_torso | Stealth_01_Torso |
+| Wraithskin | paperdoll_piece_tr11_lara_tr10_wraithskin | Lara_Loyalty_TR10_Wraithskin |
+| Yaway's Battle Tunic | paperdoll_piece_tr11_lara_assault_01_torso | Assault_01_Torso |
+| Yaway's Wooden Greaves | paperdoll_piece_tr11_lara_assault_01_legs | Assault_01_Legs |
+| (Main menu) | paperdoll_generator_lara_menu |  |
+
+The .drm files containing the outfit icons (for the outfit selection menu at campsites)
+can be found in the following folder:
+
+pcx64-w\design\image resources\campsite\outfits
+
 
 ## Appendix 2: SOTTR Photo Mode
 

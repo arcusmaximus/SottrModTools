@@ -203,6 +203,9 @@ namespace TrRebootTools.Shared.Cdc
                 throw new ArgumentException();
 
             Stream stream = PartStreams[resourceRef.ArchivePart];
+            if (resourceRef.RefDefinitionsSize + resourceRef.BodySize == resourceRef.Length)
+                return new WindowedStream(stream, resourceRef.Offset, resourceRef.Length);
+
             return new ResourceReadStream(stream, resourceRef, true);
         }
 

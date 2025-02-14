@@ -69,6 +69,9 @@ namespace TrRebootTools.Extractor
                         continue;
 
                     string filePath = Path.Combine(folderPath, ResourceNaming.GetFilePath(_archiveSet, resourceRef));
+                    if (filePath.Length > 260)
+                        filePath = Path.Combine(folderPath, ResourceNaming.GetFilePath(_archiveSet, resourceRef, false));
+
                     Directory.CreateDirectory(Path.GetDirectoryName(filePath));
                     ExtractResource(filePath, resourceRef, ref numExtractedResources, numTotalResources, progress, cancellationToken);
                 }

@@ -4,11 +4,10 @@ from mathutils import Vector
 from io_scene_tr_reboot.BlenderHelper import BlenderHelper
 from io_scene_tr_reboot.BlenderNaming import BlenderNaming
 from io_scene_tr_reboot.properties.BoneProperties import BoneProperties
-from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties
+from io_scene_tr_reboot.properties.ObjectProperties import ObjectSkeletonProperties
 from io_scene_tr_reboot.tr.Collection import Collection
 from io_scene_tr_reboot.tr.Skeleton import ISkeleton
 from io_scene_tr_reboot.util.Enumerable import Enumerable
-from io_scene_tr_reboot.util.Serializer import Serializer
 from io_scene_tr_reboot.util.SlotsBase import SlotsBase
 
 class SkeletonImporter(SlotsBase):
@@ -39,7 +38,7 @@ class SkeletonImporter(SlotsBase):
         self.assign_cloth_bones_to_group(bl_armature_obj, tr_skeleton)
         self.assign_counterparts(bl_armature_obj, tr_skeleton)
         self.assign_constraints(bl_armature_obj, tr_skeleton)
-        self.assign_blend_shape_mappings(bl_armature_obj, tr_skeleton)
+        ObjectSkeletonProperties.set_global_blend_shape_ids(bl_armature_obj, tr_skeleton.global_blend_shape_ids)
 
         return bl_armature_obj
 
@@ -118,6 +117,4 @@ class SkeletonImporter(SlotsBase):
 
             BlenderHelper.move_bone_to_group(bl_armature_obj, bl_bone, BlenderNaming.constrained_bone_group_name, BlenderNaming.constrained_bone_palette_name)
 
-    def assign_blend_shape_mappings(self, bl_armature_obj: bpy.types.Object, tr_skeleton: ISkeleton) -> None:
-        serialized_mappings = Serializer.serialize_dict(tr_skeleton.global_blend_shape_ids)
-        ObjectProperties.get_instance(bl_armature_obj).skeleton.global_blend_shape_ids = serialized_mappings
+

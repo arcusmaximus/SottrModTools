@@ -8,7 +8,7 @@ from mathutils import Vector
 from io_scene_tr_reboot.BlenderHelper import BlenderHelper
 from io_scene_tr_reboot.BlenderNaming import BlenderModelIdSet, BlenderNaming
 from io_scene_tr_reboot.operator.OperatorContext import OperatorContext
-from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties
+from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties, ObjectSkeletonProperties
 from io_scene_tr_reboot.tr.BlendShape import BlendShape
 from io_scene_tr_reboot.tr.Enumerations import CdcGame, ResourceType
 from io_scene_tr_reboot.tr.FactoryFactory import Factories
@@ -51,13 +51,14 @@ class ModelExporter(SlotsBase):
         self.factory = Factories.get(game)
         self.bl_context = bpy.context
 
-    def export_model(self, folder_path: str, ids: BlenderModelIdSet, bl_objs: list[bpy.types.Object]) -> None:
+    def export_model(self, folder_path: str, ids: BlenderModelIdSet, bl_mesh_objs: list[bpy.types.Object], bl_armature_obj: bpy.types.Object | None) -> None:
         if self.bl_context.object is not None:
             bpy.ops.object.mode_set(mode = "OBJECT")
 
-        self.validate_blender_objects(bl_objs)
+        self.validate_blender_objects(bl_mesh_objs)
 
-        tr_model = self.create_model(ids.model_id, ids.model_data_id, bl_objs)
+        blend_shape_global_ids = ObjectSkeletonProperties.get_global_blend_shape_ids(bl_armature_obj) if bl_armature_obj is not None else None
+        tr_model = self.create_model(ids.model_id, ids.model_data_id, bl_mesh_objs, blend_shape_global_ids)
 
         model_data_file_path = os.path.join(folder_path, f"{ids.model_data_id}.tr{self.game}modeldata")
         with open(model_data_file_path, "wb") as model_data_file:
@@ -77,7 +78,7 @@ class ModelExporter(SlotsBase):
     def export_extra_files(self, folder_path: str, object_id: int, tr_model: IModel) -> None:
         pass
 
-    def create_model(self, model_id: int, model_data_id: int, bl_objs: list[bpy.types.Object]) -> IModel:
+    def create_model(self, model_id: int, model_data_id: int, bl_objs: list[bpy.types.Object], blend_shape_global_ids: dict[int, int] | None) -> IModel:
         tr_model = self.factory.create_model(model_id, model_data_id)
         tr_model.refs.material_resources = Enumerable(bl_objs).select(lambda o: o.data)                                          \
                                                               .cast(bpy.types.Mesh)                                              \
@@ -98,11 +99,11 @@ class ModelExporter(SlotsBase):
                                            .select_many(lambda m: (m.shape_keys and Enumerable(m.shape_keys.key_blocks).skip(1) or []))
         if bl_shape_keys.any():
             tr_model.header.has_blend_shapes = True
-            tr_model.header.num_blend_shapes = bl_shape_keys.max(lambda bl_shape_key: BlenderNaming.parse_shape_key_name(bl_shape_key.name).local_id) + 1
+            tr_model.header.num_blend_shapes = bl_shape_keys.max(lambda s: self.get_shape_key_local_id(s, blend_shape_global_ids)) + 1
 
         blend_shape_normals_source_file_path: str | None = None
         for bl_obj in bl_objs:
-            tr_model.meshes.append(self.create_mesh(tr_model, bl_obj))
+            tr_model.meshes.append(self.create_mesh(tr_model, bl_obj, blend_shape_global_ids))
             properties = ObjectProperties.get_instance(bl_obj)
             if properties.blend_shape_normals_source_file_path:
                 blend_shape_normals_source_file_path = properties.blend_shape_normals_source_file_path
@@ -116,12 +117,19 @@ class ModelExporter(SlotsBase):
         return tr_model
 
     def apply_bone_usage_map(self, tr_model: IModel, bl_mesh_objs: list[bpy.types.Object]) -> None:
+        max_bones = len(tr_model.header.bone_usage_map) * 32
+
         for bl_vertex_group in Enumerable(bl_mesh_objs).select_many(lambda o: o.vertex_groups):
             local_id = BlenderNaming.parse_bone_name(bl_vertex_group.name).local_id
-            if local_id is not None:
-                tr_model.header.bone_usage_map[local_id // 32] |= 1 << (local_id & 0x1F)
+            if local_id is None:
+                continue
 
-    def create_mesh(self, tr_model: IModel, bl_obj: bpy.types.Object) -> IMesh:
+            if local_id >= max_bones:
+                raise Exception(f"Model references too many bones (can have a maximum of {max_bones})")
+
+            tr_model.header.bone_usage_map[local_id // 32] |= 1 << (local_id & 0x1F)
+
+    def create_mesh(self, tr_model: IModel, bl_obj: bpy.types.Object, blend_shape_global_ids: dict[int, int] | None) -> IMesh:
         with BlenderHelper.prepare_for_model_export(bl_obj):
             if not Enumerable(bl_obj.modifiers).of_type(bpy.types.TriangulateModifier).any():
                 bl_obj.modifiers.new("Triangulate", "TRIANGULATE")
@@ -144,7 +152,7 @@ class ModelExporter(SlotsBase):
             self.populate_vertex_format(tr_mesh.vertex_format, bl_mesh_maps)
             bl_corner_to_tr_vertex = self.create_vertices(tr_mesh, bl_mesh, bl_mesh_maps, use_8_weights_per_vertex)
             self.create_mesh_parts(tr_model, tr_mesh, bl_obj, bl_mesh, bl_corner_to_tr_vertex, use_8_weights_per_vertex)
-            self.create_blend_shapes(tr_model, tr_mesh, bl_obj, bl_mesh, bl_corner_to_tr_vertex)
+            self.create_blend_shapes(tr_model, tr_mesh, bl_obj, bl_mesh, bl_corner_to_tr_vertex, blend_shape_global_ids)
             self.shrink_uvs(tr_mesh, bl_mesh_maps)
 
             return tr_mesh
@@ -291,7 +299,7 @@ class ModelExporter(SlotsBase):
 
     def create_mesh_parts(self, tr_model: IModel, tr_mesh: IMesh, bl_obj: bpy.types.Object, bl_mesh: bpy.types.Mesh, bl_corner_to_tr_vertex: list[int], use_8_weights_per_vertex: bool) -> None:
         if len(bl_mesh.materials) == 0:
-            raise Exception(f"Mesh {bl_mesh.name} has no materials assigned. Please add at least one material.")
+            raise Exception(f"Mesh {bl_obj.name} has no materials assigned. Please add at least one material.")
 
         props = ObjectProperties.get_instance(bl_obj).mesh
 
@@ -299,7 +307,7 @@ class ModelExporter(SlotsBase):
         for bl_material_idx, bl_faces in bl_faces_by_material_idx.items():
             bl_material = cast(bpy.types.Material | None, bl_mesh.materials[bl_material_idx])
             if bl_material is None:
-                raise Exception(f"Mesh {bl_mesh.name} has faces referencing an empty material slot. Please populate or delete any such slots.")
+                raise Exception(f"Mesh {bl_obj.name} has faces referencing an empty material slot. Please populate or delete any such slots.")
 
             tr_material_id = BlenderNaming.parse_material_name(bl_material.name)
 
@@ -318,19 +326,19 @@ class ModelExporter(SlotsBase):
             tr_index_idx = 0
             for bl_face in bl_faces:
                 if bl_face.loop_total != 3:
-                    raise Exception(f"Mesh {bl_mesh.name} contains non-triangular faces. Please triangulate manually or with a Triangulate modifier.")
+                    raise Exception(f"Mesh {bl_obj.name} contains non-triangular faces. Please triangulate manually or with a Triangulate modifier.")
 
                 for bl_corner_idx in cast(Iterable[int], bl_face.loop_indices):
                     tr_vertex_idx = bl_corner_to_tr_vertex[bl_corner_idx]
                     if tr_vertex_idx > 0xFFFF:
-                        raise Exception(f"Mesh {bl_mesh.name} has too many vertices (maximum is 65536). Please decimate or split it.")
+                        raise Exception(f"Mesh {bl_obj.name} has too many vertices (maximum is 65536). Please decimate or split it.")
 
                     tr_mesh_part.indices[tr_index_idx] = tr_vertex_idx
                     tr_index_idx += 1
 
             tr_mesh.parts.append(tr_mesh_part)
 
-    def create_blend_shapes(self, tr_model: IModel, tr_mesh: IMesh, bl_obj: bpy.types.Object, bl_mesh: bpy.types.Mesh, bl_corner_to_tr_vertex: list[int]) -> None:
+    def create_blend_shapes(self, tr_model: IModel, tr_mesh: IMesh, bl_obj: bpy.types.Object, bl_mesh: bpy.types.Mesh, bl_corner_to_tr_vertex: list[int], blend_shape_global_ids: dict[int, int] | None) -> None:
         tr_mesh.blend_shapes = [None] * tr_model.header.num_blend_shapes
         if cast(bpy.types.Key | None, bl_mesh.shape_keys) is None:
             return
@@ -356,7 +364,7 @@ class ModelExporter(SlotsBase):
         color_offset = Vector((0.0, 0.0, 0.4, 0.0))                         # Z component = normal blending suppression strength
         for bl_shape_key_idx in range(1, len(bl_mesh.shape_keys.key_blocks)):
             bl_obj.active_shape_key_index = bl_shape_key_idx
-            tr_blend_shape_idx = BlenderNaming.parse_shape_key_name(cast(bpy.types.ShapeKey, bl_obj.active_shape_key).name).local_id
+            tr_blend_shape_idx = self.get_shape_key_local_id(cast(bpy.types.ShapeKey, bl_obj.active_shape_key), blend_shape_global_ids)
 
             bl_mesh = self.get_evaluated_bl_mesh(bl_obj)
             if hasattr(bl_mesh, "calc_normals_split"):
@@ -464,6 +472,17 @@ class ModelExporter(SlotsBase):
         bl_obj_eval = bl_obj.evaluated_get(self.bl_context.evaluated_depsgraph_get())
         bl_mesh_eval = cast(bpy.types.Mesh, bl_obj_eval.data)
         return bl_mesh_eval
+
+    def get_shape_key_local_id(self, bl_shape_key: bpy.types.ShapeKey, blend_shape_global_ids: dict[int, int] | None) -> int:
+        id_set = BlenderNaming.parse_shape_key_name(bl_shape_key.name)
+        if id_set.global_id is None or blend_shape_global_ids is None:
+            return id_set.local_id
+
+        mapping = Enumerable(blend_shape_global_ids.items()).first_or_none(lambda p: p[1] == id_set.global_id)
+        if mapping is None:
+            raise Exception(f"No mapping found for global blend shape ID {id_set.global_id}. Please use a matching skeleton, fix the global ID of shape key {bl_shape_key.name}, or delete the shape key.")
+
+        return mapping[0]
 
     def transfer_blend_shape_normals(self, tr_target_model: IModel, source_file_path: str) -> None:
         tr_source_model = self.load_model(source_file_path)

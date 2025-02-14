@@ -5,7 +5,7 @@ from mathutils import Matrix, Quaternion, Vector
 from io_scene_tr_reboot.BlenderHelper import BlenderHelper
 from io_scene_tr_reboot.BlenderNaming import BlenderBoneIdSet, BlenderNaming
 from io_scene_tr_reboot.properties.BoneProperties import BoneProperties
-from io_scene_tr_reboot.properties.ObjectProperties import ObjectProperties
+from io_scene_tr_reboot.properties.ObjectProperties import ObjectSkeletonProperties
 from io_scene_tr_reboot.tr.Bone import IBone
 from io_scene_tr_reboot.tr.Collection import Collection
 from io_scene_tr_reboot.tr.Enumerations import CdcGame, ResourceType
@@ -15,7 +15,6 @@ from io_scene_tr_reboot.tr.ResourceBuilder import ResourceBuilder
 from io_scene_tr_reboot.tr.ResourceKey import ResourceKey
 from io_scene_tr_reboot.tr.Skeleton import ISkeleton
 from io_scene_tr_reboot.util.Enumerable import Enumerable
-from io_scene_tr_reboot.util.Serializer import Serializer
 from io_scene_tr_reboot.util.SlotsBase import SlotsBase
 
 class SkeletonExporter(SlotsBase):
@@ -50,19 +49,7 @@ class SkeletonExporter(SlotsBase):
             file.write(writer.build())
 
     def add_blend_shape_id_mappings(self, tr_skeleton: ISkeleton, bl_armature_obj: bpy.types.Object) -> None:
-        serialized_mappings = ObjectProperties.get_instance(bl_armature_obj).skeleton.global_blend_shape_ids
-        for local_id, global_id in Serializer.deserialize_dict(serialized_mappings).items():
-            tr_skeleton.global_blend_shape_ids[int(local_id)] = int(global_id)
-
-        for bl_mesh_obj in Enumerable(bl_armature_obj.children).where(lambda o: isinstance(o.data, bpy.types.Mesh)):
-            bl_mesh = cast(bpy.types.Mesh, bl_mesh_obj.data)
-            if not bl_mesh.shape_keys:
-                continue
-
-            for bl_shape_key in Enumerable(bl_mesh.shape_keys.key_blocks).skip(1):
-                shape_key_ids = BlenderNaming.parse_shape_key_name(bl_shape_key.name)
-                if shape_key_ids.global_id is not None:
-                    tr_skeleton.global_blend_shape_ids[shape_key_ids.local_id] = shape_key_ids.global_id
+        tr_skeleton.global_blend_shape_ids = ObjectSkeletonProperties.get_global_blend_shape_ids(bl_armature_obj)
 
     def add_bones(self, tr_skeleton: ISkeleton, bl_armature_obj: bpy.types.Object) -> None:
         bl_armature = cast(bpy.types.Armature, bl_armature_obj.data)

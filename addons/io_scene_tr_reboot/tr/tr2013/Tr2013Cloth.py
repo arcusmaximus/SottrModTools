@@ -167,14 +167,15 @@ class Tr2013Cloth(Cloth):
         self.tune_id = tune_id
         self.strips = []
 
-    def read(self, definition_reader: ResourceReader, tune_reader: ResourceReader, global_bone_ids: list[int | None], external_collisions: list[Collision]) -> None:
+    def read(self, definition_reader: ResourceReader, tune_reader: ResourceReader | None, global_bone_ids: list[int | None], external_collisions: list[Collision]) -> None:
         self.read_definition(definition_reader)
-        self.read_tune(tune_reader, global_bone_ids, { CollisionKey(collision.type, collision.hash): collision for collision in external_collisions })
+        if tune_reader is not None:
+            self.read_tune(tune_reader, global_bone_ids, { CollisionKey(collision.type, collision.hash): collision for collision in external_collisions })
 
     def read_definition(self, reader: ResourceReader) -> None:
         dtp_def = self.read_definition_header(reader)
         if dtp_def.strips_ref is None:
-            raise Exception()
+            return
 
         reader.seek(dtp_def.strips_ref)
         for dtp_strip in self.read_definition_strips(reader, dtp_def.num_strips):

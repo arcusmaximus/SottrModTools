@@ -2,7 +2,7 @@ bl_info = {
     "name": "TR Reboot mesh support",
     "description": "Import/export files for the Tomb Raider Reboot games",
     "author": "arc_",
-    "blender": (3, 6, 5),
+    "blender": (4, 0, 0),
     "version": (1, 4, 0),
     "location": "File > Import-Export",
     "support": "COMMUNITY",

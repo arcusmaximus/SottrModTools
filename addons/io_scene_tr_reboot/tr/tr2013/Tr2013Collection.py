@@ -117,20 +117,21 @@ class Tr2013Collection(Collection):
         cloth_definition_ref = self.cloth_definition_ref
         cloth_tune_ref = self.cloth_tune_ref
         skeleton = self.get_skeleton()
-        if cloth_definition_ref is None or cloth_tune_ref is None or skeleton is None:
+        if cloth_definition_ref is None or skeleton is None:
             return None
 
         definition_reader = self.get_resource_reader(cloth_definition_ref, True)
-        tune_reader = self.get_resource_reader(self.object_ref, True)
-        if definition_reader is None or tune_reader is None:
+        tune_reader = self.get_resource_reader(self.object_ref, True) if cloth_tune_ref is not None else None
+        if definition_reader is None:
             return None
 
         definition_reader.seek(cloth_definition_ref)
-        tune_reader.seek(cloth_tune_ref)
+        if tune_reader is not None and cloth_tune_ref is not None:
+            tune_reader.seek(cloth_tune_ref)
 
         global_bone_ids = Enumerable(skeleton.bones).select(lambda b: b.global_id).to_list()
 
-        cloth = Tr2013Cloth(cloth_definition_ref.id, cloth_tune_ref.id)
+        cloth = Tr2013Cloth(cloth_definition_ref.id, self.object_ref.id)
         cloth.read(definition_reader, tune_reader, global_bone_ids, [])
         return cloth
 

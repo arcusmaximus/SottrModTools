@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -41,14 +39,14 @@ namespace TrRebootTools.Shared.Cdc
             return For(game).GetExtension(type, subType);
         }
 
-        public static string GetFileName(ArchiveSet archiveSet, ResourceReference resourceRef)
+        public static string GetFileName(ArchiveSet archiveSet, ResourceReference resourceRef, bool useOriginalFilePath = true)
         {
-            return For(archiveSet.Game).GetFileNameInstance(archiveSet, resourceRef);
+            return For(archiveSet.Game).GetFileNameInstance(archiveSet, resourceRef, useOriginalFilePath);
         }
 
-        public static string GetFilePath(ArchiveSet archiveSet, ResourceReference resourceRef)
+        public static string GetFilePath(ArchiveSet archiveSet, ResourceReference resourceRef, bool useOriginalFilePath = true)
         {
-            return For(archiveSet.Game).GetFilePathInstance(archiveSet, resourceRef);
+            return For(archiveSet.Game).GetFilePathInstance(archiveSet, resourceRef, useOriginalFilePath);
         }
 
         public static string ReadOriginalFilePath(ArchiveSet archiveSet, ResourceReference resourceRef)
@@ -98,17 +96,17 @@ namespace TrRebootTools.Shared.Cdc
                    ".type" + (int)type;
         }
 
-        private string GetFileNameInstance(ArchiveSet archiveSet, ResourceReference resourceRef)
+        private string GetFileNameInstance(ArchiveSet archiveSet, ResourceReference resourceRef, bool useOriginalFilePath)
         {
-            string name = Sanitize(ReadOriginalFilePath(archiveSet, resourceRef));
+            string name = useOriginalFilePath ? Sanitize(ReadOriginalFilePath(archiveSet, resourceRef)) : null;
             name = name != null ? $"{name}.{resourceRef.Id}" : resourceRef.Id.ToString();
             string extension = GetExtension(resourceRef.Type, resourceRef.SubType);
             return name + extension;
         }
 
-        private string GetFilePathInstance(ArchiveSet archiveSet, ResourceReference resourceRef)
+        private string GetFilePathInstance(ArchiveSet archiveSet, ResourceReference resourceRef, bool useOriginalFilePath)
         {
-            return $"{resourceRef.Type}\\{GetFileNameInstance(archiveSet, resourceRef)}";
+            return $"{resourceRef.Type}\\{GetFileNameInstance(archiveSet, resourceRef, useOriginalFilePath)}";
         }
 
         protected virtual string ReadOriginalFilePathInstance(ArchiveSet archiveSet, ResourceReference resourceRef)

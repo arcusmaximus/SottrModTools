@@ -2,6 +2,7 @@ from typing import Annotated
 import bpy
 from io_scene_tr_reboot.properties.BlenderPropertyGroup import BlenderAttachedPropertyGroup, BlenderPropertyGroup, Prop
 from io_scene_tr_reboot.util.Enumerable import Enumerable
+from io_scene_tr_reboot.util.Serializer import Serializer
 
 def search_bones(self: BlenderPropertyGroup, context: bpy.types.Context, edit_text: str) -> list[str]:
     bl_armature_obj = context.object
@@ -37,6 +38,19 @@ class ObjectMeshProperties(BlenderPropertyGroup):
 
 class ObjectSkeletonProperties(BlenderPropertyGroup):
     global_blend_shape_ids: Annotated[str, Prop("Local -> global blend shape ID mappings")]
+
+    @staticmethod
+    def get_global_blend_shape_ids(bl_armature_obj: bpy.types.Object) -> dict[int, int]:
+        serialized_mappings = ObjectProperties.get_instance(bl_armature_obj).skeleton.global_blend_shape_ids
+        if not serialized_mappings:
+            return {}
+
+        mappings = Serializer.deserialize_dict(serialized_mappings)
+        return Enumerable(mappings.items()).to_dict(lambda p: int(p[0]), lambda p: int(p[1]))
+
+    @staticmethod
+    def set_global_blend_shape_ids(bl_armature_obj: bpy.types.Object, mappings: dict[int, int]) -> None:
+        ObjectProperties.get_instance(bl_armature_obj).skeleton.global_blend_shape_ids = Serializer.serialize_dict(mappings)
 
 class ObjectProperties(BlenderAttachedPropertyGroup[bpy.types.Object]):
     property_name = "tr11_properties"

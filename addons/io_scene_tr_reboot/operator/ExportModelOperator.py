@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import TYPE_CHECKING, Annotated, Iterable, Protocol
 import bpy
 from bpy.types import Context, Event
@@ -64,10 +65,10 @@ class ExportModelOperator(ExportOperatorBase[_Properties]):
     def draw(self, context: Context) -> None:
         game = SceneProperties.get_game()
         if not self.requires_skeleton_export(game):
-            self.layout.prop(self, "export_skeleton")
+            self.layout.prop(self.properties, "export_skeleton")
 
         if not self.requires_cloth_export(game):
-            self.layout.prop(self, "export_cloth")
+            self.layout.prop(self.properties, "export_cloth")
 
     def execute(self, context: Context | None) -> set[OperatorReturnItems]:
         if context is None:
@@ -87,7 +88,11 @@ class ExportModelOperator(ExportOperatorBase[_Properties]):
             model_exporter = self.create_model_exporter(OperatorCommon.scale_factor, game)
             folder_path = os.path.split(self.properties.filepath)[0]
             for model_id_set, bl_mesh_objs_of_model in Enumerable(bl_mesh_objs).group_by(lambda o: BlenderNaming.parse_model_name(o.name)).items():
-                model_exporter.export_model(folder_path, model_id_set, bl_mesh_objs_of_model)
+                bl_armature_obj = bl_mesh_objs_of_model[0].parent
+                if bl_armature_obj is not None and not isinstance(bl_armature_obj.data, bpy.types.Armature):
+                    bl_armature_obj = None
+
+                model_exporter.export_model(folder_path, model_id_set, bl_mesh_objs_of_model, bl_armature_obj)
 
             if self.properties.export_cloth or self.requires_cloth_export(game):
                 bl_unsplit_mesh_objs = self.get_mesh_objects_to_export(context, False)
@@ -106,6 +111,9 @@ class ExportModelOperator(ExportOperatorBase[_Properties]):
 
             if bl_local_collection is not None:
                 bl_local_collection.exclude = was_local_collection_excluded
+
+            if game == CdcGame.TR2013:
+                self.copy_tr2013_model_dtps(folder_path)
 
             if not OperatorContext.warnings_logged and not OperatorContext.errors_logged:
                 OperatorContext.log_info("Model successfully exported.")
@@ -191,3 +199,33 @@ class ExportModelOperator(ExportOperatorBase[_Properties]):
                 return Tr2013ClothExporter(scale_factor)
             case _:
                 return ClothExporter(scale_factor, game)
+
+    def copy_tr2013_model_dtps(self, folder_path: str) -> None:
+        model_id_groups: list[tuple[int, ...]] = [
+            (2906, 2926, 23746),
+            (6744, 23897, 50318, 50476, 50497),
+            (21039, 21923, 21935, 23760, 102228),
+            (23757, 62322, 62326),
+            (23772, 29892, 29898),
+            (23780, 34014, 34018, 34029),
+            (23792, 106834),
+            (23803, 106888),
+            (23810, 106839),
+            (23818, 78361, 78383),
+            (23833, 45359, 46965, 48296, 48772, 48920, 50895),
+            (23848, 53803),
+            (23872, 58115, 58119, 58127),
+            (23884, 60939, 60978, 105868),
+            (23892, 62287, 62341, 62349, 62354),
+            (23909, 84740),
+            (23917, 106893, 108819, 108830, 108839)
+        ]
+        for model_id_group in model_id_groups:
+            model_paths = Enumerable(model_id_group).select(lambda id: os.path.join(folder_path, f"{id}.tr9dtp")).to_list()
+            exported_model_path_idx = Enumerable(model_paths).index_of(os.path.isfile)
+            if exported_model_path_idx < 0:
+                continue
+
+            for i in range(len(model_paths)):
+                if i != exported_model_path_idx:
+                    shutil.copyfile(model_paths[exported_model_path_idx], model_paths[i])
