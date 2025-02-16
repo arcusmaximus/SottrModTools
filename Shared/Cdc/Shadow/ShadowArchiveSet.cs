@@ -30,7 +30,7 @@
             if (voiceFlags == 0xFFFFFFF)
                 voiceLanguage = "allvo";
             else
-                voiceLanguage = CdcGameInfo.Get(Game).LocaleToLanguageName(0xFFFFFFFFF0000000 | voiceFlags).ToLower();
+                voiceLanguage = CdcGameInfo.Get(Game).LocaleToLanguageName(0xFFFFFFFFF0000000 | voiceFlags)?.ToLower() ?? "allvo";
 
             int platformFlags = (int)(locale >> 56);
             string platform = platformFlags switch
